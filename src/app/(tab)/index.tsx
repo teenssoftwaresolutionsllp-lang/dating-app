@@ -1,98 +1,139 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Discover</Text>
+            <Text style={styles.title}>Find Your Match</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.onboardingButton}
+            onPress={() => router.push('/(onboarding)/set-profile')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="person-circle-outline" size={24} color="#00F5D4" />
+            <Text style={styles.onboardingButtonText}>Profile Setup</Text>
+          </TouchableOpacity>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        {/* Feature Cards */}
+        <View style={styles.cardContainer}>
+          <View style={styles.heroCard}>
+            <View style={styles.heroIconBadge}>
+              <Ionicons name="heart" size={32} color="#FF3B30" />
+            </View>
+            <Text style={styles.heroTitle}>Welcome to Spark</Text>
+            <Text style={styles.heroSubtitle}>
+              Connect with people nearby, discover potential matches, and start real conversations.
+            </Text>
+            <TouchableOpacity
+              style={styles.ctaButton}
+              onPress={() => router.push('/(onboarding)/set-profile')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.ctaButtonText}>Get Started with Onboarding</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: '#FFFFFF',
   },
-  heroSection: {
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    marginBottom: 24,
+  },
+  greeting: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  onboardingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0FDFD',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  onboardingButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#099268',
+  },
+  cardContainer: {
+    gap: 16,
+  },
+  heroCard: {
+    backgroundColor: '#FAFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#A0F0ED',
+  },
+  heroIconBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFE5E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
   },
-  code: {
-    textTransform: 'uppercase',
+  ctaButton: {
+    backgroundColor: '#00F5D4',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 25,
+    width: '100%',
+    alignItems: 'center',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  ctaButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
   },
 });
