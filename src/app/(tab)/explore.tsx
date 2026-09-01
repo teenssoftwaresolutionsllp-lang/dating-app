@@ -2,27 +2,27 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/hooks/use-theme';
 
 const CATEGORIES = ['All', 'Nearby', 'New Members', 'Online Now', 'Popular'];
 
 export default function ExploreScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const theme = useTheme();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text style={styles.title}>Explore</Text>
-          <Text style={styles.subtitle}>Discover people with shared interests</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Explore</Text>
+          <Text style={styles.subtitle}>Discover new matches around you</Text>
         </View>
 
-        {/* Category Filter Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesRow}
-        >
+        {/* Categories Row */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat;
             return (
@@ -32,21 +32,18 @@ export default function ExploreScreen() {
                 onPress={() => setSelectedCategory(cat)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>
-                  {cat}
-                </Text>
+                <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>{cat}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* Explore Cards Grid Placeholder */}
         <View style={styles.exploreGrid}>
           <View style={styles.placeholderCard}>
-            <Ionicons name="sparkles-outline" size={32} color="#00F5D4" />
-            <Text style={styles.cardTitle}>Discover Matches</Text>
+            <Ionicons name="compass-outline" size={48} color="#00F5D4" />
+            <Text style={styles.cardTitle}>Find Matches</Text>
             <Text style={styles.cardDesc}>
-              Matches tailored to your location and relationship preferences will appear here.
+              Browse through profiles and start connecting with people nearby.
             </Text>
           </View>
         </View>
