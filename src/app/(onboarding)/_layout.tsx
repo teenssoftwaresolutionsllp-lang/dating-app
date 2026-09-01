@@ -7,12 +7,12 @@ export default function OnboardingLayout() {
       <Stack.Screen name="set-profile" />
       <Stack.Screen name="birthday" />
       <Stack.Screen name="location" />
+      <Stack.Screen name="relationship" />
       <Stack.Screen name="profession" />
       <Stack.Screen name="company" />
       <Stack.Screen name="income" />
       <Stack.Screen name="verification" />
       <Stack.Screen name="photos" />
-      <Stack.Screen name="relationship" />
     </Stack>
   );
 }

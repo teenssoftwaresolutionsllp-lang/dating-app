@@ -28,8 +28,7 @@ export default function RelationshipScreen() {
 
   const handleNext = () => {
     if (!selectedStatus) return;
-    // Finish onboarding, navigate to main app tabs
-    // router.replace('/(tab)');
+    router.push('/profession' as any);
   };
 
   const handleBack = () => {
@@ -38,56 +37,58 @@ export default function RelationshipScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={1.0} />
+      <View style={styles.centerContainer}>
+        <OnboardingHeader progress={0.52} />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Title & Subtitle */}
-        <Text style={styles.title}>{"What's your relationship status?"}</Text>
-        <Text style={styles.subtitle}>
-          Tell us where you are in your relationship journey.
-        </Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header Title & Subtitle */}
+          <Text style={styles.title}>{"What's your relationship status?"}</Text>
+          <Text style={styles.subtitle}>
+            Tell us where you are in your relationship journey.
+          </Text>
 
-        {/* Section Heading */}
-        <View style={styles.sectionHeaderContainer}>
-          <Text style={styles.sectionTitle}>Relationship Status</Text>
-        </View>
+          {/* Section Heading */}
+          <View style={styles.sectionHeaderContainer}>
+            <Text style={styles.sectionTitle}>Relationship Status</Text>
+          </View>
 
-        {/* Radio Options List */}
-        <View style={styles.optionsList}>
-          {STATUS_OPTIONS.map((option) => {
-            const isSelected = selectedStatus === option;
-            return (
-              <TouchableOpacity
-                key={option}
-                style={styles.radioOptionRow}
-                onPress={() => setSelectedStatus(option)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.radioCircle,
-                    isSelected && styles.radioCircleSelected,
-                  ]}
+          {/* Radio Options List */}
+          <View style={styles.optionsList}>
+            {STATUS_OPTIONS.map((option) => {
+              const isSelected = selectedStatus === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.radioOptionRow}
+                  onPress={() => setSelectedStatus(option)}
+                  activeOpacity={0.7}
                 >
-                  {isSelected && <View style={styles.radioDot} />}
-                </View>
-                <Text style={styles.optionText}>{option}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      isSelected && styles.radioCircleSelected,
+                    ]}
+                  >
+                    {isSelected && <View style={styles.radioDot} />}
+                  </View>
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
 
-      {/* Action Footer */}
-      <OnboardingFooter
-        showBack
-        onBack={handleBack}
-        onNext={handleNext}
-        disabled={!selectedStatus}
-      />
+        {/* Action Footer */}
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          disabled={!selectedStatus}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -96,6 +97,12 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
   },
   scrollContent: {
     paddingHorizontal: 24,

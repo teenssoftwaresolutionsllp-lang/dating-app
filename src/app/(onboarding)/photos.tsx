@@ -41,7 +41,7 @@ export default function AddPhotosScreen() {
   };
 
   const handleNext = () => {
-    router.push('/relationship' as any);
+    router.replace('/(tab)' as any);
   };
 
   const handleBack = () => {
@@ -51,7 +51,7 @@ export default function AddPhotosScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.90} />
+        <OnboardingHeader progress={1.0} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
