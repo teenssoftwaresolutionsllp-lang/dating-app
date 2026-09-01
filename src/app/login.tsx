@@ -18,7 +18,7 @@ export default function LoginScreen() {
     if (digits.length < 10) {
       Alert.alert('Invalid Number', 'Please enter a valid 10-digit phone number.');
     } else {
-      router.push({ pathname: '/otp', params: { phone } });
+      router.push({ pathname: '/otp' as any, params: { phone } });
     }
   };
 

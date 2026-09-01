@@ -20,10 +20,10 @@ export default function AppTabs() {
       <TabSlot style={{ flex: 1 }} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/home" asChild>
+          <TabTrigger name="home" href={"/(tab)" as any} asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
+          <TabTrigger name="explore" href={"/(tab)/explore" as any} asChild>
             <TabButton>Explore</TabButton>
           </TabTrigger>
         </CustomTabList>
