@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Tabs,
   TabList,
@@ -6,14 +7,12 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { SymbolView } from 'expo-symbols';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
 
-import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 
 export default function AppTabs() {
   return (
@@ -34,20 +33,34 @@ export default function AppTabs() {
 }
 
 export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+  const content =
+    typeof children === 'string' || typeof children === 'number' ? (
+      <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
+        {children}
+      </ThemedText>
+    ) : (
+      children
+    );
+
   return (
     <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView
         type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
         style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
+        {content}
       </ThemedView>
     </Pressable>
   );
 }
 
 export function CustomTabList(props: TabListProps) {
+  const children = React.Children.toArray(props.children).map((child) => {
+    if (typeof child === 'string' || typeof child === 'number') {
+      return <ThemedText type="smallBold">{child}</ThemedText>;
+    }
+    return child;
+  });
+
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
@@ -55,7 +68,7 @@ export function CustomTabList(props: TabListProps) {
           Dating App
         </ThemedText>
 
-        {props.children}
+        {children}
       </ThemedView>
     </View>
   );

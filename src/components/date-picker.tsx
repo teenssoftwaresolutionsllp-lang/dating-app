@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 interface DatePickerProps {
-  value: Date;
+  value: Date | null;
   onChange: (date: Date) => void;
   onNextField?: () => void;
   placeholder?: string;
@@ -57,7 +57,7 @@ export function DatePicker({
   value,
   onChange,
   onNextField,
-  placeholder = 'Select Date of Birth',
+  placeholder = 'DD/MM/YY',
 }: DatePickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(value || new Date(2000, 5, 15));
@@ -121,19 +121,6 @@ export function DatePicker({
     );
   };
 
-  const handleNativeWebDateChange = (e: any) => {
-    const dateVal = e.target.value;
-    if (dateVal) {
-      const [y, m, d] = dateVal.split('-').map(Number);
-      const newD = new Date(y, m - 1, d);
-      setSelectedDate(newD);
-      onChange(newD);
-      if (onNextField) {
-        onNextField();
-      }
-    }
-  };
-
   return (
     <View style={styles.container}>
       {/* Clickable Date Picker Input Field */}
@@ -148,25 +135,6 @@ export function DatePicker({
         </Text>
         <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
       </TouchableOpacity>
-
-      {/* Standard HTML5 Date Input overlay for web accessibility */}
-      {Platform.OS === 'web' && (
-        <input
-          type="date"
-          value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
-          onChange={handleNativeWebDateChange}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            opacity: 0,
-            cursor: 'pointer',
-            zIndex: 1,
-          }}
-        />
-      )}
 
       {/* Interactive Date Picker Modal */}
       <Modal

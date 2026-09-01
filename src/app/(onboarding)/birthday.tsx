@@ -1,22 +1,22 @@
-import React, { useState, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { OnboardingHeader } from '@/components/onboarding-header';
-import { OnboardingFooter } from '@/components/onboarding-footer';
-import { BirthdayGraphic } from '@/components/illustrations/birthday-graphic';
 import { DatePicker } from '@/components/date-picker';
+import { BirthdayGraphic } from '@/components/illustrations/birthday-graphic';
+import { OnboardingFooter } from '@/components/onboarding-footer';
+import { OnboardingHeader } from '@/components/onboarding-header';
 
 export default function BirthdayScreen() {
   const router = useRouter();
@@ -24,21 +24,73 @@ export default function BirthdayScreen() {
   const [day, setDay] = useState('');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
-  const [height, setHeight] = useState('5.7');
+  const [heightFeet, setHeightFeet] = useState('5');
+  const [heightInches, setHeightInches] = useState('6');
 
-  const [pickerDate, setPickerDate] = useState<Date>(new Date(2000, 5, 15));
+  const [pickerDate, setPickerDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const dayInputRef = useRef<TextInput>(null);
   const monthInputRef = useRef<TextInput>(null);
   const yearInputRef = useRef<TextInput>(null);
-  const heightInputRef = useRef<TextInput>(null);
+  const feetInputRef = useRef<TextInput>(null);
+  const inchesInputRef = useRef<TextInput>(null);
+
+  const feetNum = parseInt(heightFeet, 10) || 0;
+  const inchesNum = parseInt(heightInches, 10) || 0;
+  const isFeetValid = feetNum >= 4 && feetNum <= 10;
+  const isInchesValid = inchesNum >= 0 && inchesNum <= 11;
 
   const isFormValid =
     day.trim().length > 0 &&
     month.trim().length > 0 &&
     year.trim().length === 4 &&
-    height.trim().length > 0;
+    heightFeet.trim().length > 0 &&
+    heightInches.trim().length > 0 &&
+    isFeetValid &&
+    isInchesValid;
+
+  const handleFeetChange = (val: string) => {
+    const numVal = parseInt(val, 10);
+    if (val === '' || (val.length <= 2 && numVal >= 1 && numVal <= 10)) {
+      setHeightFeet(val);
+    }
+  };
+
+  const handleInchesChange = (val: string) => {
+    const numVal = parseInt(val, 10);
+    if (val === '' || (val.length <= 2 && numVal >= 0 && numVal <= 11)) {
+      setHeightInches(val);
+    }
+  };
+
+  const incrementFeet = () => {
+    const current = parseInt(heightFeet, 10) || 1;
+    if (current < 9) {
+      setHeightFeet((current + 1).toString());
+    }
+  };
+
+  const decrementFeet = () => {
+    const current = parseInt(heightFeet, 10) || 1;
+    if (current > 1) {
+      setHeightFeet((current - 1).toString());
+    }
+  };
+
+  const incrementInches = () => {
+    const current = parseInt(heightInches, 10) || 0;
+    if (current < 11) {
+      setHeightInches((current + 1).toString().padStart(2, '0'));
+    }
+  };
+
+  const decrementInches = () => {
+    const current = parseInt(heightInches, 10) || 0;
+    if (current > 0) {
+      setHeightInches((current - 1).toString().padStart(2, '0'));
+    }
+  };
 
   const handleNext = () => {
     if (!isFormValid) return;
@@ -58,7 +110,7 @@ export default function BirthdayScreen() {
     setMonth(m);
     setYear(y);
     setTimeout(() => {
-      heightInputRef.current?.focus();
+      feetInputRef.current?.focus();
     }, 150);
   };
 
@@ -83,119 +135,85 @@ export default function BirthdayScreen() {
 
           {/* Birthday Party Illustration */}
           <View style={styles.illustrationContainer}>
-            <BirthdayGraphic width={260} height={130} />
+            <BirthdayGraphic width={280} height={150} />
           </View>
 
-          {/* Date Input Fields Row with Underlines (Day | Month | Year) */}
-          <View style={styles.dateInputsContainer}>
-            {/* Day Column */}
-            <View style={styles.dateColumn}>
-              <Text style={styles.columnLabel}>Day</Text>
-              <TextInput
-                ref={dayInputRef}
-                style={styles.underlineInput}
-                value={day}
-                onChangeText={(val) => {
-                  setDay(val);
-                  if (val.length === 2) {
-                    monthInputRef.current?.focus();
-                  }
-                }}
-                placeholder="DD"
-                placeholderTextColor="#D1D5DB"
-                keyboardType="number-pad"
-                maxLength={2}
-                selectionColor="#00F5D4"
-                returnKeyType="next"
-                onSubmitEditing={() => monthInputRef.current?.focus()}
-              />
-            </View>
-
-            {/* Month Column */}
-            <View style={styles.dateColumn}>
-              <Text style={styles.columnLabel}>Month</Text>
-              <TextInput
-                ref={monthInputRef}
-                style={styles.underlineInput}
-                value={month}
-                onChangeText={(val) => {
-                  setMonth(val);
-                  if (val.length === 2) {
-                    yearInputRef.current?.focus();
-                  }
-                }}
-                placeholder="MM"
-                placeholderTextColor="#D1D5DB"
-                keyboardType="number-pad"
-                maxLength={2}
-                selectionColor="#00F5D4"
-                returnKeyType="next"
-                onSubmitEditing={() => yearInputRef.current?.focus()}
-              />
-            </View>
-
-            {/* Year Column */}
-            <View style={styles.dateColumn}>
-              <Text style={styles.columnLabel}>Year</Text>
-              <TextInput
-                ref={yearInputRef}
-                style={styles.underlineInput}
-                value={year}
-                onChangeText={(val) => {
-                  setYear(val);
-                  if (val.length === 4) {
-                    heightInputRef.current?.focus();
-                  }
-                }}
-                placeholder="YYYY"
-                placeholderTextColor="#D1D5DB"
-                keyboardType="number-pad"
-                maxLength={4}
-                selectionColor="#00F5D4"
-                returnKeyType="next"
-                onSubmitEditing={() => heightInputRef.current?.focus()}
-              />
-            </View>
-          </View>
-
-          {/* Quick Date Picker Trigger Modal */}
-          <TouchableOpacity
-            style={styles.datePickerQuickTrigger}
-            onPress={() => setShowDatePicker(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="calendar-outline" size={16} color="#00B49F" style={{ marginRight: 6 }} />
-            <Text style={styles.quickPickerText}>Or select from Date Picker</Text>
-          </TouchableOpacity>
-
-          {showDatePicker && (
+          <View style={styles.calendarSection}>
             <DatePicker
               value={pickerDate}
               onChange={handleDatePicked}
               onNextField={() => {
                 setShowDatePicker(false);
-                heightInputRef.current?.focus();
+                feetInputRef.current?.focus();
               }}
+              placeholder="DD/MM/YY"
             />
-          )}
+          </View>
 
-          {/* Height Section matching Screenshot 1 */}
+          {/* Height Section - Feet and Inches Spinners */}
           <View style={styles.heightSection}>
-            <Text style={styles.heightTitle}>Height</Text>
-            <View style={styles.heightInputRow}>
-              <TextInput
-                ref={heightInputRef}
-                style={styles.heightInput}
-                value={height}
-                onChangeText={setHeight}
-                keyboardType="decimal-pad"
-                maxLength={4}
-                selectionColor="#00F5D4"
-                returnKeyType="done"
-                onSubmitEditing={handleNext}
-              />
-              <Text style={styles.heightUnit}>fts</Text>
+            <Text style={styles.heightTitle}>How tall are you?</Text>
+
+            {/* Feet and Inches Row */}
+            <View style={styles.heightSpinnerRow}>
+              {/* Feet Spinner */}
+              <View style={styles.spinnerContainer}>
+                <TextInput
+                  ref={feetInputRef}
+                  style={styles.spinnerInput}
+                  value={heightFeet}
+                  onChangeText={handleFeetChange}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectionColor="#00F5D4"
+                />
+
+                <View style={styles.spinnerArrowStack}>
+                  <Pressable style={styles.spinnerButton} onPress={incrementFeet}>
+                    <Ionicons name="chevron-up" size={18} color="#64748B" />
+                  </Pressable>
+                  <Pressable style={styles.spinnerButton} onPress={decrementFeet}>
+                    <Ionicons name="chevron-down" size={18} color="#64748B" />
+                  </Pressable>
+                </View>
+
+              </View>
+
+              {/* Inches Spinner */}
+              <View style={styles.spinnerContainer}>
+                <TextInput
+                  ref={inchesInputRef}
+                  style={styles.spinnerInput}
+                  value={heightInches}
+                  onChangeText={handleInchesChange}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectionColor="#00F5D4"
+                />
+
+                <View style={styles.spinnerArrowStack}>
+                  <Pressable style={styles.spinnerButton} onPress={incrementInches}>
+                    <Ionicons name="chevron-up" size={18} color="#64748B" />
+                  </Pressable>
+                  <Pressable style={styles.spinnerButton} onPress={decrementInches}>
+                    <Ionicons name="chevron-down" size={18} color="#64748B" />
+                  </Pressable>
+                </View>
+
+              </View>
             </View>
+
+            {/* Validation Error Message */}
+            {!isFeetValid && heightFeet.trim().length > 0 && (
+              <Text style={styles.errorMessage}>
+                Feet should be between 4-10.
+              </Text>
+            )}
+            {!isInchesValid && heightInches.trim().length > 0 && (
+              <Text style={styles.errorMessage}>
+                Inches should be between 0-11.
+              </Text>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -239,16 +257,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   illustrationContainer: {
-    marginVertical: 10,
+    marginVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  calendarSection: {
+    width: '100%',
+    marginTop: 12,
+    marginBottom: 12,
   },
   dateInputsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 16,
     width: '100%',
-    marginTop: 20,
+    marginTop: 6,
     marginBottom: 12,
     paddingHorizontal: 12,
   },
@@ -292,39 +315,86 @@ const styles = StyleSheet.create({
   },
   heightSection: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 24,
     width: '100%',
   },
   heightTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 12,
+    marginBottom: 24,
   },
-  heightInputRow: {
+  heightSpinnerRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#E5E7EB',
-    width: 140,
-    paddingBottom: 4,
-    backgroundColor: '#FFFFFF',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 16,
+    marginBottom: 16,
   },
-  heightInput: {
-    fontSize: 22,
+  spinnerContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 60,
+    paddingLeft: 16,
+    paddingRight: 10,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+  },
+  spinnerArrowStack: {
+    width: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  spinnerButton: {
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  spinnerInput: {
+    flex: 1,
+    minWidth: 28,
+    fontSize: 26,
     fontWeight: '600',
     color: '#111827',
-    backgroundColor: '#FFFFFF',
-    textAlign: 'right',
-    marginRight: 6,
-    minWidth: 40,
+    textAlign: 'center',
     paddingVertical: 0,
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
-  heightUnit: {
-    fontSize: 12,
-    color: '#6B7280',
+  errorMessage: {
+    fontSize: 14,
     fontWeight: '500',
+    color: '#EF4444',
+    marginTop: 8,
+  },
+  scrollerContainer: {
+    width: '100%',
+    marginTop: 24,
+    height: 200,
+    borderRadius: 14,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  scrollerItem: {
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  scrollerItemSelected: {
+    backgroundColor: '#E0FDFD',
+  },
+  scrollerItemText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  scrollerItemTextSelected: {
+    color: '#00B49F',
+    fontWeight: '700',
   },
 });
