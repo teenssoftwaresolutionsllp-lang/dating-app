@@ -42,7 +42,7 @@ export default function LocationScreen() {
 
   const handleNext = () => {
     if (!isLocationValid) return;
-    router.push('/profession' as any);
+    router.push('/relationship' as any);
   };
 
   const handleBack = () => {
