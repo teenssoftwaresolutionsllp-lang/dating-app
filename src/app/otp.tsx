@@ -114,7 +114,7 @@ export default function OtpScreen() {
                   <Ionicons name="pencil" size={14} color={theme.textSecondary} />
                 </Pressable>
               </View>
-              <PrimaryButton disabled={!complete} onPress={() => router.replace('/(tab)' as any)} style={styles.verifyButton}>
+              <PrimaryButton disabled={!complete} onPress={() => router.replace('/(onboarding)/set-profile' as any)} style={styles.verifyButton}>
                 Verify
               </PrimaryButton>
               <LegalFooter />

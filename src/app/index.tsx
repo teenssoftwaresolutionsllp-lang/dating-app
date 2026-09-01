@@ -15,8 +15,8 @@ export default function LanguageScreen() {
         <Text style={[styles.title, { color: theme.text }]}>Set Your Display Language</Text>
         <Text style={[styles.subtitle, { color: theme.text }]}>తెలుగులో యాప్‌ను ఉపయోగించడానికి మీ భాషను ఎంచుకోండి</Text>
         <View style={styles.options}>
-          <OptionButton onPress={() => router.push('/(onboarding)/set-profile' as any)}>English</OptionButton>
-          <OptionButton onPress={() => router.push('/(onboarding)/set-profile' as any)}>తెలుగు</OptionButton>
+          <OptionButton onPress={() => router.push('/login' as any)}>English</OptionButton>
+          <OptionButton onPress={() => router.push('/login' as any)}>తెలుగు</OptionButton>
         </View>
       </View>
     </SafeAreaView>
