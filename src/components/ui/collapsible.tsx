@@ -20,7 +20,7 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
         onPress={() => setIsOpen((value) => !value)}>
         <ThemedView type="backgroundElement" style={styles.button}>
           <SymbolView
-            name="chevron.right"
+            name={'chevron.right' as any}
             size={14}
             weight="bold"
             tintColor={theme.text}

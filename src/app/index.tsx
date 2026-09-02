@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
+import React from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, Text, View, Platform } from 'react-native';
 
 import { OptionButton } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,8 +18,8 @@ export default function LanguageScreen() {
             తెలుగులో యాప్‌ను ఉపయోగించడానికి మీ భాషను ఎంచుకోండి
           </Text>
           <View style={styles.options}>
-            <OptionButton onPress={() => router.push('/login')}>English</OptionButton>
-            <OptionButton onPress={() => router.push('/login')}>తెలుగు</OptionButton>
+            <OptionButton onPress={() => router.push('/login' as any)}>English</OptionButton>
+            <OptionButton onPress={() => router.push('/login' as any)}>తెలుగు</OptionButton>
           </View>
         </View>
       </View>

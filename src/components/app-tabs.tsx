@@ -1,30 +1,40 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme ?? 'light'];
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="home">
-        <Label>Home</Label>
-        <Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="explore">
-        <Label>Explore</Label>
-        <Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#00F5D4',
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: { backgroundColor: colors.backgroundElement },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Explore',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="compass-outline" color={color} size={size} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
