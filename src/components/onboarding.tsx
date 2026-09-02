@@ -1,5 +1,16 @@
 import { PropsWithChildren, useEffect, useState, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type ViewStyle, Platform, Keyboard, LayoutAnimation, ScrollView, Dimensions } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
+  Platform,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
 import { Image } from 'expo-image';
 
 import { Colors } from '@/constants/theme';
@@ -10,7 +21,17 @@ type ButtonProps = Omit<PressableProps, 'style'> & PropsWithChildren<{ style?: S
 export function PrimaryButton({ children, style, ...props }: ButtonProps) {
   const theme = useTheme();
   return (
-    <Pressable {...props} style={({ pressed }) => [styles.primaryButton, { backgroundColor: theme.primaryButton }, pressed && styles.pressed, style]}>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [
+        styles.primaryButton,
+        { backgroundColor: theme.primaryButton },
+        Platform.OS === 'web' && styles.webPointer,
+        pressed && styles.pressed,
+        style,
+      ]}
+      accessibilityRole="button"
+    >
       <Text style={[styles.primaryButtonText, { color: theme.text }]}>{children}</Text>
     </Pressable>
   );
@@ -19,7 +40,17 @@ export function PrimaryButton({ children, style, ...props }: ButtonProps) {
 export function OptionButton({ children, style, ...props }: ButtonProps) {
   const theme = useTheme();
   return (
-    <Pressable {...props} style={({ pressed }) => [styles.optionButton, { backgroundColor: theme.optionButton }, pressed && styles.pressed, style]}>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [
+        styles.optionButton,
+        { backgroundColor: theme.optionButton },
+        Platform.OS === 'web' && styles.webPointer,
+        pressed && styles.pressed,
+        style,
+      ]}
+      accessibilityRole="button"
+    >
       <Text style={[styles.optionButtonText, { color: theme.text }]}>{children}</Text>
     </Pressable>
   );
@@ -40,9 +71,13 @@ export function RelationshipArtwork({ variant }: { variant: 'welcome' | 'otp' })
   const isDark = theme.text === '#ffffff';
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Container width constrained for tablets and web
+  const slideWidth = Math.min(windowWidth, 480);
 
   const bgStyle = {
-    backgroundColor: isDark ? '#1F2022' : '#ffffff'
+    backgroundColor: isDark ? '#1F2022' : '#ffffff',
   };
 
   const dynamicHeight = '48%';
@@ -51,27 +86,27 @@ export function RelationshipArtwork({ variant }: { variant: 'welcome' | 'otp' })
     const images = [
       require('@/assets/images/image 2.png'),
       require('@/assets/images/OTP.png'),
-      require('@/assets/images/login3.png')
+      require('@/assets/images/login3.png'),
     ];
 
     useEffect(() => {
       const timer = setInterval(() => {
         const nextIndex = (activeIndex + 1) % images.length;
         scrollViewRef.current?.scrollTo({
-          x: nextIndex * Dimensions.get('window').width,
+          x: nextIndex * slideWidth,
           animated: true,
         });
         setActiveIndex(nextIndex);
       }, 3000);
 
       return () => clearInterval(timer);
-    }, [activeIndex, images.length]);
+    }, [activeIndex, images.length, slideWidth]);
 
     const handleScroll = (event: any) => {
       const scrollOffset = event.nativeEvent.contentOffset.x;
-      const width = event.nativeEvent.layoutMeasurement.width;
+      const width = event.nativeEvent.layoutMeasurement.width || slideWidth;
       const index = Math.round(scrollOffset / width);
-      if (index !== activeIndex) {
+      if (index !== activeIndex && index >= 0 && index < images.length) {
         setActiveIndex(index);
       }
     };
@@ -88,10 +123,10 @@ export function RelationshipArtwork({ variant }: { variant: 'welcome' | 'otp' })
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          style={styles.carouselScrollView}
+          style={[styles.carouselScrollView, { width: slideWidth }]}
         >
           {images.map((img, idx) => (
-            <View key={idx} style={styles.carouselSlide}>
+            <View key={idx} style={[styles.carouselSlide, { width: slideWidth }]}>
               <Image
                 source={img}
                 style={styles.artworkImage}
@@ -106,7 +141,7 @@ export function RelationshipArtwork({ variant }: { variant: 'welcome' | 'otp' })
               key={idx}
               style={[
                 styles.indicatorDot,
-                { backgroundColor: activeIndex === idx ? activeColor : inactiveColor }
+                { backgroundColor: activeIndex === idx ? activeColor : inactiveColor },
               ]}
             />
           ))}
@@ -120,11 +155,13 @@ export function RelationshipArtwork({ variant }: { variant: 'welcome' | 'otp' })
 
   return (
     <View style={[styles.artwork, styles.otpArtwork, bgStyle, { height: dynamicHeight }]}>
-      <Image
-        source={source}
-        style={styles.artworkImage}
-        contentFit="cover"
-      />
+      <View style={{ width: slideWidth, height: '100%' }}>
+        <Image
+          source={source}
+          style={styles.artworkImage}
+          contentFit="cover"
+        />
+      </View>
     </View>
   );
 }
@@ -161,8 +198,11 @@ const styles = StyleSheet.create({
     fontFamily: 'DM_Sans_400Regular',
     fontSize: 14,
   },
+  webPointer: {
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer', userSelect: 'none' } as any) : {}),
+  },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.75,
     transform: [{ scale: 0.99 }],
   },
   legal: {
@@ -179,6 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 310,
     overflow: 'hidden',
+    width: '100%',
   },
   otpArtwork: {
     height: 310,
@@ -187,23 +228,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  artworkFullScreen: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: -1,
-  },
   carouselScrollView: {
-    width: '100%',
     height: '100%',
+    alignSelf: 'center',
   },
   carouselSlide: {
-    width: Dimensions.get('window').width,
     height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   indicatorContainer: {
     position: 'absolute',

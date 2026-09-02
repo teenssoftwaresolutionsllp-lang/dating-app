@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 
 SplashScreen.preventAutoHideAsync();
@@ -18,9 +19,9 @@ export default function RootLayout() {
 	if (!fontsLoaded) return null;
 
 	return (
-		<>
+		<SafeAreaProvider>
 			<Stack screenOptions={{ headerShown: false }} />
 			<AnimatedSplashOverlay />
-		</>
+		</SafeAreaProvider>
 	);
 }
