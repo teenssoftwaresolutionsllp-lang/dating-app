@@ -41,17 +41,21 @@ export default function AddPhotosScreen() {
   };
 
   const handleNext = () => {
-    router.push('/onboarding/interests');
+    router.push('/interests');
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/verification');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.75} />
+        <OnboardingHeader progress={0.65} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

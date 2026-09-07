@@ -12,10 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { FemaleAvatar, MaleAvatar } from '@/components/illustrations/gender-avatars';
 
 export default function SetProfileScreen() {
   const router = useRouter();
@@ -28,6 +28,14 @@ export default function SetProfileScreen() {
   const handleNext = () => {
     if (!isProfileValid) return;
     router.push('/birthday');
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/otp');
+    }
   };
 
   return (
@@ -93,7 +101,11 @@ export default function SetProfileScreen() {
                 onPress={() => setGender('Female')}
                 activeOpacity={0.8}
               >
-                <FemaleAvatar size={100} />
+                <Image
+                  source={require('@/assets/images/female-avatar.jpg')}
+                  style={styles.genderImage}
+                  contentFit="contain"
+                />
                 <Text style={styles.genderLabel}>Female</Text>
               </TouchableOpacity>
 
@@ -106,7 +118,11 @@ export default function SetProfileScreen() {
                 onPress={() => setGender('Male')}
                 activeOpacity={0.8}
               >
-                <MaleAvatar size={100} />
+                <Image
+                  source={require('@/assets/images/male-avatar.jpg')}
+                  style={styles.genderImage}
+                  contentFit="contain"
+                />
                 <Text style={styles.genderLabel}>Male</Text>
               </TouchableOpacity>
             </View>
@@ -122,8 +138,8 @@ export default function SetProfileScreen() {
 
       {/* Action Button */}
       <OnboardingFooter
-        showBack={true}
-        onBack={() => router.back()}
+        showBack
+        onBack={handleBack}
         onNext={handleNext}
         disabled={!isProfileValid}
       />
@@ -221,11 +237,16 @@ const styles = StyleSheet.create({
     borderColor: '#00F5D4',
     backgroundColor: '#CEFBFB',
   },
+  genderImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+  },
   genderLabel: {
     fontSize: 14,
     fontWeight: '700',
     color: '#111827',
-    marginTop: 6,
+    marginTop: 8,
   },
   warningRow: {
     flexDirection: 'row',

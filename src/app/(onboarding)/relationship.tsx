@@ -28,11 +28,15 @@ export default function RelationshipScreen() {
 
   const handleNext = () => {
     if (!selectedStatus) return;
-    router.push('/onboarding/languages' as any);
+    router.push('/languages');
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/location');
+    }
   };
 
   return (
@@ -97,7 +101,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    alignItems: 'center',
   },
   centerContainer: {
     flex: 1,

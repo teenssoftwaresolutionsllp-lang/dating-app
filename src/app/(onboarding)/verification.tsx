@@ -23,17 +23,21 @@ export default function VerificationScreen() {
   const [selfieVerified, setSelfieVerified] = useState(false);
 
   const handleNext = () => {
-    router.push('/photos' as any);
+    router.push('/photos');
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/income');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.69} />
+        <OnboardingHeader progress={0.6} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

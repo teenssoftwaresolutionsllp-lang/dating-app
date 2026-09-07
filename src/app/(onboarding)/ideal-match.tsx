@@ -14,6 +14,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
 
 export default function IdealMatchScreen() {
   const theme = useTheme();
@@ -81,7 +83,7 @@ export default function IdealMatchScreen() {
     setMaxAge(Math.max(18, Math.min(55, calculatedAge)));
   };
 
-  // Slider pan responder for age (works on iOS, Android, tablets, and Web mouse/touch)
+  // Slider pan responder for age
   const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -96,7 +98,15 @@ export default function IdealMatchScreen() {
   );
 
   const handleNext = () => {
-    router.push('/onboarding/ready');
+    router.push('/ready');
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/looking-for');
+    }
   };
 
   // Slider progress ratio
@@ -105,12 +115,7 @@ export default function IdealMatchScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '98%', backgroundColor: theme.primaryButton }]} />
-          </View>
-        </View>
+        <OnboardingHeader progress={0.85} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -280,31 +285,11 @@ export default function IdealMatchScreen() {
         </ScrollView>
 
         {/* Footer Navigation */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[
-              styles.backButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-
-          <Pressable
-            onPress={handleNext}
-            style={[
-              styles.nextButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </Pressable>
-        </View>
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+        />
       </View>
 
       {/* Religion Selection Modal Sheet */}
@@ -392,21 +377,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -538,32 +508,6 @@ const styles = StyleSheet.create({
   },
   chipIcon: {
     marginLeft: 6,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
   modalOverlay: {
     flex: 1,

@@ -42,11 +42,15 @@ export default function LocationScreen() {
 
   const handleNext = () => {
     if (!isLocationValid) return;
-    router.push('/relationship' as any);
+    router.push('/relationship');
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/birthday');
+    }
   };
 
   const filteredCities = CITIES.filter((city) =>
@@ -66,13 +70,13 @@ export default function LocationScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header Title & Subtitle matching Screenshot 2 */}
+          {/* Header Title & Subtitle */}
           <Text style={styles.title}>Set your location</Text>
           <Text style={styles.subtitle}>
             {"Choose where you'd like to meet people and find better matches."}
           </Text>
 
-          {/* Capsule Search Bar matching Screenshot 2 */}
+          {/* Capsule Search Bar */}
           <View style={styles.searchContainer}>
             <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
@@ -88,7 +92,7 @@ export default function LocationScreen() {
             />
           </View>
 
-          {/* City Grid - 2 columns side by side */}
+          {/* City Grid - 2 columns */}
           <View style={styles.citiesGrid}>
             {filteredCities.map((city) => {
               const isSelected = selectedCity === city.id;

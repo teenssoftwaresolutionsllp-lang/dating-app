@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
 
 export default function QualificationScreen() {
   const theme = useTheme();
@@ -21,9 +22,17 @@ export default function QualificationScreen() {
   const handleSelect = (qual: string) => {
     setSelected(qual);
     router.push({
-      pathname: '/onboarding/study',
+      pathname: '/study',
       params: { qualification: qual },
     });
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/languages');
+    }
   };
 
   const activeColor = theme.primaryButton;
@@ -35,7 +44,7 @@ export default function QualificationScreen() {
         {/* Top Bar with Back Button */}
         <View style={styles.topBar}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={[
               styles.backButton,
               { backgroundColor: theme.primaryButton },
@@ -48,12 +57,7 @@ export default function QualificationScreen() {
           </Pressable>
         </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '38%', backgroundColor: theme.primaryButton }]} />
-          </View>
-        </View>
+        <OnboardingHeader progress={0.35} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -136,21 +140,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 20,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,

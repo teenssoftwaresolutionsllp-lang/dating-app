@@ -8,11 +8,19 @@ export default function OnboardingLayout() {
       <Stack.Screen name="birthday" />
       <Stack.Screen name="location" />
       <Stack.Screen name="relationship" />
+      <Stack.Screen name="languages" />
+      <Stack.Screen name="qualification" />
+      <Stack.Screen name="study" />
       <Stack.Screen name="profession" />
       <Stack.Screen name="company" />
       <Stack.Screen name="income" />
       <Stack.Screen name="verification" />
       <Stack.Screen name="photos" />
+      <Stack.Screen name="interests" />
+      <Stack.Screen name="religion" />
+      <Stack.Screen name="looking-for" />
+      <Stack.Screen name="ideal-match" />
+      <Stack.Screen name="ready" />
     </Stack>
   );
 }

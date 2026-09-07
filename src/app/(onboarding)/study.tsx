@@ -1,54 +1,96 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
 
-export default function LookingForScreen() {
+export default function StudyScreen() {
+  const { qualification } = useLocalSearchParams<{ qualification?: string }>();
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
-  const options = [
-    'Something casual',
-    'A serious relationship',
-    'Long – term relationship',
-    'Marriage',
-    'Still figuring it out',
-  ];
+  const studyOptionsMap: Record<string, string[]> = {
+    'High School': [
+      '10th / SSC',
+      '11th / Intermediate',
+      'Diploma',
+      'Other',
+    ],
+    'Bachelors': [
+      'B.Tech / B.E',
+      'B.Sc',
+      'B.Com',
+      'B.A',
+      'BBA',
+      'BCA',
+      'LLB',
+      'B. Pharmacy',
+      'B. Arch',
+      'Other',
+    ],
+    'Masters': [
+      'M.Tech / M.E',
+      'M.Sc',
+      'M.Com',
+      'M.A',
+      'MBA',
+      'MCA',
+      'LLM',
+      'M. Pharmacy',
+      'Other',
+    ],
+    'PhD': [
+      'PhD - Engineering / Technology',
+      'PhD - Science',
+      'PhD - Arts / Humanities',
+      'PhD - Management / Commerce',
+      'PhD - Other',
+    ],
+    'Others': [
+      'Vocational',
+      'Certification',
+      'Other',
+    ],
+  };
+
+  const currentQualification = qualification || 'Bachelors';
+  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Bachelors'];
 
   const [selected, setSelected] = useState<string | null>(null);
 
   const handleNext = () => {
     if (selected) {
       router.push({
-        pathname: '/onboarding/ideal-match',
-        params: { lookingFor: selected },
+        pathname: '/profession',
+        params: { qualification: currentQualification, study: selected },
       });
+    }
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/qualification');
     }
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '94%', backgroundColor: theme.primaryButton }]} />
-          </View>
-        </View>
+        <OnboardingHeader progress={0.4} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>What are you into?</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better matches.
+            Add your education and work details to complete your profile.
           </Text>
 
           {/* Section Title */}
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            What are you looking for?
+            What did you study?
           </Text>
 
           {/* Radio list options */}
@@ -91,35 +133,12 @@ export default function LookingForScreen() {
         </ScrollView>
 
         {/* Footer Navigation */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[
-              styles.backButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-
-          <Pressable
-            onPress={handleNext}
-            disabled={!selected}
-            style={[
-              styles.nextButton,
-              {
-                backgroundColor: theme.primaryButton,
-                opacity: !selected ? 0.5 : 1,
-              },
-              Platform.OS === 'web' && ({ cursor: selected ? 'pointer' : 'default' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </Pressable>
-        </View>
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          disabled={!selected}
+        />
       </View>
     </SafeAreaView>
   );
@@ -136,24 +155,10 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     justifyContent: 'space-between',
   },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: 20,
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'DM_Sans_700Bold',
@@ -171,7 +176,7 @@ const styles = StyleSheet.create({
     maxWidth: 290,
   },
   sectionTitle: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: 'DM_Sans_500Medium',
     fontSize: 16,
     marginTop: 34,
     marginBottom: 24,
@@ -201,31 +206,5 @@ const styles = StyleSheet.create({
   optionText: {
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 15,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
 });

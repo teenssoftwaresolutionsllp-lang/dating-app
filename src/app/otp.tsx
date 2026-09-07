@@ -83,7 +83,13 @@ export default function OtpScreen() {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.root, { backgroundColor: theme.background }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/login');
+            }
+          }}
           style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
           accessibilityRole="button"
         >
@@ -167,7 +173,7 @@ export default function OtpScreen() {
 
                   <PrimaryButton
                     disabled={!complete}
-                    onPress={() => router.replace('/set-profile' as any)}
+                    onPress={() => router.replace('/set-profile')}
                     style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
                   >
                     Verify
@@ -186,10 +192,6 @@ export default function OtpScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
-    width: '100%',
-  },
-  container: {
     flex: 1,
     width: '100%',
   },

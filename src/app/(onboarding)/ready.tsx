@@ -15,6 +15,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+
 
 // Vibrant celebratory color palette for ribbons, stars, hearts, and balls
 const CELEBRATION_COLORS = [
@@ -266,28 +268,19 @@ export default function ProfileReadyScreen() {
     router.replace('/(tab)/home');
   };
 
-  const progressWidthInterpolate = progressBarAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/ideal-match' as any);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
         {/* Top Animated Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <Animated.View
-              style={[
-                styles.progressFill,
-                {
-                  width: progressWidthInterpolate,
-                  backgroundColor: theme.primaryButton,
-                },
-              ]}
-            />
-          </View>
-        </View>
+       <OnboardingHeader progress={1.0} />
 
         {/* CELEBRATION BLAST OVERLAY (Ribbons, Stars, Hearts, Ball Shapes ONLY - NO Circle, NO Fog) */}
         <Animated.View
@@ -531,7 +524,7 @@ export default function ProfileReadyScreen() {
           ]}
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={[
               styles.backButton,
               { backgroundColor: theme.primaryButton },

@@ -20,17 +20,21 @@ export default function CompanyScreen() {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleNext = () => {
-    router.push('/income' as any);
+    router.push('/income');
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/profession');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.56} />
+        <OnboardingHeader progress={0.5} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -49,7 +53,7 @@ export default function CompanyScreen() {
 
             {/* Section Label */}
             <View style={styles.labelContainer}>
-              <Text style={styles.label}>Company Name</Text>
+              <Text style={styles.label}>Company Name / Organization</Text>
             </View>
 
             {/* Capsule Input Container */}
@@ -81,6 +85,7 @@ export default function CompanyScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          disabled={!companyName && companyName.trim().length === 0}
         />
       </View>
     </SafeAreaView>

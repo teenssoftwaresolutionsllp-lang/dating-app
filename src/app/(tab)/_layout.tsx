@@ -1,8 +1,16 @@
 import React from 'react';
-
-import AppTabs from '@/components/app-tabs';
+import { Stack } from 'expo-router';
 
 export default function TabLayout() {
-  return <AppTabs />;
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack.Screen name="people" />
+      <Stack.Screen name="chats" />
+      <Stack.Screen name="matches" />
+      <Stack.Screen name="likes" />
+      <Stack.Screen name="me" />
+      <Stack.Screen name="home" />
+      <Stack.Screen name="explore" />
+    </Stack>
+  );
 }
-

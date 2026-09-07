@@ -1,14 +1,15 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
 
 export default function InterestsScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
   const interestsList = [
     'Music',
@@ -41,9 +42,17 @@ export default function InterestsScreen() {
   const handleNext = () => {
     if (selectedInterests.length >= 3) {
       router.push({
-        pathname: '/onboarding/religion',
+        pathname: '/religion',
         params: { interests: JSON.stringify(selectedInterests) },
       });
+    }
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/photos');
     }
   };
 
@@ -52,12 +61,7 @@ export default function InterestsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '81%', backgroundColor: theme.primaryButton }]} />
-          </View>
-        </View>
+        <OnboardingHeader progress={0.7} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -115,35 +119,12 @@ export default function InterestsScreen() {
         </ScrollView>
 
         {/* Footer Navigation */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[
-              styles.backButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-
-          <Pressable
-            onPress={handleNext}
-            disabled={!isNextEnabled}
-            style={[
-              styles.nextButton,
-              {
-                backgroundColor: theme.primaryButton,
-                opacity: isNextEnabled ? 1 : 0.45,
-              },
-              Platform.OS === 'web' && ({ cursor: isNextEnabled ? 'pointer' : 'default' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </Pressable>
-        </View>
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          disabled={!isNextEnabled}
+        />
       </View>
     </SafeAreaView>
   );
@@ -159,21 +140,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -225,31 +191,5 @@ const styles = StyleSheet.create({
   },
   chipIcon: {
     marginLeft: 6,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
 });

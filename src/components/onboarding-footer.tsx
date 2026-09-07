@@ -10,7 +10,7 @@ interface OnboardingFooterProps {
   disabled?: boolean;
 }
 
-export function OnboardingFooter({
+export function   OnboardingFooter({
   showBack = false,
   onBack,
   onNext,
@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#00F5D4',
     alignItems: 'center',
     justifyContent: 'center',
+    bottom:30,
   },
   nextButton: {
     flex: 1,
@@ -69,6 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#00F5D4',
     alignItems: 'center',
     justifyContent: 'center',
+    bottom:30,
   },
   nextButtonFull: {
     width: '100%',
