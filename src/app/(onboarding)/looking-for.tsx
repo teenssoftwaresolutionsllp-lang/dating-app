@@ -4,6 +4,9 @@ import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-n
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
+
 
 export default function LookingForScreen() {
   const theme = useTheme();
@@ -23,9 +26,17 @@ export default function LookingForScreen() {
   const handleNext = () => {
     if (selected) {
       router.push({
-        pathname: '/onboarding/ideal-match',
+        pathname: '/(onboarding)/ideal-match',
         params: { lookingFor: selected },
       });
+    }
+  };
+
+    const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/religion' as any);
     }
   };
 
@@ -33,11 +44,7 @@ export default function LookingForScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
         {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '82%', backgroundColor: theme.primaryButton }]} />
-          </View>
-        </View>
+        <OnboardingHeader progress={0.8} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -91,35 +98,12 @@ export default function LookingForScreen() {
         </ScrollView>
 
         {/* Footer Navigation */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[
-              styles.backButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-
-          <Pressable
-            onPress={handleNext}
-            disabled={!selected}
-            style={[
-              styles.nextButton,
-              {
-                backgroundColor: theme.primaryButton,
-                opacity: !selected ? 0.5 : 1,
-              },
-              Platform.OS === 'web' && ({ cursor: selected ? 'pointer' : 'default' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </Pressable>
-        </View>
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          disabled={!selected}
+        />
       </View>
     </SafeAreaView>
   );

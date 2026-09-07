@@ -1,67 +1,145 @@
-import { router } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
-import { OptionButton } from '@/components/onboarding';
-import { useTheme } from '@/hooks/use-theme';
-
-export default function LanguageScreen() {
-  const theme = useTheme();
+export default function WelcomeScreen() {
+  const handleGetStart = () => {
+    router.push('/verified-profiles' as any);
+  };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.text }]}>Set Your Display Language</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            తెలుగులో యాప్‌ను ఉపయోగించడానికి మీ భాషను ఎంచుకోండి
-          </Text>
-          <View style={styles.options}>
-            <OptionButton onPress={() => router.push('/login' as any)}>English</OptionButton>
-            <OptionButton onPress={() => router.push('/login' as any)}>తెలుగు</OptionButton>
+    <View style={styles.root}>
+      <StatusBar style="dark" />
+      <View style={styles.responsiveContainer}>
+        {/* Background Couple Artwork */}
+        <Image
+          source={require('@/assets/images/find_perfect_match.png')}
+          style={styles.backgroundImage}
+          contentFit="contain"
+          contentPosition="bottom center"
+          priority="high"
+        />
+
+        {/* Overlay container with safe area insets */}
+        <SafeAreaView style={styles.overlayContainer} edges={['top', 'bottom']}>
+          {/* Header Text Section */}
+          <View style={styles.headerSection}>
+            <Text style={styles.titleLine1}>Find your</Text>
+            <Text style={styles.titleLine2}>
+              <Text style={styles.pinkText}>Perfect</Text>
+              <Text style={styles.blackText}> match</Text>
+            </Text>
           </View>
-        </View>
+
+          {/* Spacer to push button to bottom */}
+          <View style={styles.spacer} />
+
+          {/* Bottom Action Button */}
+          <View style={styles.bottomSection}>
+            <Pressable
+              onPress={handleGetStart}
+              style={({ pressed }) => [
+                styles.getStartButton,
+                pressed && styles.buttonPressed,
+                Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Get Start"
+            >
+              <Text style={styles.getStartButtonText}>Get Start</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
-  container: {
+  responsiveContainer: {
     flex: 1,
     width: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    maxWidth: 440,
+    position: 'relative',
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
   },
-  content: {
-    flex: 1,
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
-    maxWidth: 480,
-    alignItems: 'center',
+    height: '100%',
+  },
+  overlayContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'web' ? 48 : 88,
   },
-  title: {
+  headerSection: {
+    paddingTop: Platform.OS === 'web' ? 44 : 20,
+    paddingHorizontal: 4,
+    transform: [{ translateY: 170 }],
+  },
+  titleLine1: {
     fontFamily: 'DM_Sans_700Bold',
-    fontSize: 24,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#000000',
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
-  subtitle: {
-    maxWidth: 280,
-    marginTop: 14,
-    fontFamily: 'DM_Sans_500Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'center',
+  titleLine2: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 32,
+    fontWeight: '700',
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
-  options: {
+  pinkText: {
+    color: '#FE3562',
+  },
+  blackText: {
+    color: '#000000',
+  },
+  spacer: {
+    flex: 1,
+  },
+  bottomSection: {
+    paddingBottom: Platform.OS === 'web' ? 28 : 16,
     width: '100%',
-    maxWidth: 280,
-    gap: 24,
-    marginTop: 60,
+    alignItems: 'center',
+    bottom:30,
+  },
+  getStartButton: {
+    backgroundColor: '#00F5FF',
+    height: 52,
+    borderRadius: 26,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00F5FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+   
+  },
+  buttonPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
+  },
+  getStartButtonText: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    letterSpacing: 0.2,
   },
 });

@@ -60,12 +60,18 @@ export default function OtpScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable
-        onPress={() => router.back()}
-        style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
+      <Pressable 
+        onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/login');
+          }
+        }} 
+        style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
         accessibilityRole="button"
       >
-        <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
       </Pressable>
 
       <KeyboardAvoidingView
@@ -142,7 +148,7 @@ export default function OtpScreen() {
 
                 <PrimaryButton
                   disabled={!complete}
-                  onPress={() => router.replace('/onboarding/languages')}
+                  onPress={() => router.replace('/(onboarding)/set-profile')}
                   style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
                 >
                   Verify
@@ -246,7 +252,10 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   verifyButton: {
-    marginTop: 24,
+    marginTop: 120,
     marginBottom: 20,
   },
 });
+
+
+

@@ -4,6 +4,8 @@ import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-n
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
 
 export default function QualificationScreen() {
   const theme = useTheme();
@@ -23,7 +25,7 @@ export default function QualificationScreen() {
   const handleSelect = (qual: string) => {
     setSelected(qual);
     router.push({
-      pathname: '/onboarding/study',
+      pathname: '/(onboarding)/study',
       params: { qualification: qual },
     });
   };
@@ -46,16 +48,12 @@ export default function QualificationScreen() {
             accessibilityRole="button"
             hitSlop={12}
           >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+            <Ionicons name="chevron-back-outline" size={24} color="#000000" />
           </Pressable>
         </View>
 
         {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '66%', backgroundColor: theme.primaryButton }]} />
-          </View>
-        </View>
+       <OnboardingHeader progress={0.35} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}

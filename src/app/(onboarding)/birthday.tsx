@@ -12,11 +12,12 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 
 import { DatePicker } from '@/components/date-picker';
-import { BirthdayGraphic } from '@/components/illustrations/birthday-graphic';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { OnboardingHeader } from '@/components/onboarding-header';
+import { updateStoredUserProfile } from '@/constants/userProfile';
 
 export default function BirthdayScreen() {
   const router = useRouter();
@@ -94,11 +95,23 @@ export default function BirthdayScreen() {
 
   const handleNext = () => {
     if (!isFormValid) return;
-    router.push('/location');
+    const d = day.padStart(2, '0');
+    const m = month.padStart(2, '0');
+    const y = year;
+    const dobString = `${y}-${m}-${d}`;
+    updateStoredUserProfile({
+      dateOfBirth: dobString,
+      height: `${heightFeet}'${heightInches}" (${Math.round((parseInt(heightFeet, 10) * 12 + parseInt(heightInches, 10)) * 2.54)} cm)`,
+    });
+    router.push('/(onboarding)/location' as any);
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/set-profile' as any);
+    }
   };
 
   const handleDatePicked = (selectedDate: Date) => {
@@ -109,6 +122,9 @@ export default function BirthdayScreen() {
     setDay(d);
     setMonth(m);
     setYear(y);
+    updateStoredUserProfile({
+      dateOfBirth: `${y}-${m}-${d}`,
+    });
     setTimeout(() => {
       feetInputRef.current?.focus();
     }, 150);
@@ -116,7 +132,7 @@ export default function BirthdayScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.5} />
+      <OnboardingHeader progress={0.22} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -135,7 +151,11 @@ export default function BirthdayScreen() {
 
           {/* Birthday Party Illustration */}
           <View style={styles.illustrationContainer}>
-            <BirthdayGraphic width={280} height={150} />
+            <Image
+              source={require('@/assets/images/birthday.jpg')}
+              style={styles.birthdayImage}
+              contentFit="contain"
+            />
           </View>
 
           <View style={styles.calendarSection}>
@@ -260,6 +280,10 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  birthdayImage: {
+    width: 280,
+    height: 150,
   },
   calendarSection: {
     width: '100%',

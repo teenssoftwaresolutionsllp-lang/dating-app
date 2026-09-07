@@ -46,12 +46,18 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable
-        onPress={() => router.back()}
-        style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
+      <Pressable 
+        onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/select-language' as any);
+          }
+        }} 
+        style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
         accessibilityRole="button"
       >
-        <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
       </Pressable>
 
       <KeyboardAvoidingView
@@ -91,13 +97,13 @@ export default function LoginScreen() {
                   />
                 </View>
 
-                <Text style={[styles.or, { color: theme.textSecondary }]}>or</Text>
+                {/* <Text style={[styles.or, { color: theme.textSecondary }]}>or</Text>
 
                 <View style={styles.socials}>
                   <SocialButton type="google" theme={theme} />
                   <SocialButton type="facebook" theme={theme} />
                   <SocialButton type="instagram" theme={theme} />
-                </View>
+                </View> */}
 
                 <PrimaryButton onPress={handleLogin} style={styles.loginButton}>
                   Login
@@ -113,33 +119,33 @@ export default function LoginScreen() {
   );
 }
 
-function SocialButton({ type, theme }: { type: 'google' | 'facebook' | 'instagram'; theme: any }) {
-  const isDark = theme.text === '#ffffff';
-  let iconSource;
-  if (type === 'google') {
-    iconSource = require('@/assets/images/google-icon.png');
-  } else if (type === 'facebook') {
-    iconSource = require('@/assets/images/facebook-icon.png');
-  } else if (type === 'instagram') {
-    iconSource = require('@/assets/images/instagram-icon.png');
-  }
+// function SocialButton({ type, theme }: { type: 'google' | 'facebook' | 'instagram'; theme: any }) {
+//   const isDark = theme.text === '#ffffff';
+//   let iconSource;
+//   if (type === 'google') {
+//     iconSource = require('@/assets/images/google-icon.png');
+//   } else if (type === 'facebook') {
+//     iconSource = require('@/assets/images/facebook-icon.png');
+//   } else if (type === 'instagram') {
+//     iconSource = require('@/assets/images/instagram-icon.png');
+//   }
 
-  return (
-    <Pressable
-      style={[
-        styles.socialButton,
-        {
-          borderColor: theme.border,
-          backgroundColor: isDark ? theme.backgroundElement : '#ffffff',
-        },
-        Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-      ]}
-      accessibilityRole="button"
-    >
-      <Image source={iconSource} style={{ width: 24, height: 24 }} contentFit="contain" />
-    </Pressable>
-  );
-}
+//   return (
+//     <Pressable
+//       style={[
+//         styles.socialButton,
+//         {
+//           borderColor: theme.border,
+//           backgroundColor: isDark ? theme.backgroundElement : '#ffffff',
+//         },
+//         Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+//       ]}
+//       accessibilityRole="button"
+//     >
+//       <Image source={iconSource} style={{ width: 24, height: 24 }} contentFit="contain" />
+//     </Pressable>
+//   );
+// }
 
 const styles = StyleSheet.create({
   root: {
@@ -210,28 +216,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingHorizontal: 14,
   },
-  or: {
-    fontFamily: 'DM_Sans_400Regular',
-    fontSize: 13,
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  socials: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 32,
-    marginTop: 18,
-  },
-  socialButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
+  // or: {
+  //   fontFamily: 'DM_Sans_400Regular',
+  //   fontSize: 13,
+  //   marginTop: 20,
+  //   textAlign: 'center',
+  // },
+  // socials: {
+  //   flexDirection: 'row',
+  //   justifyContent: 'center',
+  //   gap: 32,
+  //   marginTop: 18,
+  // },
+  // socialButton: {
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  //   width: 50,
+  //   height: 50,
+  //   borderRadius: 14,
+  //   borderWidth: 1,
+  // },
   loginButton: {
-    marginTop: 24,
+    marginTop: 120,
     marginBottom: 20,
   },
 });
