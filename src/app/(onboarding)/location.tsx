@@ -55,7 +55,7 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.75} />
+      <OnboardingHeader progress={0.19} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

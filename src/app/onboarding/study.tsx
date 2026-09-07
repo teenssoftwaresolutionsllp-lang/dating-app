@@ -63,7 +63,7 @@ export default function StudyScreen() {
   const handleNext = () => {
     if (selected) {
       router.push({
-        pathname: '/onboarding/interests',
+        pathname: '/profession' as any,
         params: { qualification: currentQualification, study: selected },
       });
     }
@@ -75,7 +75,7 @@ export default function StudyScreen() {
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '45%', backgroundColor: theme.primaryButton }]} />
+            <View style={[styles.progressFill, { width: '44%', backgroundColor: theme.primaryButton }]} />
           </View>
         </View>
 

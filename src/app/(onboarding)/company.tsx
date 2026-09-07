@@ -30,7 +30,7 @@ export default function CompanyScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.65} />
+        <OnboardingHeader progress={0.56} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

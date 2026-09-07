@@ -55,7 +55,7 @@ export default function InterestsScreen() {
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '60%', backgroundColor: theme.primaryButton }]} />
+            <View style={[styles.progressFill, { width: '81%', backgroundColor: theme.primaryButton }]} />
           </View>
         </View>
 

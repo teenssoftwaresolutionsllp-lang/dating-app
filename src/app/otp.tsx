@@ -3,12 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TextInputKeyPressEventData,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,7 +36,22 @@ export default function OtpScreen() {
   }, [seconds]);
 
   function updateCode(value: string, index: number) {
-    const digit = value.replace(/\D/g, '').slice(-1);
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length > 1) {
+      const digits = cleaned.slice(0, 4).split('');
+      const next = [...code];
+      digits.forEach((d, i) => {
+        if (index + i < 4) {
+          next[index + i] = d;
+        }
+      });
+      setCode(next);
+      const nextIndex = Math.min(index + digits.length, 3);
+      inputs.current[nextIndex]?.focus();
+      return;
+    }
+
+    const digit = cleaned.slice(-1);
     const next = [...code];
     next[index] = digit;
     setCode(next);
@@ -42,9 +60,12 @@ export default function OtpScreen() {
     }
   }
 
-  function handleKeyPress(e: any, index: number) {
+  function handleKeyPress(e: NativeSyntheticEvent<TextInputKeyPressEventData>, index: number) {
     if (e.nativeEvent.key === 'Backspace') {
       if (!code[index] && index > 0) {
+        const next = [...code];
+        next[index - 1] = '';
+        setCode(next);
         inputs.current[index - 1]?.focus();
       }
     }
@@ -59,102 +80,107 @@ export default function OtpScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable
-        onPress={() => router.back()}
-        style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
-        accessibilityRole="button"
-      >
-        <Ionicons name="arrow-back" size={24} color="#ffffff" />
-      </Pressable>
-
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-          showsVerticalScrollIndicator={false}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.root, { backgroundColor: theme.background }]}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
+          accessibilityRole="button"
         >
-          <View style={styles.responsiveWrapper}>
-            <RelationshipArtwork variant="otp" />
+          <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        </Pressable>
 
-            <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
-              <View style={styles.content}>
-                <View style={styles.headingRow}>
-                  <Text style={[styles.heading, { color: theme.text }]}>Enter OTP to Verify</Text>
-                  <Pressable
-                    onPress={resend}
-                    disabled={seconds > 0}
-                    style={Platform.OS === 'web' ? ({ cursor: seconds === 0 ? 'pointer' : 'default' } as any) : {}}
-                  >
-                    <Text
-                      style={[
-                        styles.resend,
-                        { color: isDark ? '#538DFF' : '#1769FF' },
-                        seconds > 0 && styles.disabled,
-                      ]}
+        <KeyboardAvoidingView
+          style={styles.keyboardContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.responsiveWrapper}>
+              <RelationshipArtwork variant="otp" />
+
+              <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
+                <View style={styles.content}>
+                  <View style={styles.headingRow}>
+                    <Text style={[styles.heading, { color: theme.text }]}>Enter OTP to Verify</Text>
+                    <Pressable
+                      onPress={resend}
+                      disabled={seconds > 0}
+                      style={Platform.OS === 'web' ? ({ cursor: seconds === 0 ? 'pointer' : 'default' } as any) : {}}
                     >
-                      Resend in 00:{String(seconds).padStart(2, '0')}
+                      <Text
+                        style={[
+                          styles.resend,
+                          { color: isDark ? '#538DFF' : '#1769FF' },
+                          seconds > 0 && styles.disabled,
+                        ]}
+                      >
+                        Resend in 00:{String(seconds).padStart(2, '0')}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.otpRow}>
+                    {code.map((digit, index) => (
+                      <TextInput
+                        key={index}
+                        ref={(input) => {
+                          inputs.current[index] = input;
+                        }}
+                        value={digit}
+                        onChangeText={(value) => updateCode(value, index)}
+                        onKeyPress={(e) => handleKeyPress(e, index)}
+                        keyboardType="number-pad"
+                        textContentType="oneTimeCode"
+                        autoComplete="sms-otp"
+                        maxLength={index === 0 ? 4 : 1}
+                        selectTextOnFocus
+                        style={[
+                          styles.otpInput,
+                          {
+                            color: theme.text,
+                            borderColor: theme.border,
+                            backgroundColor: isDark ? theme.backgroundElement : '#ffffff',
+                          },
+                          Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+                        ]}
+                        textAlign="center"
+                      />
+                    ))}
+                  </View>
+
+                  <View style={styles.sentRow}>
+                    <Text style={[styles.sent, { color: theme.textSecondary }]}>
+                      We have sent OTP to {phone || '00000 00000'}
                     </Text>
-                  </Pressable>
-                </View>
+                    <Pressable
+                      onPress={() => router.back()}
+                      style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                    >
+                      <Ionicons name="pencil" size={14} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
 
-                <View style={styles.otpRow}>
-                  {code.map((digit, index) => (
-                    <TextInput
-                      key={index}
-                      ref={(input) => {
-                        inputs.current[index] = input;
-                      }}
-                      value={digit}
-                      onChangeText={(value) => updateCode(value, index)}
-                      onKeyPress={(e) => handleKeyPress(e, index)}
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      style={[
-                        styles.otpInput,
-                        {
-                          color: theme.text,
-                          borderColor: theme.border,
-                          backgroundColor: isDark ? theme.backgroundElement : '#ffffff',
-                        },
-                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
-                      ]}
-                      textAlign="center"
-                    />
-                  ))}
-                </View>
-
-                <View style={styles.sentRow}>
-                  <Text style={[styles.sent, { color: theme.textSecondary }]}>
-                    We have sent OTP to {phone || '00000 00000'}
-                  </Text>
-                  <Pressable
-                    onPress={() => router.back()}
-                    style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                  <PrimaryButton
+                    disabled={!complete}
+                    onPress={() => router.replace('/set-profile' as any)}
+                    style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
                   >
-                    <Ionicons name="pencil" size={14} color={theme.textSecondary} />
-                  </Pressable>
+                    Verify
+                  </PrimaryButton>
+
+                  <LegalFooter />
                 </View>
-
-                <PrimaryButton
-                  disabled={!complete}
-                  onPress={() => router.replace('/onboarding/languages')}
-                  style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
-                >
-                  Verify
-                </PrimaryButton>
-
-                <LegalFooter />
-              </View>
-            </SafeAreaView>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+              </SafeAreaView>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -163,7 +189,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  dismissArea: {
+  container: {
     flex: 1,
     width: '100%',
   },

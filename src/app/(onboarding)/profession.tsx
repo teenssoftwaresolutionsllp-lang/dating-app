@@ -57,7 +57,7 @@ export default function ProfessionScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.58} />
+        <OnboardingHeader progress={0.50} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

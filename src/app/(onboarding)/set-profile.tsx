@@ -32,7 +32,7 @@ export default function SetProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.25} />
+      <OnboardingHeader progress={0.06} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -121,7 +121,12 @@ export default function SetProfileScreen() {
       </KeyboardAvoidingView>
 
       {/* Action Button */}
-      <OnboardingFooter showBack={false} onNext={handleNext} disabled={!isProfileValid} />
+      <OnboardingFooter
+        showBack={true}
+        onBack={() => router.back()}
+        onNext={handleNext}
+        disabled={!isProfileValid}
+      />
     </SafeAreaView>
   );
 }

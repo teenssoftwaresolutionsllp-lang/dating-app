@@ -116,7 +116,7 @@ export default function BirthdayScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.5} />
+      <OnboardingHeader progress={0.12} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

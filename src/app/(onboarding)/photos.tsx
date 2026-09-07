@@ -41,7 +41,7 @@ export default function AddPhotosScreen() {
   };
 
   const handleNext = () => {
-    router.replace('/(tab)' as any);
+    router.push('/onboarding/interests');
   };
 
   const handleBack = () => {
@@ -51,7 +51,7 @@ export default function AddPhotosScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={1.0} />
+        <OnboardingHeader progress={0.75} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

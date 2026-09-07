@@ -146,6 +146,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
+  dismissArea: {
+    flex: 1,
+    width: '100%',
+  },
   keyboardContainer: {
     flex: 1,
     width: '100%',

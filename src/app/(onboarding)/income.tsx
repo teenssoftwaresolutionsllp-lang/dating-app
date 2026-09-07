@@ -37,7 +37,7 @@ export default function IncomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.72} />
+        <OnboardingHeader progress={0.62} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

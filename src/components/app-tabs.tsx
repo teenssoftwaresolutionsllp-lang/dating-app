@@ -18,7 +18,7 @@ export default function AppTabs() {
         tabBarStyle: { backgroundColor: colors.backgroundElement },
       }}>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (

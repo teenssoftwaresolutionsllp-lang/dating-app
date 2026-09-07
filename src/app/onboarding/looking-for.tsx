@@ -35,7 +35,7 @@ export default function LookingForScreen() {
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={[styles.progressBar, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
-            <View style={[styles.progressFill, { width: '82%', backgroundColor: theme.primaryButton }]} />
+            <View style={[styles.progressFill, { width: '94%', backgroundColor: theme.primaryButton }]} />
           </View>
         </View>
 

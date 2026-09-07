@@ -33,7 +33,7 @@ export default function VerificationScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.82} />
+        <OnboardingHeader progress={0.69} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
