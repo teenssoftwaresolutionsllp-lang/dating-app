@@ -18,6 +18,12 @@ export default function AppTabs() {
         tabBarStyle: { backgroundColor: colors.backgroundElement },
       }}>
       <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="home"
         options={{
           title: 'Home',

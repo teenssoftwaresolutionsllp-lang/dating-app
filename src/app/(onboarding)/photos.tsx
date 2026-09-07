@@ -131,7 +131,7 @@ export default function AddPhotosScreen() {
           <View style={styles.warningRow}>
             <Ionicons name="information-circle-outline" size={18} color="#FF3B30" style={styles.warningIcon} />
             <Text style={styles.warningText}>
-              Real photos only. AI-generated or misleading images aren't allowed.
+              Real photos only. AI-generated or misleading images aren&apos;t allowed.
             </Text>
           </View>
         </ScrollView>

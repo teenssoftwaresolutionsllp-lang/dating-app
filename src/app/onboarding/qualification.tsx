@@ -1,15 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function QualificationScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
-
   const qualifications = [
     'High School',
     'Bachelors',

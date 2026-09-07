@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   Modal,
   PanResponder,
@@ -21,7 +21,6 @@ export default function IdealMatchScreen() {
   const insets = useSafeAreaInsets();
 
   // Age state (18 to 55)
-  const [minAge] = useState(18);
   const [maxAge, setMaxAge] = useState(35);
   const [trackWidth, setTrackWidth] = useState(240);
 
@@ -83,7 +82,7 @@ export default function IdealMatchScreen() {
   };
 
   // Slider pan responder for age (works on iOS, Android, tablets, and Web mouse/touch)
-  const panResponder = useRef(
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -94,7 +93,7 @@ export default function IdealMatchScreen() {
         handleSliderTouch(evt.nativeEvent.locationX);
       },
     })
-  ).current;
+  );
 
   const handleNext = () => {
     router.push('/onboarding/ready');

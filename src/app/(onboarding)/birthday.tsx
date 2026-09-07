@@ -28,11 +28,7 @@ export default function BirthdayScreen() {
   const [heightInches, setHeightInches] = useState('6');
 
   const [pickerDate, setPickerDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const dayInputRef = useRef<TextInput>(null);
-  const monthInputRef = useRef<TextInput>(null);
-  const yearInputRef = useRef<TextInput>(null);
   const feetInputRef = useRef<TextInput>(null);
   const inchesInputRef = useRef<TextInput>(null);
 
@@ -143,7 +139,6 @@ export default function BirthdayScreen() {
               value={pickerDate}
               onChange={handleDatePicked}
               onNextField={() => {
-                setShowDatePicker(false);
                 feetInputRef.current?.focus();
               }}
               placeholder="DD/MM/YY"
