@@ -12,7 +12,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { CustomTabBar } from '@/components/CustomTabBar';
+import { PhotoActionSheetModal } from '@/components/PhotoActionSheetModal';
 import { ASSET_IMAGES } from '@/constants/datingData';
 import {
   UserProfile,
@@ -40,11 +42,36 @@ const ALL_INTEREST_OPTIONS = [
   'Art & Design',
 ];
 
+const VIBE_ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Movies: 'videocam-outline',
+  Travel: 'compass-outline',
+  Food: 'restaurant-outline',
+  Fitness: 'barbell-outline',
+  Music: 'musical-notes-outline',
+  Photography: 'camera-outline',
+  Gaming: 'game-controller-outline',
+  Art: 'color-palette-outline',
+  Cooking: 'flame-outline',
+  Nature: 'leaf-outline',
+  Coffee: 'cafe-outline',
+  Nightlife: 'moon-outline',
+  Reading: 'book-outline',
+  Tech: 'laptop-outline',
+  Pets: 'paw-outline',
+  Yoga: 'body-outline',
+};
+
+function getVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
+  return VIBE_ICON_MAP[vibe] || 'sparkles-outline';
+}
+
 export default function MeScreen({ showTabBar = true, showHeaderBar = true }: MeScreenProps = {}) {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>(() => getStoredUserProfile());
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<UserProfile>(() => getStoredUserProfile());
   const [showToast, setShowToast] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeUserProfile((updated) => {
@@ -52,6 +79,16 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
     });
     return unsubscribe;
   }, []);
+
+  const handlePhotoSelected = (uri: string) => {
+    const updated = updateStoredUserProfile({ avatarUri: uri });
+    setProfile(updated);
+    setEditForm((prev) => ({ ...prev, avatarUri: uri }));
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 2500);
+  };
 
   // Open Edit View
   const handleOpenEdit = () => {
@@ -114,8 +151,15 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
             >
               {/* Change Avatar Row */}
               <View style={styles.editAvatarRow}>
-                <Image source={ASSET_IMAGES.userProfile} style={styles.editAvatarImage} />
-                <TouchableOpacity style={styles.changePhotoButton} activeOpacity={0.8}>
+                <Image
+                  source={editForm.avatarUri ? { uri: editForm.avatarUri } : (profile.avatarUri ? { uri: profile.avatarUri } : ASSET_IMAGES.userProfile)}
+                  style={styles.editAvatarImage}
+                />
+                <TouchableOpacity
+                  style={styles.changePhotoButton}
+                  onPress={() => setShowPhotoModal(true)}
+                  activeOpacity={0.8}
+                >
                   <Ionicons name="camera-outline" size={16} color="#0F766E" />
                   <Text style={styles.changePhotoText}>Change Photo</Text>
                 </TouchableOpacity>
@@ -298,7 +342,11 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
               <Ionicons name="card-outline" size={22} color="#0F766E" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Profile</Text>
-            <TouchableOpacity style={styles.headerIconButton} onPress={handleOpenEdit} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => router.push('/settings')}
+              activeOpacity={0.7}
+            >
               <Ionicons name="settings-outline" size={22} color="#0F766E" />
             </TouchableOpacity>
           </View>
@@ -320,8 +368,15 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           {/* User Profile Card Header */}
           <View style={styles.profileHeaderCard}>
             <View style={styles.avatarContainer}>
-              <Image source={ASSET_IMAGES.userProfile} style={styles.avatarImage} />
-              <TouchableOpacity style={styles.cameraEditBadge} onPress={handleOpenEdit} activeOpacity={0.85}>
+              <Image
+                source={profile.avatarUri ? { uri: profile.avatarUri } : ASSET_IMAGES.userProfile}
+                style={styles.avatarImage}
+              />
+              <TouchableOpacity
+                style={styles.cameraEditBadge}
+                onPress={() => setShowPhotoModal(true)}
+                activeOpacity={0.85}
+              >
                 <Ionicons name="camera" size={14} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -352,7 +407,11 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
               <View style={styles.progressBarBackground}>
                 <View style={[styles.progressBarFill, { width: '80%' }]} />
               </View>
-              <TouchableOpacity activeOpacity={0.7} style={styles.completeLinkTouch} onPress={handleOpenEdit}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.completeLinkTouch}
+                onPress={() => router.push('/(onboarding)/set-profile')}
+              >
                 <Text style={styles.completeLinkText}>Complete Your Profile</Text>
               </TouchableOpacity>
             </View>
@@ -362,7 +421,7 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>About</Text>
-              <TouchableOpacity onPress={handleOpenEdit} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => router.push('/edit-about')} activeOpacity={0.7}>
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -375,46 +434,28 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>My Vibes</Text>
-              <TouchableOpacity onPress={handleOpenEdit} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => router.push('/edit-vibes')}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.vibesRow}>
-              <View style={styles.vibeItem}>
-                <View style={styles.vibeIconCircle}>
-                  <Ionicons name="videocam-outline" size={22} color="#0F766E" />
+              {(profile.vibes && profile.vibes.length > 0
+                ? profile.vibes
+                : ['Movies', 'Travel', 'Food', 'Fitness', 'Music']
+              ).map((vibe, index) => (
+                <View key={index} style={styles.vibeItem}>
+                  <View style={styles.vibeIconCircle}>
+                    <Ionicons name={getVibeIcon(vibe)} size={22} color="#0F766E" />
+                  </View>
+                  <Text style={styles.vibeLabel} numberOfLines={1}>
+                    {vibe}
+                  </Text>
                 </View>
-                <Text style={styles.vibeLabel}>Movies</Text>
-              </View>
-
-              <View style={styles.vibeItem}>
-                <View style={styles.vibeIconCircle}>
-                  <Ionicons name="compass-outline" size={22} color="#0F766E" />
-                </View>
-                <Text style={styles.vibeLabel}>Travel</Text>
-              </View>
-
-              <View style={styles.vibeItem}>
-                <View style={styles.vibeIconCircle}>
-                  <Ionicons name="restaurant-outline" size={22} color="#0F766E" />
-                </View>
-                <Text style={styles.vibeLabel}>Food</Text>
-              </View>
-
-              <View style={styles.vibeItem}>
-                <View style={styles.vibeIconCircle}>
-                  <Ionicons name="barbell-outline" size={22} color="#0F766E" />
-                </View>
-                <Text style={styles.vibeLabel}>Fitness</Text>
-              </View>
-
-              <View style={styles.vibeItem}>
-                <View style={styles.vibeIconCircle}>
-                  <Ionicons name="musical-notes-outline" size={22} color="#0F766E" />
-                </View>
-                <Text style={styles.vibeLabel}>Music</Text>
-              </View>
+              ))}
             </View>
           </View>
 
@@ -422,7 +463,10 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>{"What I'm Looking For"}</Text>
-              <TouchableOpacity onPress={handleOpenEdit} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => router.push('/edit-looking-for')}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -441,7 +485,10 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Profile Details</Text>
-              <TouchableOpacity onPress={handleOpenEdit} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => router.push('/edit-details')}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -501,7 +548,10 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>My Interests</Text>
-              <TouchableOpacity onPress={handleOpenEdit} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => router.push('/edit-interests')}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -530,6 +580,13 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
             <Ionicons name="checkmark-circle-outline" size={24} color="#166534" />
           </View>
         </ScrollView>
+
+        {/* Photo Picker Action Sheet Modal */}
+        <PhotoActionSheetModal
+          visible={showPhotoModal}
+          onClose={() => setShowPhotoModal(false)}
+          onPhotoSelected={handlePhotoSelected}
+        />
 
         {showTabBar && <CustomTabBar />}
       </View>
