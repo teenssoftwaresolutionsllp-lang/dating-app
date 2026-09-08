@@ -1,18 +1,25 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-
+import { updateStoredUserProfile } from '@/constants/userProfile';
 
 export default function StudyScreen() {
   const { qualification } = useLocalSearchParams<{ qualification?: string }>();
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
   const studyOptionsMap: Record<string, string[]> = {
     'High School': [
@@ -49,30 +56,47 @@ export default function StudyScreen() {
       'PhD - Science',
       'PhD - Arts / Humanities',
       'PhD - Management / Commerce',
-      'PhD - Other',
+      'Other',
     ],
     'Others': [
-      'Vocational',
-      'Certification',
+      'ITI / Vocational',
+      'Certification / Professional Course',
       'Other',
     ],
   };
 
-  const currentQualification = qualification || 'Bachelors';
-  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Bachelors'];
+  const currentQualification = qualification || 'Others';
+  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Others'];
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [otherText, setOtherText] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
-  const handleNext = () => {
-    if (selected) {
-      router.push({
-        pathname: '/(onboarding)/profession',
-        params: { qualification: currentQualification, study: selected },
-      });
+  const isOtherSelected = selected === 'Other' || (selected ? selected.endsWith('Other') : false);
+  const isFormValid = Boolean(
+    selected && (!isOtherSelected || otherText.trim().length > 0)
+  );
+
+  const handleOptionPress = (option: string) => {
+    setSelected(option);
+    if (option !== 'Other' && !option.endsWith('Other')) {
+      setOtherText('');
     }
   };
 
-    const handleBack = () => {
+  const handleNext = () => {
+    if (!selected) return;
+    const finalStudy = isOtherSelected ? otherText.trim() || 'Other' : selected;
+    updateStoredUserProfile({
+      education: `${currentQualification} - ${finalStudy}`,
+    });
+    router.push({
+      pathname: '/(onboarding)/profession',
+      params: { qualification: currentQualification, study: finalStudy },
+    });
+  };
+
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -82,68 +106,112 @@ export default function StudyScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-     <OnboardingHeader progress={0.4} />
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Add your education and work details to complete your profile.
-          </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <View style={styles.responsiveContainer}>
+          {/* Progress Bar */}
+          <OnboardingHeader progress={0.4} />
 
-          {/* Section Title */}
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            What did you study?
-          </Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Add your education and work details to complete your profile.
+            </Text>
 
-          {/* Radio list options */}
-          <View style={styles.optionsList}>
-            {options.map((option) => {
-              const isSelected = selected === option;
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() => setSelected(option)}
-                  style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: isSelected }}
-                >
-                  {/* Radio Circle */}
-                  <View
-                    style={[
-                      styles.radioCircle,
-                      { borderColor: isSelected ? theme.primaryButton : theme.border },
-                    ]}
-                  >
-                    {isSelected && (
+            {/* Section Title */}
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              What did you study?
+            </Text>
+
+            {/* Radio list options */}
+            <View style={styles.optionsList}>
+              {options.map((option) => {
+                const isSelected = selected === option;
+                const isOther = option === 'Other' || option.endsWith('Other');
+
+                return (
+                  <View key={option} style={styles.optionWrapper}>
+                    <Pressable
+                      onPress={() => handleOptionPress(option)}
+                      style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected }}
+                    >
+                      {/* Radio Circle */}
                       <View
                         style={[
-                          styles.radioInnerCircle,
-                          { backgroundColor: theme.primaryButton },
+                          styles.radioCircle,
+                          { borderColor: isSelected ? theme.primaryButton : theme.border },
                         ]}
-                      />
+                      >
+                        {isSelected && (
+                          <View
+                            style={[
+                              styles.radioInnerCircle,
+                              { backgroundColor: theme.primaryButton },
+                            ]}
+                          />
+                        )}
+                      </View>
+
+                      {/* Option Text */}
+                      <Text style={[styles.optionText, { color: theme.text }]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+
+                    {/* Text input box below Other option when selected */}
+                    {isSelected && isOther && (
+                      <View
+                        style={[
+                          styles.otherInputContainer,
+                          {
+                            backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
+                            borderColor: isInputFocused ? theme.primaryButton : (isDark ? '#374151' : '#D1D5DB'),
+                          },
+                        ]}
+                      >
+                        <TextInput
+                          style={[
+                            styles.otherTextInput,
+                            { color: theme.text },
+                          ]}
+                          value={otherText}
+                          onChangeText={setOtherText}
+                          onFocus={() => setIsInputFocused(true)}
+                          onBlur={() => setIsInputFocused(false)}
+                          placeholder="Enter your field of study"
+                          placeholderTextColor={theme.textSecondary || '#9CA3AF'}
+                          autoFocus
+                          selectionColor={theme.primaryButton}
+                          returnKeyType="done"
+                          onSubmitEditing={isFormValid ? handleNext : undefined}
+                          {...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {})}
+                        />
+                      </View>
                     )}
                   </View>
+                );
+              })}
+            </View>
+          </ScrollView>
 
-                  {/* Option Text */}
-                  <Text style={[styles.optionText, { color: theme.text }]}>
-                    {option}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        {/* Footer Navigation */}
-        <OnboardingFooter
-          showBack
-          onBack={handleBack}
-          onNext={handleNext}
-          disabled={!selected}
-        />
-      </View>
+          {/* Footer Navigation */}
+          <OnboardingFooter
+            showBack
+            onBack={handleBack}
+            onNext={handleNext}
+            disabled={!isFormValid}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -153,26 +221,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  keyboardView: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+  },
   responsiveContainer: {
     flex: 1,
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -203,6 +261,9 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 22,
   },
+  optionWrapper: {
+    width: '100%',
+  },
   radioContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -225,30 +286,20 @@ const styles = StyleSheet.create({
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 15,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
+  otherInputContainer: {
+    marginTop: 12,
+    marginLeft: 36,
     height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
     justifyContent: 'center',
   },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
+  otherTextInput: {
+    fontSize: 15,
+    fontFamily: 'DM_Sans_400Regular',
+    paddingVertical: 0,
+    height: '100%',
+    width: '100%',
   },
 });
