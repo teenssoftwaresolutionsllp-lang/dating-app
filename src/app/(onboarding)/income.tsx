@@ -27,17 +27,21 @@ export default function IncomeScreen() {
 
   const handleNext = () => {
     if (!selectedIncome) return;
-    router.push('/verification' as any);
+    router.push('/(onboarding)/verification' as any);
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/company' as any);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.72} />
+        <OnboardingHeader progress={0.55} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

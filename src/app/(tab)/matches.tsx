@@ -1,6 +1,6 @@
 import React from 'react';
 import DatingProfileScreen from '@/components/DatingProfileScreen';
 
-export default function HomeScreen() {
+export default function MatchesScreen() {
   return <DatingProfileScreen />;
 }

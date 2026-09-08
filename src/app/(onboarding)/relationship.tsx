@@ -28,17 +28,21 @@ export default function RelationshipScreen() {
 
   const handleNext = () => {
     if (!selectedStatus) return;
-    router.push('/profession' as any);
+    router.push('/(onboarding)/languages' as any);
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/location' as any);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.52} />
+        <OnboardingHeader progress={0.25} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

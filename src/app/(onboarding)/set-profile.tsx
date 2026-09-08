@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { FemaleAvatar, MaleAvatar } from '@/components/illustrations/gender-avatars';
+import { Image } from 'expo-image';
 
 export default function SetProfileScreen() {
   const router = useRouter();
@@ -27,12 +27,20 @@ export default function SetProfileScreen() {
 
   const handleNext = () => {
     if (!isProfileValid) return;
-    router.push('/birthday');
+    router.push('/(onboarding)/birthday' as any);
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/otp' as any);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.25} />
+      <OnboardingHeader progress={0.05} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -91,9 +99,13 @@ export default function SetProfileScreen() {
                   gender === 'Female' && styles.genderCardSelected,
                 ]}
                 onPress={() => setGender('Female')}
-                activeOpacity={0.8}
+                activeOpacity={0.3}
               >
-                <FemaleAvatar size={100} />
+                <Image
+                  source={require('@/assets/images/female-avatar.jpg')}
+                  style={styles.genderImage}
+                  contentFit="contain"
+                />
                 <Text style={styles.genderLabel}>Female</Text>
               </TouchableOpacity>
 
@@ -104,9 +116,13 @@ export default function SetProfileScreen() {
                   gender === 'Male' && styles.genderCardSelected,
                 ]}
                 onPress={() => setGender('Male')}
-                activeOpacity={0.8}
+                activeOpacity={0.3}
               >
-                <MaleAvatar size={100} />
+                <Image
+                  source={require('@/assets/images/male-avatar.jpg')}
+                  style={styles.genderImage}
+                  contentFit="contain"
+                />
                 <Text style={styles.genderLabel}>Male</Text>
               </TouchableOpacity>
             </View>
@@ -121,7 +137,12 @@ export default function SetProfileScreen() {
       </KeyboardAvoidingView>
 
       {/* Action Button */}
-      <OnboardingFooter showBack={false} onNext={handleNext} disabled={!isProfileValid} />
+      <OnboardingFooter
+        showBack
+        onBack={handleBack}
+        onNext={handleNext}
+        disabled={!isProfileValid}
+      />
     </SafeAreaView>
   );
 }
@@ -204,7 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 150,
     height: 150,
-    backgroundColor: '#E0FDFD',
+    // backgroundColor: '#E0FDFD',
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -214,13 +235,19 @@ const styles = StyleSheet.create({
   },
   genderCardSelected: {
     borderColor: '#00F5D4',
-    backgroundColor: '#CEFBFB',
+    // backgroundColor: '#ccf8fb',
+  },
+  genderImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    
   },
   genderLabel: {
     fontSize: 14,
     fontWeight: '700',
     color: '#111827',
-    marginTop: 6,
+    marginTop: 8,
   },
   warningRow: {
     flexDirection: 'row',

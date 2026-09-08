@@ -47,17 +47,21 @@ export default function ProfessionScreen() {
 
   const handleNext = () => {
     if (!selectedProfession && !searchQuery.trim()) return;
-    router.push('/company' as any);
+    router.push('/(onboarding)/company' as any);
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/study' as any);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={0.58} />
+        <OnboardingHeader progress={0.45} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

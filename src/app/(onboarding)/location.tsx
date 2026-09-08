@@ -42,11 +42,15 @@ export default function LocationScreen() {
 
   const handleNext = () => {
     if (!isLocationValid) return;
-    router.push('/relationship' as any);
+    router.push('/(onboarding)/relationship' as any);
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/birthday' as any);
+    }
   };
 
   const filteredCities = CITIES.filter((city) =>
@@ -55,7 +59,7 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.75} />
+      <OnboardingHeader progress={0.2} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

@@ -41,17 +41,21 @@ export default function AddPhotosScreen() {
   };
 
   const handleNext = () => {
-    router.replace('/(tab)' as any);
+    router.push('/(onboarding)/interests' as any);
   };
 
   const handleBack = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/verification' as any);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <OnboardingHeader progress={1.0} />
+        <OnboardingHeader progress={0.65} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

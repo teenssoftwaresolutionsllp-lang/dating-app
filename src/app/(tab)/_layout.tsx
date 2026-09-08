@@ -1,21 +1,16 @@
-// import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-// import { useColorScheme } from 'react-native';
-
-// import AppTabs from '@/components/app-tabs';
-
-// export default function TabLayout() {
-//   const colorScheme = useColorScheme();
-//   return (
-//     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-//       <AppTabs />
-//     </ThemeProvider>
-//   );
-// }
-
-
-
-import AppTabs from '@/components/app-tabs';
+import React from 'react';
+import { Stack } from 'expo-router';
 
 export default function TabLayout() {
-  return <AppTabs />;
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack.Screen name="people" />
+      <Stack.Screen name="chats" />
+      <Stack.Screen name="matches" />
+      <Stack.Screen name="likes" />
+      <Stack.Screen name="me" />
+      <Stack.Screen name="home" />
+      <Stack.Screen name="explore" />
+    </Stack>
+  );
 }

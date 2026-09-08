@@ -88,6 +88,7 @@ export function DatePicker({
 
   const handlePrevMonth = () => {
     setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    
   };
 
   const handleNextMonth = () => {
