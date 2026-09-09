@@ -10,8 +10,8 @@ export default function VerifiedProfilesScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  // Clamped width matching responsiveContainer (maxWidth: 440)
-  const containerWidth = Math.min(screenWidth, 440);
+  // Clamped width matching responsiveContainer (maxWidth: 480)
+  const containerWidth = Math.min(screenWidth, 480);
 
   // The artwork is 1024 x 1536 (Aspect ratio 2:3).
   // In the 1024x1536 artwork:
@@ -42,7 +42,7 @@ export default function VerifiedProfilesScreen() {
           onPress={handleBack}
           style={[
             styles.backButton,
-            { top: insets.top + (Platform.OS === 'web' ? 16 : 8), left: 16 },
+            { top: insets.top + 8, left: 16 },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   responsiveContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 480,
     position: 'relative',
     backgroundColor: '#ffffff',
     overflow: 'hidden',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   bottomSection: {
     width: '100%',
     paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'web' ? 24 : 16,
+    paddingBottom: 16,
     alignItems: 'center',
     gap: 16,
     bottom:30,

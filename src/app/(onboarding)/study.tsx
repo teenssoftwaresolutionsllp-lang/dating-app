@@ -191,7 +191,7 @@ export default function StudyScreen() {
                           selectionColor={theme.primaryButton}
                           returnKeyType="done"
                           onSubmitEditing={isFormValid ? handleNext : undefined}
-                          {...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {})}
+                          {...({ outlineStyle: 'none' } as any)}
                         />
                       </View>
                     )}

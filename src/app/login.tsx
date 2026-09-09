@@ -91,7 +91,7 @@ export default function LoginScreen() {
                     style={[
                       styles.input,
                       { color: theme.text },
-                      Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+                      { outlineStyle: 'none' } as any,
                     ]}
                   />
                 </View>

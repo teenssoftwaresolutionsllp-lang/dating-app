@@ -10,7 +10,8 @@ import {
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { Platform } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
+import '@/global.css';
 
 if (Platform.OS !== 'web') {
   void SplashScreen.preventAutoHideAsync();
@@ -34,11 +35,50 @@ export default function RootLayout() {
     return null;
   }
 
-  return (
-    <SafeAreaProvider>
+  const content = (
+    <>
       <Stack screenOptions={{ headerShown: false }} />
       {Platform.OS !== 'web' && <AnimatedSplashOverlay />}
+    </>
+  );
+
+  return (
+    <SafeAreaProvider style={styles.provider}>
+      {Platform.OS === 'web' ? (
+        <View style={styles.webOuterContainer}>
+          <View style={styles.webAppContainer}>
+            {content}
+          </View>
+        </View>
+      ) : (
+        content
+      )}
     </SafeAreaProvider>
   );
 }
-
+
+const styles = StyleSheet.create({
+  provider: {
+    flex: 1,
+  },
+  webOuterContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webAppContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 25,
+  },
+});
