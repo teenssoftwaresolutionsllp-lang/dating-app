@@ -6,9 +6,8 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
-  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
@@ -80,7 +79,7 @@ export default function LikesScreen() {
                     <Image
                       source={item.image}
                       style={styles.blurredCardImage}
-                      blurRadius={Platform.OS === 'web' ? 8 : 10}
+                      blurRadius={10}
                       resizeMode="cover"
                     />
                     <View style={styles.blurredCardOverlay} />

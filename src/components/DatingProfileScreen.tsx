@@ -7,14 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView,
   StatusBar,
   Animated,
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
-  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { router } from 'expo-router';
@@ -508,7 +507,7 @@ export default function DatingProfileScreen() {
                         <Image
                           source={item.image}
                           style={styles.blurredCardImage}
-                          blurRadius={Platform.OS === 'web' ? 8 : 10}
+                          blurRadius={10}
                           resizeMode="cover"
                         />
                         <View style={styles.blurredCardOverlay} />

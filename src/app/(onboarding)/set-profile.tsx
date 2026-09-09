@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
   },
   helperText: {
     fontSize: 12,

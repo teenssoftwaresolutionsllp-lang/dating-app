@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'web' ? 48 : 88,
+    paddingTop: 88,
   },
   title: {
     fontFamily: 'DM_Sans_700Bold',

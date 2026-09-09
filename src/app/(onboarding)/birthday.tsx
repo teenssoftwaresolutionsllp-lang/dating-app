@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     textAlign: 'center',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
   },
   errorMessage: {
     fontSize: 14,

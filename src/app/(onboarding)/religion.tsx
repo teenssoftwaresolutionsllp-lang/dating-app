@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 20,
