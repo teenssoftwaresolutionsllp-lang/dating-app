@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -29,11 +29,7 @@ export default function BirthdayScreen() {
   const [heightInches, setHeightInches] = useState('6');
 
   const [pickerDate, setPickerDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const dayInputRef = useRef<TextInput>(null);
-  const monthInputRef = useRef<TextInput>(null);
-  const yearInputRef = useRef<TextInput>(null);
   const feetInputRef = useRef<TextInput>(null);
   const inchesInputRef = useRef<TextInput>(null);
 
@@ -103,14 +99,14 @@ export default function BirthdayScreen() {
       dateOfBirth: dobString,
       height: `${heightFeet}'${heightInches}" (${Math.round((parseInt(heightFeet, 10) * 12 + parseInt(heightInches, 10)) * 2.54)} cm)`,
     });
-    router.push('/(onboarding)/location' as any);
+    router.push('/location');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/set-profile' as any);
+      router.replace('/set-profile');
     }
   };
 
@@ -132,7 +128,7 @@ export default function BirthdayScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.22} />
+      <OnboardingHeader progress={0.12} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -143,7 +139,7 @@ export default function BirthdayScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Title & Subtitle matching Screenshot 1 */}
+          {/* Title & Subtitle */}
           <Text style={styles.title}>When is your Birthday?</Text>
           <Text style={styles.subtitle}>
             Write your birth year to complete your profile
@@ -163,7 +159,6 @@ export default function BirthdayScreen() {
               value={pickerDate}
               onChange={handleDatePicked}
               onNextField={() => {
-                setShowDatePicker(false);
                 feetInputRef.current?.focus();
               }}
               placeholder="DD/MM/YY"
@@ -196,7 +191,6 @@ export default function BirthdayScreen() {
                     <Ionicons name="chevron-down" size={18} color="#64748B" />
                   </Pressable>
                 </View>
-
               </View>
 
               {/* Inches Spinner */}
@@ -219,7 +213,6 @@ export default function BirthdayScreen() {
                     <Ionicons name="chevron-down" size={18} color="#64748B" />
                   </Pressable>
                 </View>
-
               </View>
             </View>
 
@@ -290,53 +283,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
   },
-  dateInputsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-    width: '100%',
-    marginTop: 6,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-  },
-  dateColumn: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  columnLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  underlineInput: {
-    width: '100%',
-    height: 40,
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#D1D5DB',
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    textAlign: 'center',
-    paddingVertical: 0,
-    backgroundColor: '#FFFFFF',
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
-  },
-  datePickerQuickTrigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: '#E0FDFD',
-    marginBottom: 24,
-  },
-  quickPickerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#00B49F',
-  },
   heightSection: {
     alignItems: 'center',
     marginTop: 24,
@@ -391,34 +337,5 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#EF4444',
     marginTop: 8,
-  },
-  scrollerContainer: {
-    width: '100%',
-    marginTop: 24,
-    height: 200,
-    borderRadius: 14,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  scrollerItem: {
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  scrollerItemSelected: {
-    backgroundColor: '#E0FDFD',
-  },
-  scrollerItemText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#9CA3AF',
-  },
-  scrollerItemTextSelected: {
-    color: '#00B49F',
-    fontWeight: '700',
   },
 });

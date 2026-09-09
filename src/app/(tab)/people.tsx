@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   SafeAreaView,
-  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';

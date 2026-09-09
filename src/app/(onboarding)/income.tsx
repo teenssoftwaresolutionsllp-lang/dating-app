@@ -27,14 +27,14 @@ export default function IncomeScreen() {
 
   const handleNext = () => {
     if (!selectedIncome) return;
-    router.push('/(onboarding)/verification' as any);
+    router.push('/verification');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/company' as any);
+      router.replace('/company');
     }
   };
 

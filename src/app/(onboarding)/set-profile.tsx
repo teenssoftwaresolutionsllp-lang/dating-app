@@ -12,10 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { Image } from 'expo-image';
 
 export default function SetProfileScreen() {
   const router = useRouter();
@@ -27,20 +27,20 @@ export default function SetProfileScreen() {
 
   const handleNext = () => {
     if (!isProfileValid) return;
-    router.push('/(onboarding)/birthday' as any);
+    router.push('/birthday');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/otp' as any);
+      router.replace('/otp');
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.05} />
+      <OnboardingHeader progress={0.06} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -99,7 +99,7 @@ export default function SetProfileScreen() {
                   gender === 'Female' && styles.genderCardSelected,
                 ]}
                 onPress={() => setGender('Female')}
-                activeOpacity={0.3}
+                activeOpacity={0.8}
               >
                 <Image
                   source={require('@/assets/images/female-avatar.jpg')}
@@ -116,7 +116,7 @@ export default function SetProfileScreen() {
                   gender === 'Male' && styles.genderCardSelected,
                 ]}
                 onPress={() => setGender('Male')}
-                activeOpacity={0.3}
+                activeOpacity={0.8}
               >
                 <Image
                   source={require('@/assets/images/male-avatar.jpg')}
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 150,
     height: 150,
-    // backgroundColor: '#E0FDFD',
+    backgroundColor: '#E0FDFD',
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -235,13 +235,12 @@ const styles = StyleSheet.create({
   },
   genderCardSelected: {
     borderColor: '#00F5D4',
-    // backgroundColor: '#ccf8fb',
+    backgroundColor: '#CEFBFB',
   },
   genderImage: {
     width: 80,
     height: 80,
     borderRadius: 16,
-    
   },
   genderLabel: {
     fontSize: 14,

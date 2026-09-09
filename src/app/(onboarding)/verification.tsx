@@ -40,14 +40,14 @@ export default function VerificationScreen() {
   };
 
   const handleNext = () => {
-    router.push('/(onboarding)/photos' as any);
+    router.push('/photos');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/income' as any);
+      router.replace('/income');
     }
   };
 

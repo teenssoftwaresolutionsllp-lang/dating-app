@@ -1,17 +1,14 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 
-
 export default function ChooseLanguagesScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
   const languages = [
     'English',
@@ -35,14 +32,14 @@ export default function ChooseLanguagesScreen() {
   };
 
   const handleNext = () => {
-    router.push('/(onboarding)/qualification');
+    router.push('/qualification');
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/relationship' as any);
+      router.replace('/relationship');
     }
   };
 
@@ -52,8 +49,7 @@ export default function ChooseLanguagesScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-       <OnboardingHeader progress={0.3} />
+        <OnboardingHeader progress={0.3} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -103,7 +99,7 @@ export default function ChooseLanguagesScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selected}
+          disabled={selected.length === 0}
         />
       </View>
     </SafeAreaView>
@@ -120,21 +116,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -173,31 +154,5 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 15,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
 });

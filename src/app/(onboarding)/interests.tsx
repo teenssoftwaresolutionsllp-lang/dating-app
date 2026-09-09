@@ -1,17 +1,15 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 
-
 export default function InterestsScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
   const interestsList = [
     'Music',
@@ -44,17 +42,17 @@ export default function InterestsScreen() {
   const handleNext = () => {
     if (selectedInterests.length >= 3) {
       router.push({
-        pathname: '/(onboarding)/religion',
+        pathname: '/religion',
         params: { interests: JSON.stringify(selectedInterests) },
       });
     }
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/photos' as any);
+      router.replace('/photos');
     }
   };
 
@@ -63,9 +61,7 @@ export default function InterestsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-                <OnboardingHeader progress={0.7} />
-        
+        <OnboardingHeader progress={0.7} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -127,7 +123,7 @@ export default function InterestsScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedInterests}
+          disabled={!isNextEnabled}
         />
       </View>
     </SafeAreaView>
@@ -144,21 +140,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -210,31 +191,5 @@ const styles = StyleSheet.create({
   },
   chipIcon: {
     marginLeft: 6,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
 });

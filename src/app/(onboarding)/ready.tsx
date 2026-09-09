@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -16,7 +16,6 @@ import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
-import { OnboardingFooter } from '@/components/onboarding-footer';
 
 
 // Vibrant celebratory color palette for ribbons, stars, hearts, and balls
@@ -138,25 +137,25 @@ export default function ProfileReadyScreen() {
   );
 
   // 1. Top Progress Bar Fill Animation (0.65 -> 1.0)
-  const progressBarAnim = useRef(new Animated.Value(0.65)).current;
+  const [progressBarAnim] = useState(() => new Animated.Value(0.65));
 
   // 2. Blast Radial Expansion (NO fog, NO circles, ONLY Ribbons, Stars, Hearts, Balls!)
-  const blastExpansion = useRef(new Animated.Value(0)).current;
-  const blastOverlayOpacity = useRef(new Animated.Value(1)).current;
+  const [blastExpansion] = useState(() => new Animated.Value(0));
+  const [blastOverlayOpacity] = useState(() => new Animated.Value(1));
 
   // 3. Profile Card & Content Reveal Values
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(25)).current;
+  const [titleOpacity] = useState(() => new Animated.Value(0));
+  const [titleTranslateY] = useState(() => new Animated.Value(25));
 
-  const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const subtitleTranslateY = useRef(new Animated.Value(20)).current;
+  const [subtitleOpacity] = useState(() => new Animated.Value(0));
+  const [subtitleTranslateY] = useState(() => new Animated.Value(20));
 
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-  const cardTranslateY = useRef(new Animated.Value(35)).current;
-  const cardScale = useRef(new Animated.Value(0.9)).current;
+  const [cardOpacity] = useState(() => new Animated.Value(0));
+  const [cardTranslateY] = useState(() => new Animated.Value(35));
+  const [cardScale] = useState(() => new Animated.Value(0.9));
 
-  const footerOpacity = useRef(new Animated.Value(0)).current;
-  const footerTranslateY = useRef(new Animated.Value(20)).current;
+  const [footerOpacity] = useState(() => new Animated.Value(0));
+  const [footerTranslateY] = useState(() => new Animated.Value(20));
 
   useEffect(() => {
     // STEP 1: Top progress completes to 100% (450ms)
@@ -250,16 +249,32 @@ export default function ProfileReadyScreen() {
         ]),
       ]).start();
     });
-  }, []);
+  }, [
+    blastExpansion,
+    blastOverlayOpacity,
+    cardOpacity,
+    cardScale,
+    cardTranslateY,
+    footerOpacity,
+    footerTranslateY,
+    progressBarAnim,
+    subtitleOpacity,
+    subtitleTranslateY,
+    titleOpacity,
+    titleTranslateY,
+  ]);
 
-  const   handleLetsDate = () => {
+  const handleLetsDate = () => {
     router.replace('/(tab)/home');
   };
 
-  const progressWidthInterpolate = progressBarAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/ideal-match' as any);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
@@ -509,7 +524,7 @@ export default function ProfileReadyScreen() {
           ]}
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={[
               styles.backButton,
               { backgroundColor: theme.primaryButton },
@@ -564,7 +579,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   screenCenterBlastContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 50,

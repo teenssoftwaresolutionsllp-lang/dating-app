@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   Modal,
   PanResponder,
@@ -17,14 +17,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 
-
 export default function IdealMatchScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
 
   // Age state (18 to 55)
-  const [minAge] = useState(18);
   const [maxAge, setMaxAge] = useState(35);
   const [trackWidth, setTrackWidth] = useState(240);
 
@@ -85,8 +83,8 @@ export default function IdealMatchScreen() {
     setMaxAge(Math.max(18, Math.min(55, calculatedAge)));
   };
 
-  // Slider pan responder for age (works on iOS, Android, tablets, and Web mouse/touch)
-  const panResponder = useRef(
+  // Slider pan responder for age
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -97,17 +95,17 @@ export default function IdealMatchScreen() {
         handleSliderTouch(evt.nativeEvent.locationX);
       },
     })
-  ).current;
+  );
 
   const handleNext = () => {
-    router.push('/(onboarding)/ready');
+    router.push('/ready');
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/looking-for' as any);
+      router.replace('/looking-for');
     }
   };
 
@@ -117,8 +115,7 @@ export default function IdealMatchScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-       <OnboardingHeader progress={0.85} />
+        <OnboardingHeader progress={0.85} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -288,7 +285,7 @@ export default function IdealMatchScreen() {
         </ScrollView>
 
         {/* Footer Navigation */}
-     <OnboardingFooter
+        <OnboardingFooter
           showBack
           onBack={handleBack}
           onNext={handleNext}
@@ -380,21 +377,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -526,32 +508,6 @@ const styles = StyleSheet.create({
   },
   chipIcon: {
     marginLeft: 6,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
   modalOverlay: {
     flex: 1,

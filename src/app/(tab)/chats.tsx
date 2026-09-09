@@ -59,7 +59,9 @@ export default function ChatScreen({
     return null;
   });
 
-  React.useEffect(() => {
+  const [prevInitial, setPrevInitial] = useState(initialConversation);
+  if (initialConversation !== prevInitial) {
+    setPrevInitial(initialConversation);
     if (initialConversation) {
       setSelectedConversation({
         name: initialConversation.name,
@@ -74,7 +76,7 @@ export default function ChatScreen({
         ],
       });
     }
-  }, [initialConversation]);
+  }
   const [selectedCall, setSelectedCall] = useState<CallLog | null>(null);
   const [inputText, setInputText] = useState('');
 

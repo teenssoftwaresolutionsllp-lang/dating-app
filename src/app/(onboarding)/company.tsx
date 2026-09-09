@@ -20,14 +20,14 @@ export default function CompanyScreen() {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleNext = () => {
-    router.push('/(onboarding)/income' as any);
+    router.push('/income');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/profession' as any);
+      router.replace('/profession');
     }
   };
 
@@ -53,7 +53,7 @@ export default function CompanyScreen() {
 
             {/* Section Label */}
             <View style={styles.labelContainer}>
-              <Text style={styles.label}>Company Name/Organization</Text>
+              <Text style={styles.label}>Company Name / Organization</Text>
             </View>
 
             {/* Capsule Input Container */}

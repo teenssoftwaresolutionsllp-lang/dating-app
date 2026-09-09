@@ -47,14 +47,14 @@ export default function ProfessionScreen() {
 
   const handleNext = () => {
     if (!selectedProfession && !searchQuery.trim()) return;
-    router.push('/(onboarding)/company' as any);
+    router.push('/company');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/study' as any);
+      router.replace('/study');
     }
   };
 
