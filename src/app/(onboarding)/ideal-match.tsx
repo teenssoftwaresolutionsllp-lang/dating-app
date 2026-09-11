@@ -99,11 +99,18 @@ export default function IdealMatchScreen() {
     })
   ).current;
 
+  const isComplete = Boolean(
+    selectedDistance &&
+    selectedReligion &&
+    selectedInterests.length > 0
+  );
+
   const handleNext = () => {
+    if (!isComplete) return;
     router.push('/(onboarding)/ready');
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -288,10 +295,15 @@ export default function IdealMatchScreen() {
         </ScrollView>
 
         {/* Footer Navigation */}
-     <OnboardingFooter
+        <OnboardingFooter
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isComplete
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
 

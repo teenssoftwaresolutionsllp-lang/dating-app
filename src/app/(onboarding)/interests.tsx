@@ -1,12 +1,11 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-
 
 export default function InterestsScreen() {
   const theme = useTheme();
@@ -32,25 +31,76 @@ export default function InterestsScreen() {
   ];
 
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [error, setError] = useState(false);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
       setSelectedInterests(selectedInterests.filter((item) => item !== interest));
     } else {
-      setSelectedInterests([...selectedInterests, interest]);
+      const updated = [...selectedInterests, interest];
+      setSelectedInterests(updated);
+      if (error && updated.length >= 3) {
+        setError(false);
+      }
     }
   };
 
   const handleNext = () => {
-    if (selectedInterests.length >= 3) {
-      router.push({
-        pathname: '/(onboarding)/religion',
-        params: { interests: JSON.stringify(selectedInterests) },
-      });
+    if (selectedInterests.length < 3) {
+      setError(true);
+      triggerShake();
+      return;
     }
+    router.push({
+      pathname: '/(onboarding)/religion',
+      params: { interests: JSON.stringify(selectedInterests) },
+    });
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -64,8 +114,7 @@ export default function InterestsScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
         {/* Progress Bar */}
-                <OnboardingHeader progress={0.7} />
-        
+        <OnboardingHeader progress={0.7} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -77,7 +126,18 @@ export default function InterestsScreen() {
           {/* Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Your Interests</Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>Choose at least 3</Text>
+            {error && (
+              <Animated.Text
+                style={[
+                  styles.errorMessage,
+                  {
+                    transform: [{ translateX: shakeAnim }],
+                  },
+                ]}
+              >
+                Please select at least 3 interests
+              </Animated.Text>
+            )}
           </View>
 
           {/* Interests Chips Grid */}
@@ -127,7 +187,11 @@ export default function InterestsScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedInterests}
+          nextButtonStyle={{
+            backgroundColor: isNextEnabled
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -236,5 +300,12 @@ const styles = StyleSheet.create({
     fontFamily: 'DM_Sans_700Bold',
     fontSize: 16,
     color: '#000000',
+  },
+  errorMessage: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

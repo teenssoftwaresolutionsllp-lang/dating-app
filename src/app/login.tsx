@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  Alert,
+  Animated,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -20,25 +20,42 @@ import { useTheme } from '@/hooks/use-theme';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
+  const [error, setError] = useState('');
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -3, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  };
 
   const handleLogin = () => {
     const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) {
-      if (Platform.OS === 'web') {
-        window.alert('Please enter a valid 10-digit phone number.');
-      } else {
-        Alert.alert('Invalid Number', 'Please enter a valid 10-digit phone number.');
-      }
-    } else {
-      router.push({ pathname: '/otp' as any, params: { phone } });
+    if (digits.length !== 10) {
+      setError('Please enter a valid number');
+      triggerShake();
+      return;
     }
+    setError('');
+    router.push({ pathname: '/otp' as any, params: { phone: digits } });
   };
 
   const handlePhoneChange = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
+    const cleaned = text.replace(/\D/g, '').slice(0, 10);
     setPhone(cleaned);
+    if (error) {
+      setError('');
+    }
     if (cleaned.length === 10) {
       Keyboard.dismiss();
     }
@@ -60,61 +77,72 @@ export default function LoginScreen() {
         <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
       </Pressable>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={false}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.responsiveWrapper}>
-            <RelationshipArtwork variant="welcome" />
+        <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
+          <RelationshipArtwork variant="welcome" />
 
-            <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
-              <View style={styles.content}>
+          <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
+            <View style={styles.content}>
+              <View style={styles.formTopSection}>
                 <Text style={[styles.title, { color: theme.text }]}>Welcome ,</Text>
                 <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
                   Login to Connect with your People.
                 </Text>
 
-                <View style={[styles.phoneInput, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                  <Text style={[styles.countryCode, { color: theme.text, borderRightColor: theme.border }]}>+91</Text>
-                  <TextInput
-                    value={phone}
-                    onChangeText={handlePhoneChange}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    placeholder="00000 00000"
-                    placeholderTextColor={theme.textSecondary}
-                    style={[
-                      styles.input,
-                      { color: theme.text },
-                      Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
-                    ]}
-                  />
+                <View style={styles.phoneInputContainer}>
+                  <View style={[styles.phoneInput, { borderColor: error ? '#FF3B30' : theme.border, backgroundColor: theme.background }]}>
+                    <Text style={[styles.countryCode, { color: theme.text, borderRightColor: error ? '#FF3B30' : theme.border }]}>+91</Text>
+                    <TextInput
+                      value={phone}
+                      onChangeText={handlePhoneChange}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      placeholder="00000 00000"
+                      placeholderTextColor={theme.textSecondary}
+                      style={[
+                        styles.input,
+                        { color: theme.text },
+                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+                      ]}
+                    />
+                  </View>
+
+                  {!!error && (
+                    <Animated.View style={[styles.errorWrapper, { transform: [{ translateX: shakeAnim }] }]}>
+                      <Text style={styles.errorText}>{error}</Text>
+                    </Animated.View>
+                  )}
                 </View>
+              </View>
 
-                {/* <Text style={[styles.or, { color: theme.textSecondary }]}>or</Text>
-
-                <View style={styles.socials}>
-                  <SocialButton type="google" theme={theme} />
-                  <SocialButton type="facebook" theme={theme} />
-                  <SocialButton type="instagram" theme={theme} />
-                </View> */}
-
-                <PrimaryButton onPress={handleLogin} style={styles.loginButton}>
+              <View style={styles.bottomButtonSection}>
+                <PrimaryButton
+                  onPress={handleLogin}
+                  style={[
+                    styles.loginButton,
+                    {
+                      backgroundColor:
+                        phone.length === 10
+                          ? theme.primaryButton
+                          : '#BDFFF9',
+                    },
+                  ]}
+                >
                   Login
                 </PrimaryButton>
 
                 <LegalFooter />
               </View>
-            </SafeAreaView>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            </View>
+          </SafeAreaView>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -186,6 +214,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 16,
+    justifyContent: 'space-between',
+  },
+  formTopSection: {
+    width: '100%',
   },
   title: {
     fontFamily: 'DM_Serif_Display_400Regular',
@@ -196,11 +228,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 2,
   },
+  phoneInputContainer: {
+    width: '100%',
+    position: 'relative',
+    marginTop: 21,
+  },
   phoneInput: {
     alignItems: 'center',
     flexDirection: 'row',
     height: 48,
-    marginTop: 21,
     borderRadius: 15,
     borderWidth: 1,
   },
@@ -216,28 +252,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingHorizontal: 14,
   },
-  // or: {
-  //   fontFamily: 'DM_Sans_400Regular',
-  //   fontSize: 13,
-  //   marginTop: 20,
-  //   textAlign: 'center',
-  // },
-  // socials: {
-  //   flexDirection: 'row',
-  //   justifyContent: 'center',
-  //   gap: 32,
-  //   marginTop: 18,
-  // },
-  // socialButton: {
-  //   alignItems: 'center',
-  //   justifyContent: 'center',
-  //   width: 50,
-  //   height: 50,
-  //   borderRadius: 14,
-  //   borderWidth: 1,
-  // },
+  errorWrapper: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+  },
+  errorText: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  bottomButtonSection: {
+    width: '100%',
+    paddingBottom: 8,
+  },
   loginButton: {
-    marginTop: 120,
-    marginBottom: 20,
+    marginBottom: 16,
   },
 });

@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop:30,
+    paddingTop:10,
   },
   topHeaderNav: {
     height: 52,

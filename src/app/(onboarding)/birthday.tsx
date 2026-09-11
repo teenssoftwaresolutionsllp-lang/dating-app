@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+    Animated,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -18,9 +19,11 @@ import { DatePicker } from '@/components/date-picker';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function BirthdayScreen() {
   const router = useRouter();
+  const theme = useTheme();
 
   const [day, setDay] = useState('');
   const [month, setMonth] = useState('');
@@ -30,6 +33,9 @@ export default function BirthdayScreen() {
 
   const [pickerDate, setPickerDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dobError, setDobError] = useState(false);
+
+  const dobShakeAnim = useRef(new Animated.Value(0)).current;
 
   const dayInputRef = useRef<TextInput>(null);
   const monthInputRef = useRef<TextInput>(null);
@@ -42,14 +48,57 @@ export default function BirthdayScreen() {
   const isFeetValid = feetNum >= 4 && feetNum <= 10;
   const isInchesValid = inchesNum >= 0 && inchesNum <= 11;
 
+  const isDobValid =
+    pickerDate !== null ||
+    (day.trim().length > 0 && month.trim().length > 0 && year.trim().length === 4);
+
   const isFormValid =
-    day.trim().length > 0 &&
-    month.trim().length > 0 &&
-    year.trim().length === 4 &&
+    isDobValid &&
     heightFeet.trim().length > 0 &&
     heightInches.trim().length > 0 &&
     isFeetValid &&
     isInchesValid;
+
+  const triggerDobShake = () => {
+    dobShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(dobShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dobShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dobShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dobShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dobShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dobShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dobShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleFeetChange = (val: string) => {
     const numVal = parseInt(val, 10);
@@ -94,7 +143,14 @@ export default function BirthdayScreen() {
   };
 
   const handleNext = () => {
-    if (!isFormValid) return;
+    if (!isDobValid) {
+      setDobError(true);
+      triggerDobShake();
+      return;
+    }
+    if (!isFeetValid || !isInchesValid || heightFeet.trim().length === 0 || heightInches.trim().length === 0) {
+      return;
+    }
     const d = day.padStart(2, '0');
     const m = month.padStart(2, '0');
     const y = year;
@@ -115,6 +171,7 @@ export default function BirthdayScreen() {
   };
 
   const handleDatePicked = (selectedDate: Date) => {
+    setDobError(false);
     setPickerDate(selectedDate);
     const d = String(selectedDate.getDate()).padStart(2, '0');
     const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -132,119 +189,138 @@ export default function BirthdayScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.22} />
+      <View style={styles.centerContainer}>
+        <OnboardingHeader progress={0.22} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {/* Title & Subtitle matching Screenshot 1 */}
-          <Text style={styles.title}>When is your Birthday?</Text>
-          <Text style={styles.subtitle}>
-            Write your birth year to complete your profile
-          </Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Title & Subtitle matching Screenshot 1 */}
+            <Text style={styles.title}>When is your Birthday?</Text>
+            <Text style={styles.subtitle}>
+              Write your birth year to complete your profile
+            </Text>
 
-          {/* Birthday Party Illustration */}
-          <View style={styles.illustrationContainer}>
-            <Image
-              source={require('@/assets/images/birthday.jpg')}
-              style={styles.birthdayImage}
-              contentFit="contain"
-            />
-          </View>
-
-          <View style={styles.calendarSection}>
-            <DatePicker
-              value={pickerDate}
-              onChange={handleDatePicked}
-              onNextField={() => {
-                setShowDatePicker(false);
-                feetInputRef.current?.focus();
-              }}
-              placeholder="DD/MM/YY"
-            />
-          </View>
-
-          {/* Height Section - Feet and Inches Spinners */}
-          <View style={styles.heightSection}>
-            <Text style={styles.heightTitle}>How tall are you?</Text>
-
-            {/* Feet and Inches Row */}
-            <View style={styles.heightSpinnerRow}>
-              {/* Feet Spinner */}
-              <View style={styles.spinnerContainer}>
-                <TextInput
-                  ref={feetInputRef}
-                  style={styles.spinnerInput}
-                  value={heightFeet}
-                  onChangeText={handleFeetChange}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  selectionColor="#00F5D4"
-                />
-
-                <View style={styles.spinnerArrowStack}>
-                  <Pressable style={styles.spinnerButton} onPress={incrementFeet}>
-                    <Ionicons name="chevron-up" size={18} color="#64748B" />
-                  </Pressable>
-                  <Pressable style={styles.spinnerButton} onPress={decrementFeet}>
-                    <Ionicons name="chevron-down" size={18} color="#64748B" />
-                  </Pressable>
-                </View>
-
-              </View>
-
-              {/* Inches Spinner */}
-              <View style={styles.spinnerContainer}>
-                <TextInput
-                  ref={inchesInputRef}
-                  style={styles.spinnerInput}
-                  value={heightInches}
-                  onChangeText={handleInchesChange}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  selectionColor="#00F5D4"
-                />
-
-                <View style={styles.spinnerArrowStack}>
-                  <Pressable style={styles.spinnerButton} onPress={incrementInches}>
-                    <Ionicons name="chevron-up" size={18} color="#64748B" />
-                  </Pressable>
-                  <Pressable style={styles.spinnerButton} onPress={decrementInches}>
-                    <Ionicons name="chevron-down" size={18} color="#64748B" />
-                  </Pressable>
-                </View>
-
-              </View>
+            {/* Birthday Party Illustration */}
+            <View style={styles.illustrationContainer}>
+              <Image
+                source={require('@/assets/images/birthday.jpg')}
+                style={styles.birthdayImage}
+                contentFit="contain"
+              />
             </View>
 
-            {/* Validation Error Message */}
-            {!isFeetValid && heightFeet.trim().length > 0 && (
-              <Text style={styles.errorMessage}>
-                Feet should be between 4-10.
-              </Text>
-            )}
-            {!isInchesValid && heightInches.trim().length > 0 && (
-              <Text style={styles.errorMessage}>
-                Inches should be between 0-11.
-              </Text>
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            <View style={styles.calendarSection}>
+              <DatePicker
+                value={pickerDate}
+                onChange={handleDatePicked}
+                onNextField={() => {
+                  setShowDatePicker(false);
+                  feetInputRef.current?.focus();
+                }}
+                placeholder="DD/MM/YY"
+                hasError={dobError}
+              />
+              {dobError && (
+                <Animated.Text
+                  style={[
+                    styles.dobErrorMessage,
+                    {
+                      transform: [{ translateX: dobShakeAnim }],
+                    },
+                  ]}
+                >
+                  Please Enter DOB
+                </Animated.Text>
+              )}
+            </View>
 
-      {/* Action Footer with Validation */}
-      <OnboardingFooter
-        showBack
-        onBack={handleBack}
-        onNext={handleNext}
-        disabled={!isFormValid}
-      />
+            {/* Height Section - Feet and Inches Spinners */}
+            <View style={styles.heightSection}>
+              <Text style={styles.heightTitle}>How tall are you?</Text>
+
+              {/* Feet and Inches Row */}
+              <View style={styles.heightSpinnerRow}>
+                {/* Feet Spinner */}
+                <View style={styles.spinnerContainer}>
+                  <TextInput
+                    ref={feetInputRef}
+                    style={styles.spinnerInput}
+                    value={heightFeet}
+                    onChangeText={handleFeetChange}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectionColor="#00E4E8"
+                  />
+
+                  <View style={styles.spinnerArrowStack}>
+                    <Pressable style={styles.spinnerButton} onPress={incrementFeet}>
+                      <Ionicons name="chevron-up" size={18} color="#64748B" />
+                    </Pressable>
+                    <Pressable style={styles.spinnerButton} onPress={decrementFeet}>
+                      <Ionicons name="chevron-down" size={18} color="#64748B" />
+                    </Pressable>
+                  </View>
+
+                </View>
+
+                {/* Inches Spinner */}
+                <View style={styles.spinnerContainer}>
+                  <TextInput
+                    ref={inchesInputRef}
+                    style={styles.spinnerInput}
+                    value={heightInches}
+                    onChangeText={handleInchesChange}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectionColor="#00E4E8"
+                  />
+
+                  <View style={styles.spinnerArrowStack}>
+                    <Pressable style={styles.spinnerButton} onPress={incrementInches}>
+                      <Ionicons name="chevron-up" size={18} color="#64748B" />
+                    </Pressable>
+                    <Pressable style={styles.spinnerButton} onPress={decrementInches}>
+                      <Ionicons name="chevron-down" size={18} color="#64748B" />
+                    </Pressable>
+                  </View>
+
+                </View>
+              </View>
+
+              {/* Validation Error Message */}
+              {!isFeetValid && heightFeet.trim().length > 0 && (
+                <Text style={styles.errorMessage}>
+                  Feet should be between 4-10.
+                </Text>
+              )}
+              {!isInchesValid && heightInches.trim().length > 0 && (
+                <Text style={styles.errorMessage}>
+                  Inches should be between 0-11.
+                </Text>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* Action Footer with Validation */}
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isFormValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -253,6 +329,12 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
   },
   keyboardView: {
     flex: 1,
@@ -289,6 +371,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 12,
     marginBottom: 12,
+    position: 'relative',
   },
   dateInputsContainer: {
     flexDirection: 'row',
@@ -335,12 +418,13 @@ const styles = StyleSheet.create({
   quickPickerText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B49F',
+    color: '#00E4E8',
   },
   heightSection: {
     alignItems: 'center',
     marginTop: 24,
     width: '100%',
+    position: 'relative',
   },
   heightTitle: {
     fontSize: 22,
@@ -387,10 +471,20 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   errorMessage: {
-    fontSize: 14,
+    position: 'absolute',
+    bottom: -18,
+    fontSize: 13,
     fontWeight: '500',
     color: '#EF4444',
-    marginTop: 8,
+  },
+  dobErrorMessage: {
+    position: 'absolute',
+    bottom: -16,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    alignSelf: 'center',
+    left: 10
   },
   scrollerContainer: {
     width: '100%',
@@ -418,7 +512,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   scrollerItemTextSelected: {
-    color: '#00B49F',
+    color: '#00E4E8',
     fontWeight: '700',
   },
 });

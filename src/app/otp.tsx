@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -20,11 +21,27 @@ export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone?: string }>();
   const [code, setCode] = useState(['', '', '', '']);
   const [seconds, setSeconds] = useState(30);
+  const [error, setError] = useState('');
   const inputs = useRef<(TextInput | null)[]>([]);
   const complete = code.every(Boolean);
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
+  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -3, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  };
 
   useEffect(() => {
     if (seconds === 0) return;
@@ -37,6 +54,9 @@ export default function OtpScreen() {
     const next = [...code];
     next[index] = digit;
     setCode(next);
+    if (error) {
+      setError('');
+    }
     if (digit && index < 3) {
       inputs.current[index + 1]?.focus();
     }
@@ -58,6 +78,16 @@ export default function OtpScreen() {
     }
   }
 
+  const handleVerify = () => {
+    if (!complete) {
+      setError('Invalid OTP');
+      triggerShake();
+      return;
+    }
+    setError('');
+    router.replace('/(onboarding)/set-profile');
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Pressable 
@@ -74,21 +104,19 @@ export default function OtpScreen() {
         <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
       </Pressable>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={false}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.responsiveWrapper}>
-            <RelationshipArtwork variant="otp" />
+        <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
+          <RelationshipArtwork variant="otp" />
 
-            <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
-              <View style={styles.content}>
+          <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
+            <View style={styles.content}>
+              <View style={styles.formTopSection}>
                 <View style={styles.headingRow}>
                   <Text style={[styles.heading, { color: theme.text }]}>Enter OTP to Verify</Text>
                   <Pressable
@@ -134,32 +162,48 @@ export default function OtpScreen() {
                   ))}
                 </View>
 
-                <View style={styles.sentRow}>
-                  <Text style={[styles.sent, { color: theme.textSecondary }]}>
-                    We have sent OTP to {phone || '00000 00000'}
-                  </Text>
-                  <Pressable
-                    onPress={() => router.back()}
-                    style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
-                  >
-                    <Ionicons name="pencil" size={14} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
+                <View style={styles.sentContainer}>
+                  <View style={styles.sentRow}>
+                    <Text style={[styles.sent, { color: theme.textSecondary }]}>
+                      We have sent OTP to {phone || '00000 00000'}
+                    </Text>
+                    <Pressable
+                      onPress={() => router.back()}
+                      style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                    >
+                      <Ionicons name="pencil" size={14} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
 
+                  {!!error && (
+                    <Animated.View style={[styles.errorWrapper, { transform: [{ translateX: shakeAnim }] }]}>
+                      <Text style={styles.errorText}>{error}</Text>
+                    </Animated.View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.bottomButtonSection}>
                 <PrimaryButton
-                  disabled={!complete}
-                  onPress={() => router.replace('/(onboarding)/set-profile')}
-                  style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
+                  onPress={handleVerify}
+                  style={[
+                    styles.verifyButton,
+                    {
+                      backgroundColor: complete
+                        ? theme.primaryButton
+                        : '#BDFFF9',
+                    },
+                  ]}
                 >
                   Verify
                 </PrimaryButton>
 
                 <LegalFooter />
               </View>
-            </SafeAreaView>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            </View>
+          </SafeAreaView>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -205,8 +249,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 16,
+    justifyContent: 'space-between',
+  },
+  formTopSection: {
+    width: '100%',
   },
   headingRow: {
     alignItems: 'center',
@@ -237,13 +285,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
+  sentContainer: {
+    width: '100%',
+    marginTop: 16,
+    position: 'relative',
+  },
   sentRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
-    marginTop: 16,
   },
   sent: {
+    flex: 1,
     fontFamily: 'DM_Sans_400Regular',
     fontSize: 12,
   },
@@ -251,9 +304,25 @@ const styles = StyleSheet.create({
     padding: 4,
     marginLeft: 2,
   },
+  errorWrapper: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+  },
+  errorText: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  bottomButtonSection: {
+    width: '100%',
+    paddingBottom: 8,
+  },
   verifyButton: {
-    marginTop: 120,
-    marginBottom: 20,
+    marginBottom: 16,
   },
 });
 

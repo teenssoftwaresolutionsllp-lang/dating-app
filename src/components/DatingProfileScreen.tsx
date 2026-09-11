@@ -1262,7 +1262,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   blurredCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.18)',
   },
   lockIconBadge: {
@@ -1354,7 +1354,7 @@ const styles = StyleSheet.create({
   mainScrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop:20,
+    // marginTop:5,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1705,6 +1705,7 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   tabLabel: {
     fontSize: 11,

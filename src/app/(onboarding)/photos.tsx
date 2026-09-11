@@ -12,9 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { useTheme } from '@/hooks/use-theme';
 
 // Demo sample avatars for user interaction testing
 const DEMO_PHOTOS = [
@@ -26,27 +28,52 @@ const DEMO_PHOTOS = [
 
 export default function AddPhotosScreen() {
   const router = useRouter();
+  const theme = useTheme();
 
   // photo state (index 0 is main profile photo, 1..3 are additional photos)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null, null]);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
+  const isPhotosComplete = Boolean(photos[0] || photos.some((p) => p !== null));
+
+  const pickImageForSlot = async (slotIndex: number) => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        setPhotos((prev) => {
+          const next = [...prev];
+          next[slotIndex] = uri;
+          return next;
+        });
+      }
+    } catch {
+      // Return safely to Photos screen on cancel/reject
+    }
+  };
+
   const handleSlotPress = (index: number) => {
-    setActiveSlot(index);
-    setShowUploadModal(true);
+    pickImageForSlot(index);
   };
 
   const handleUploadPhoto = () => {
     if (activeSlot !== null) {
-      setPhotos((prev) => {
-        const next = [...prev];
-        next[activeSlot] = DEMO_PHOTOS[activeSlot % DEMO_PHOTOS.length];
-        return next;
-      });
+      const slot = activeSlot;
+      setShowUploadModal(false);
+      setActiveSlot(null);
+      pickImageForSlot(slot);
+    } else {
+      setShowUploadModal(false);
     }
-    setShowUploadModal(false);
-    setActiveSlot(null);
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -164,7 +191,7 @@ export default function AddPhotosScreen() {
 
           {/* Warning Banner */}
           <View style={styles.warningRow}>
-            <Ionicons name="information-circle-outline" size={18} color="#FF3B30" style={styles.warningIcon} />
+            <Ionicons name="information-circle-outline" size={18} color="#9CA3AF" style={styles.warningIcon} />
             <Text style={styles.warningText}>
               Real photos only. AI-generated or misleading images aren't allowed.
             </Text>
@@ -176,6 +203,11 @@ export default function AddPhotosScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isPhotosComplete
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
 
@@ -273,7 +305,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -410,7 +442,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: '#9CA3AF',
     fontWeight: '500',
     lineHeight: 16,
     flex: 1,

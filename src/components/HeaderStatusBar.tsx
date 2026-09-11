@@ -21,13 +21,13 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 30 : 30,
+    // paddingTop:0,
     paddingBottom: 8,
   },
   titleContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    // paddingVertical: 0,
   },
   titleText: {
     fontFamily: 'DM_Sans_700Bold',

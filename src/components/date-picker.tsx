@@ -15,6 +15,7 @@ interface DatePickerProps {
   onChange: (date: Date) => void;
   onNextField?: () => void;
   placeholder?: string;
+  hasError?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -58,6 +59,7 @@ export function DatePicker({
   onChange,
   onNextField,
   placeholder = 'DD/MM/YY',
+  hasError = false,
 }: DatePickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(value || new Date(2000, 5, 15));
@@ -126,15 +128,33 @@ export function DatePicker({
     <View style={styles.container}>
       {/* Clickable Date Picker Input Field */}
       <TouchableOpacity
-        style={styles.triggerButton}
+        style={[
+          styles.triggerButton,
+          hasError && styles.triggerButtonError,
+        ]}
         onPress={handleOpen}
         activeOpacity={0.7}
       >
-        <Ionicons name="calendar-outline" size={20} color="#00B49F" style={styles.inputIcon} />
-        <Text style={[styles.triggerText, !value && styles.placeholderText]}>
+        <Ionicons
+          name="calendar-outline"
+          size={20}
+          color={hasError ? '#9CA3AF' : '#00E4E8'}
+          style={styles.inputIcon}
+        />
+        <Text
+          style={[
+            styles.triggerText,
+            !value && styles.placeholderText,
+            hasError && styles.triggerTextError,
+          ]}
+        >
           {formattedDateString}
         </Text>
-        <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+        <Ionicons
+          name="chevron-down"
+          size={18}
+          color={hasError ? '#9CA3AF' : '#9CA3AF'}
+        />
       </TouchableOpacity>
 
       {/* Interactive Date Picker Modal */}
@@ -293,15 +313,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FAFFFF',
     borderWidth: 1.5,
-    borderColor: '#00F5D4',
+    borderColor: '#00E4E8',
     borderRadius: 14,
     paddingHorizontal: 16,
     width: '100%',
-    shadowColor: '#00F5D4',
+    shadowColor: '#00E4E8',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 2,
+  },
+  triggerButtonError: {
+    borderColor: '#FF3B30',
+    shadowColor: '#FF3B30',
   },
   inputIcon: {
     marginRight: 12,
@@ -311,6 +335,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+  },
+  triggerTextError: {
+    color: '#9CA3AF',
   },
   placeholderText: {
     color: '#9CA3AF',
@@ -358,7 +385,7 @@ const styles = StyleSheet.create({
   selectedBannerYear: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B49F',
+    color: '#00E4E8',
     textTransform: 'uppercase',
   },
   selectedBannerDate: {
@@ -416,8 +443,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   yearItemSelected: {
-    backgroundColor: '#00F5D4',
-    borderColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
+    borderColor: '#00E4E8',
   },
   yearItemText: {
     fontSize: 14,
@@ -456,7 +483,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   dayCellSelected: {
-    backgroundColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
   },
   dayText: {
     fontSize: 14,
@@ -491,7 +518,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 12,
-    backgroundColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
   },
   confirmButtonText: {
     fontSize: 14,
