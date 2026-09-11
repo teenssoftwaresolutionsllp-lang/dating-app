@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TextInputKeyPressEventData,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,15 +18,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
 
+const OTP_LENGTH = 4;
+const RESEND_SECONDS = 30;
+
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone?: string }>();
   const [code, setCode] = useState(['', '', '', '']);
   const [seconds, setSeconds] = useState(30);
   const [error, setError] = useState('');
   const inputs = useRef<(TextInput | null)[]>([]);
-  const complete = code.every(Boolean);
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
   const initialHeight = useRef(Dimensions.get('window').height).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -44,15 +46,22 @@ export default function OtpScreen() {
   };
 
   useEffect(() => {
-    if (seconds === 0) return;
-    const timer = setInterval(() => setSeconds((value) => value - 1), 1000);
+    if (seconds <= 0) return;
+    const timer = setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
   }, [seconds]);
 
-  function updateCode(value: string, index: number) {
-    const digit = value.replace(/\D/g, '').slice(-1);
+  const updateCode = (value: string, index: number) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) {
+      setCode((current) => current.map((digit, position) => (position === index ? '' : digit)));
+      return;
+    }
+
     const next = [...code];
-    next[index] = digit;
+    digits.slice(0, OTP_LENGTH - index).split('').forEach((digit, offset) => {
+      next[index + offset] = digit;
+    });
     setCode(next);
     if (error) {
       setError('');
@@ -62,21 +71,38 @@ export default function OtpScreen() {
     }
   }
 
-  function handleKeyPress(e: any, index: number) {
-    if (e.nativeEvent.key === 'Backspace') {
-      if (!code[index] && index > 0) {
-        inputs.current[index - 1]?.focus();
-      }
+    const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
+    if (next.every(Boolean)) {
+      Keyboard.dismiss();
+    } else {
+      inputs.current[nextIndex]?.focus();
     }
-  }
+  };
 
-  function resend() {
-    if (seconds === 0) {
-      setCode(['', '', '', '']);
-      setSeconds(30);
-      inputs.current[0]?.focus();
+  const handleKeyPress = (
+    event: NativeSyntheticEvent<TextInputKeyPressEventData>,
+    index: number
+  ) => {
+    if (event.nativeEvent.key !== 'Backspace') return;
+    if (code[index]) {
+      setCode((current) => current.map((digit, position) => (position === index ? '' : digit)));
+    } else if (index > 0) {
+      setCode((current) => current.map((digit, position) => (position === index - 1 ? '' : digit)));
+      inputs.current[index - 1]?.focus();
     }
-  }
+  };
+
+  const resend = () => {
+    if (seconds > 0) return;
+    setCode(Array(OTP_LENGTH).fill(''));
+    setSeconds(RESEND_SECONDS);
+    requestAnimationFrame(() => inputs.current[0]?.focus());
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/login');
+  };
 
   const handleVerify = () => {
     if (!complete) {
@@ -90,18 +116,14 @@ export default function OtpScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable 
-        onPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/login');
-          }
-        }} 
-        style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
+      <Pressable
+        onPress={handleBack}
         accessibilityRole="button"
+        accessibilityLabel="Go back"
+        hitSlop={8}
+        style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
       >
-        <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
+        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
       </Pressable>
 
       <ScrollView
@@ -122,7 +144,9 @@ export default function OtpScreen() {
                   <Pressable
                     onPress={resend}
                     disabled={seconds > 0}
-                    style={Platform.OS === 'web' ? ({ cursor: seconds === 0 ? 'pointer' : 'default' } as any) : {}}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resend OTP"
+                    style={seconds === 0 ? styles.webPointer : undefined}
                   >
                     <Text
                       style={[
@@ -131,7 +155,7 @@ export default function OtpScreen() {
                         seconds > 0 && styles.disabled,
                       ]}
                     >
-                      Resend in 00:{String(seconds).padStart(2, '0')}
+                      {seconds > 0 ? `Resend in 00:${String(seconds).padStart(2, '0')}` : 'Resend OTP'}
                     </Text>
                   </Pressable>
                 </View>
@@ -145,19 +169,24 @@ export default function OtpScreen() {
                       }}
                       value={digit}
                       onChangeText={(value) => updateCode(value, index)}
-                      onKeyPress={(e) => handleKeyPress(e, index)}
+                      onKeyPress={(event) => handleKeyPress(event, index)}
                       keyboardType="number-pad"
-                      maxLength={1}
+                      inputMode="numeric"
+                      textContentType="oneTimeCode"
+                      autoComplete="sms-otp"
+                      maxLength={index === 0 ? OTP_LENGTH : 1}
+                      selectTextOnFocus
+                      autoCorrect={false}
                       style={[
                         styles.otpInput,
                         {
                           color: theme.text,
                           borderColor: theme.border,
-                          backgroundColor: isDark ? theme.backgroundElement : '#ffffff',
+                          backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
                         },
-                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
                       ]}
                       textAlign="center"
+                      accessibilityLabel={`OTP digit ${index + 1}`}
                     />
                   ))}
                 </View>
@@ -197,7 +226,6 @@ export default function OtpScreen() {
                 >
                   Verify
                 </PrimaryButton>
-
                 <LegalFooter />
               </View>
             </View>
@@ -209,29 +237,10 @@ export default function OtpScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    width: '100%',
-  },
-  dismissArea: {
-    flex: 1,
-    width: '100%',
-  },
-  keyboardContainer: {
-    flex: 1,
-    width: '100%',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  responsiveWrapper: {
-    width: '100%',
-    maxWidth: 480,
-    flex: 1,
-    justifyContent: 'space-between',
-  },
+  root: { flex: 1, width: '100%' },
+  keyboardContainer: { flex: 1, width: '100%' },
+  scrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start' },
+  responsiveWrapper: { width: '100%', maxWidth: 480, flex: 1, justifyContent: 'space-between' },
   backButton: {
     position: 'absolute',
     zIndex: 20,
@@ -277,9 +286,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 26,
   },
+  webPointer: Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined,
+  contentSafeArea: { flex: 1 },
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heading: { fontFamily: 'DM_Sans_500Medium', fontSize: 14 },
+  resend: { fontFamily: 'DM_Sans_500Medium', fontSize: 12 },
+  disabled: { opacity: 0.65 },
+  otpRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 26 },
   otpInput: {
-    fontFamily: 'DM_Sans_500Medium',
-    fontSize: 20,
     width: 58,
     height: 58,
     borderRadius: 14,
@@ -325,6 +340,3 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 });
-
-
-

@@ -11,6 +11,8 @@ export interface UserProfile {
   height: string;
   interests: string[];
   lookingFor: string[];
+  vibes?: string[];
+  avatarUri?: string;
 }
 
 /**
@@ -90,6 +92,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   height: `5'10" (178 cm)`,
   interests: ['Music', 'Movies', 'Travel', 'Concerts', 'Nature', 'Gaming'],
   lookingFor: ['Serious Relationship', 'Meaningful Connection'],
+  vibes: ['Movies', 'Travel', 'Food', 'Fitness', 'Music'],
 };
 
 // In-memory persistent user profile state

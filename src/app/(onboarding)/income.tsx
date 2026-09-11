@@ -85,7 +85,7 @@ export default function IncomeScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/company' as any);
+      router.replace('/company');
     }
   };
 

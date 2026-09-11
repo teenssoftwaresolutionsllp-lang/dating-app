@@ -20,6 +20,12 @@ export default function AppTabs() {
       <Tabs.Screen
         name="index"
         options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="home"
+        options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" color={color} size={size} />

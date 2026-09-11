@@ -110,7 +110,7 @@ export default function ProfessionScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/study' as any);
+      router.replace('/study');
     }
   };
 
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     height: '100%',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
   },
   listContainer: {
     width: '100%',

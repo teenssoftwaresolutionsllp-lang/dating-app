@@ -10,7 +10,6 @@ import { OnboardingFooter } from '@/components/onboarding-footer';
 export default function InterestsScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
   const interestsList = [
     'Music',
@@ -104,7 +103,7 @@ export default function InterestsScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/photos' as any);
+      router.replace('/photos');
     }
   };
 
@@ -208,21 +207,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   scrollContent: {
     paddingHorizontal: 24,

@@ -66,8 +66,8 @@ export default function StudyScreen() {
     ],
   };
 
-  const currentQualification = qualification || 'Others';
-  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Others'];
+  const currentQualification = qualification || 'Bachelors';
+  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Bachelors'];
 
   const [selected, setSelected] = useState<string | null>(null);
   const [otherText, setOtherText] = useState('');
@@ -143,16 +143,15 @@ export default function StudyScreen() {
       education: `${currentQualification} - ${finalStudy}`,
     });
     router.push({
-      pathname: '/(onboarding)/profession',
+      pathname: '/profession',
       params: { qualification: currentQualification, study: finalStudy },
     });
   };
-
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/qualification' as any);
+      router.replace('/qualification');
     }
   };
 
@@ -260,7 +259,7 @@ export default function StudyScreen() {
                           selectionColor={theme.primaryButton}
                           returnKeyType="done"
                           onSubmitEditing={isFormValid ? handleNext : undefined}
-                          {...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {})}
+                          {...({ outlineStyle: 'none' } as any)}
                         />
                       </View>
                     )}
@@ -305,6 +304,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 20,
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'DM_Sans_700Bold',

@@ -37,9 +37,6 @@ export default function BirthdayScreen() {
 
   const dobShakeAnim = useRef(new Animated.Value(0)).current;
 
-  const dayInputRef = useRef<TextInput>(null);
-  const monthInputRef = useRef<TextInput>(null);
-  const yearInputRef = useRef<TextInput>(null);
   const feetInputRef = useRef<TextInput>(null);
   const inchesInputRef = useRef<TextInput>(null);
 
@@ -159,14 +156,14 @@ export default function BirthdayScreen() {
       dateOfBirth: dobString,
       height: `${heightFeet}'${heightInches}" (${Math.round((parseInt(heightFeet, 10) * 12 + parseInt(heightInches, 10)) * 2.54)} cm)`,
     });
-    router.push('/(onboarding)/location' as any);
+    router.push('/location');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/set-profile' as any);
+      router.replace('/set-profile');
     }
   };
 
@@ -468,7 +465,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     textAlign: 'center',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
   },
   errorMessage: {
     position: 'absolute',

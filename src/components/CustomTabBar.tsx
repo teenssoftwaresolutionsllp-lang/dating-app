@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { router, usePathname } from 'expo-router';
 
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    paddingBottom: 24,
     paddingHorizontal: 8,
     justifyContent: 'space-around',
     alignItems: 'center',

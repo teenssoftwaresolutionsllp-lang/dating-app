@@ -7,7 +7,6 @@ import {
   ScrollView,
   Modal,
   TouchableWithoutFeedback,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -260,7 +259,7 @@ export default function VerificationScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/income' as any);
+      router.replace('/income');
     }
   };
 

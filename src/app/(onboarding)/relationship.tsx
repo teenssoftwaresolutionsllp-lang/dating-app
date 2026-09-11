@@ -30,14 +30,14 @@ export default function RelationshipScreen() {
 
   const handleNext = () => {
     if (!selectedStatus) return;
-    router.push('/(onboarding)/languages' as any);
+    router.push('/languages');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/location' as any);
+      router.replace('/location');
     }
   };
 
@@ -107,7 +107,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    alignItems: 'center',
   },
   centerContainer: {
     flex: 1,

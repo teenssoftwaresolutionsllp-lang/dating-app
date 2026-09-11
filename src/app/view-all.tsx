@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   Modal,
   Dimensions,
   ImageSourcePropType,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';

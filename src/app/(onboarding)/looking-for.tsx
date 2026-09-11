@@ -9,8 +9,6 @@ import { OnboardingFooter } from '@/components/onboarding-footer';
 
 export default function LookingForScreen() {
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
 
   const options = [
     'Something casual',
@@ -82,14 +80,13 @@ export default function LookingForScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/religion' as any);
+      router.replace('/religion');
     }
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
         <OnboardingHeader progress={0.8} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -189,21 +186,6 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     justifyContent: 'space-between',
   },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 24,
@@ -263,31 +245,5 @@ const styles = StyleSheet.create({
   optionText: {
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 15,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
   },
 });

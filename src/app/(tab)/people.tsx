@@ -6,9 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  SafeAreaView,
-  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';

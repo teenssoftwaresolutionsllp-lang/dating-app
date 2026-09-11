@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   responsiveContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 480,
     position: 'relative',
     backgroundColor: '#ffffff',
     overflow: 'hidden',
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   headerSection: {
-    paddingTop: Platform.OS === 'web' ? 44 : 20,
+    paddingTop: 20,
     paddingHorizontal: 4,
     transform: [{ translateY: 170 }],
   },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomSection: {
-    paddingBottom: Platform.OS === 'web' ? 28 : 16,
+    paddingBottom: 16,
     width: '100%',
     alignItems: 'center',
     bottom:30,

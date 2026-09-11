@@ -13,7 +13,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
@@ -177,6 +176,10 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   root: {
+    flex: 1,
+    width: '100%',
+  },
+  dismissArea: {
     flex: 1,
     width: '100%',
   },

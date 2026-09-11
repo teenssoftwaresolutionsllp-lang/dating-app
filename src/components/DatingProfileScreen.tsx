@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,15 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView,
   StatusBar,
   Animated,
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
-  Platform,
-  TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { router } from 'expo-router';
@@ -287,12 +285,7 @@ const YOU_LIKED_DATA = [
   { id: 'yl3', name: 'Teju, 23', image: ASSET_IMAGES[0], time: '3 days ago', match: '87%' },
 ];
 
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'profile';
-  text: string;
-  time: string;
-}
+
 
 export default function DatingProfileScreen() {
   const [activeTab, setActiveTab] = useState<'matches' | 'likes' | 'people' | 'chats' | 'me'>('matches');
@@ -306,22 +299,7 @@ export default function DatingProfileScreen() {
     avatar: any;
   } | null>(null);
 
-  // Chat conversation state
-  const [chatMessages, setChatMessages] = useState<{ [profileId: string]: ChatMessage[] }>({
-    '1': [
-      { id: 'm1', sender: 'profile', text: 'Hey there! 👋 Saw you looking at my profile. How is your day going?', time: '10:30 AM' },
-    ],
-    '2': [
-      { id: 'm1', sender: 'profile', text: 'Hi! ☕ Love road trips and good coffee. What about you?', time: '11:15 AM' },
-    ],
-    '3': [
-      { id: 'm1', sender: 'profile', text: 'Hey! 🎨 What kind of music or art do you like?', time: '12:00 PM' },
-    ],
-    '4': [
-      { id: 'm1', sender: 'profile', text: 'Hello! 🎧 Always up for a chat about tech or music!', time: '1:45 PM' },
-    ],
-  });
-  const [inputText, setInputText] = useState('');
+
 
   const currentProfile = PROFILES_DATA[currentProfileIndex];
 
@@ -331,27 +309,17 @@ export default function DatingProfileScreen() {
   );
 
   const scrollViewRef = useRef<ScrollView>(null);
-  const chatScrollRef = useRef<ScrollView>(null);
-  const scrollXAnim = useRef(new Animated.Value(0)).current;
-  const heartScaleAnim = useRef(new Animated.Value(1)).current;
+  const [scrollXAnim] = useState(() => new Animated.Value(0));
+  const [heartScaleAnim] = useState(() => new Animated.Value(1));
 
   // Slide animation for complete screen swipe effect
   const [isAnimating, setIsAnimating] = useState(false);
-  const cardSlideAnim = useRef(new Animated.Value(0)).current;
+  const [cardSlideAnim] = useState(() => new Animated.Value(0));
 
   const cardRotateInterpolation = cardSlideAnim.interpolate({
     inputRange: [-cardWidth * 1.5, 0, cardWidth * 1.5],
     outputRange: ['-14deg', '0deg', '14deg'],
   });
-
-  // Handle back navigation
-  const handleGoBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.push('/(onboarding)/photos' as any);
-    }
-  };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -461,55 +429,12 @@ export default function DatingProfileScreen() {
     setActiveTab('chats');
   };
 
-  // Send message in chat screen
-  const handleSendMessage = (textToSend?: string) => {
-    const text = textToSend || inputText;
-    if (!text.trim()) return;
-
-    const newMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: text.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setChatMessages((prev) => ({
-      ...prev,
-      [currentProfile.id]: [...(prev[currentProfile.id] || []), newMsg],
-    }));
-
-    if (!textToSend) setInputText('');
-
-    setTimeout(() => {
-      chatScrollRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-
-    // Auto-reply simulation from profile
-    setTimeout(() => {
-      const replyMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'profile',
-        text: `Thanks for messaging! 😊 I'd love to chat more!`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setChatMessages((prev) => ({
-        ...prev,
-        [currentProfile.id]: [...(prev[currentProfile.id] || []), replyMsg],
-      }));
-      setTimeout(() => {
-        chatScrollRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }, 1200);
-  };
-
   const onCardLayout = (e: LayoutChangeEvent) => {
     const { width } = e.nativeEvent.layout;
     if (width > 0 && Math.abs(width - cardWidth) > 1) {
       setCardWidth(width);
     }
   };
-
-  const currentMessages = chatMessages[currentProfile.id] || [];
 
   return (
     <View style={styles.outerContainer}>
@@ -582,7 +507,7 @@ export default function DatingProfileScreen() {
                         <Image
                           source={item.image}
                           style={styles.blurredCardImage}
-                          blurRadius={Platform.OS === 'web' ? 8 : 10}
+                          blurRadius={10}
                           resizeMode="cover"
                         />
                         <View style={styles.blurredCardOverlay} />
@@ -634,7 +559,7 @@ export default function DatingProfileScreen() {
             {showLikedToast && (
               <View style={styles.likedToast}>
                 <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.likedToastText}>Liked {currentProfile.name}'s profile!</Text>
+                <Text style={styles.likedToastText}>{`Liked ${currentProfile.name}'s profile!`}</Text>
               </View>
             )}
 

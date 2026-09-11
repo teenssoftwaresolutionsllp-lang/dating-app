@@ -81,7 +81,7 @@ export default function CompanyScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/profession' as any);
+      router.replace('/profession');
     }
   };
 
@@ -107,7 +107,7 @@ export default function CompanyScreen() {
 
             {/* Section Label */}
             <View style={styles.labelContainer}>
-              <Text style={styles.label}>Company Name/Organization</Text>
+              <Text style={styles.label}>Company Name / Organization</Text>
             </View>
 
             {/* Capsule Input Container */}
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
   },
   textInputError: {
     color: '#FF3B30',

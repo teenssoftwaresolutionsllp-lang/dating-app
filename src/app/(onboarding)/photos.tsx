@@ -89,14 +89,14 @@ export default function AddPhotosScreen() {
   };
 
   const handleNext = () => {
-    router.push('/(onboarding)/interests' as any);
+    router.push('/interests');
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/verification' as any);
+      router.replace('/verification');
     }
   };
 
@@ -193,7 +193,7 @@ export default function AddPhotosScreen() {
           <View style={styles.warningRow}>
             <Ionicons name="information-circle-outline" size={18} color="#9CA3AF" style={styles.warningIcon} />
             <Text style={styles.warningText}>
-              Real photos only. AI-generated or misleading images aren't allowed.
+              Real photos only. AI-generated or misleading images aren&apos;t allowed.
             </Text>
           </View>
         </ScrollView>

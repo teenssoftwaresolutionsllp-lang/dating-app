@@ -107,7 +107,7 @@ export default function LocationScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/birthday' as any);
+      router.replace('/birthday');
     }
   };
 
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     height: '100%',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
   },
   searchInputError: {
     color: '#FF3B30',
