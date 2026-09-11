@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   titleContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    // paddingVertical: 0,
   },
   titleText: {
     fontFamily: 'DM_Sans_700Bold',

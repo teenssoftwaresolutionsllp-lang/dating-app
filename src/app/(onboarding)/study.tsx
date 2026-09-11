@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -71,6 +72,50 @@ export default function StudyScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [otherText, setOtherText] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [error, setError] = useState(false);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const isOtherSelected = selected === 'Other' || (selected ? selected.endsWith('Other') : false);
   const isFormValid = Boolean(
@@ -79,13 +124,20 @@ export default function StudyScreen() {
 
   const handleOptionPress = (option: string) => {
     setSelected(option);
+    if (error) {
+      setError(false);
+    }
     if (option !== 'Other' && !option.endsWith('Other')) {
       setOtherText('');
     }
   };
 
   const handleNext = () => {
-    if (!selected) return;
+    if (!selected || (isOtherSelected && otherText.trim().length === 0)) {
+      setError(true);
+      triggerShake();
+      return;
+    }
     const finalStudy = isOtherSelected ? otherText.trim() || 'Other' : selected;
     updateStoredUserProfile({
       education: `${currentQualification} - ${finalStudy}`,
@@ -105,13 +157,14 @@ export default function StudyScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
-        <View style={styles.responsiveContainer}>
-          <OnboardingHeader progress={0.4} />
+      <View style={styles.responsiveContainer}>
+        {/* Progress Bar */}
+        <OnboardingHeader progress={0.4} />
 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
+        >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -124,9 +177,24 @@ export default function StudyScreen() {
             </Text>
 
             {/* Section Title */}
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              What did you study?
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                What did you study?
+              </Text>
+
+              {error && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose any one option
+                </Animated.Text>
+              )}
+            </View>
 
             {/* Radio list options */}
             <View style={styles.optionsList}>
@@ -200,16 +268,20 @@ export default function StudyScreen() {
               })}
             </View>
           </ScrollView>
+        </KeyboardAvoidingView>
 
-          {/* Footer Navigation */}
-          <OnboardingFooter
-            showBack
-            onBack={handleBack}
-            onNext={handleNext}
-            disabled={!isFormValid}
-          />
-        </View>
-      </KeyboardAvoidingView>
+        {/* Footer Navigation */}
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isFormValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -222,7 +294,6 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
     width: '100%',
-    alignItems: 'center',
   },
   responsiveContainer: {
     flex: 1,
@@ -250,11 +321,24 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     maxWidth: 290,
   },
+  sectionHeader: {
+    width: '100%',
+    position: 'relative',
+    marginTop: 34,
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 16,
-    marginTop: 34,
-    marginBottom: 24,
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
   optionsList: {
     width: '100%',

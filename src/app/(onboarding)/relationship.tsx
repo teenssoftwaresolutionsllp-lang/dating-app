@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { useTheme } from '@/hooks/use-theme';
 
 const STATUS_OPTIONS = [
   'Single',
@@ -24,6 +25,7 @@ const STATUS_OPTIONS = [
 
 export default function RelationshipScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
   const handleNext = () => {
@@ -90,7 +92,11 @@ export default function RelationshipScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedStatus}
+          nextButtonStyle={{
+            backgroundColor: selectedStatus
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -105,7 +111,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
   scrollContent: {
     paddingHorizontal: 24,

@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     ...StyleSheet.absoluteFill,
     width: '100%',
-    height: '100%',
+    height: '100%'
   },
   overlayContainer: {
     flex: 1,

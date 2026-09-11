@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
+import * as ImagePicker from 'expo-image-picker';
+import {
+  setLastActiveRoute,
+  setPendingVerificationAction,
+  getPendingVerificationAction,
+  clearPendingVerificationAction,
+} from '@/utils/routePersistence';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { useTheme } from '@/hooks/use-theme';
 import {
   GovernmentIdIcon,
   SelfieScanIcon,
@@ -21,28 +28,234 @@ import {
 
 export default function VerificationScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [govIdUploaded, setGovIdUploaded] = useState(false);
-  const [govIdMethod, setGovIdMethod] = useState<'upload' | 'camera' | null>(null);
+  const [govIdMethod, setGovIdMethod] = useState<'upload' | 'camera' | null>(
+    null
+  );
   const [selfieVerified, setSelfieVerified] = useState(false);
   const [showGovIdModal, setShowGovIdModal] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
 
-  const handleSelectGovIdMethod = (method: 'upload' | 'camera') => {
-    setGovIdMethod(method);
-    setGovIdUploaded(true);
-    setShowGovIdModal(false);
+  const isVerificationComplete = Boolean(govIdUploaded && selfieVerified);
+
+  useEffect(() => {
+    setLastActiveRoute('/(onboarding)/verification');
+
+    const checkPendingResult = async () => {
+      try {
+        if (Platform.OS === 'android') {
+          const pending = await ImagePicker.getPendingResultAsync();
+          const pendingAction = await getPendingVerificationAction();
+
+          if (
+            pending &&
+            !('code' in pending) &&
+            !pending.canceled &&
+            pending.assets &&
+            pending.assets.length > 0
+          ) {
+            if (pendingAction === 'govId_upload') {
+              setGovIdMethod('upload');
+              setGovIdUploaded(true);
+            } else if (pendingAction === 'govId_camera') {
+              setGovIdMethod('camera');
+              setGovIdUploaded(true);
+            } else if (pendingAction === 'selfie') {
+              setSelfieVerified(true);
+            }
+          }
+          await clearPendingVerificationAction();
+        }
+      } catch {
+        // Ignore pending result errors
+      }
+    };
+
+    checkPendingResult();
+  }, []);
+
+  const openPhotoPicker = async (callback: () => void) => {
+    // Web
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.position = 'fixed';
+      input.style.top = '-9999px';
+      input.style.left = '-9999px';
+
+      document.body.appendChild(input);
+
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+
+        // Only update when user actually selected an image
+        if (file) {
+          callback();
+        }
+
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+      };
+
+      input.click();
+      return;
+    }
+
+    // Native
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      // Permission denied/rejected:
+      // do nothing and remain on VerificationScreen
+      if (!permission.granted) {
+        await clearPendingVerificationAction();
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      // User cancelled/closed gallery:
+      // do nothing and remain on VerificationScreen
+      if (result.canceled) {
+        await clearPendingVerificationAction();
+        return;
+      }
+
+      // Update only if an actual image was selected
+      if (result.assets?.length > 0) {
+        callback();
+      }
+      await clearPendingVerificationAction();
+    } catch (error) {
+      // Permission/picker error:
+      // do nothing and remain on VerificationScreen
+      await clearPendingVerificationAction();
+      return;
+    }
   };
 
-  const handleSelectSelfieCamera = () => {
-    setSelfieVerified(true);
+  const openCameraPicker = async (
+    callback: () => void,
+    isFrontCamera = false
+  ) => {
+    // Web
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.setAttribute(
+        'capture',
+        isFrontCamera ? 'user' : 'environment'
+      );
+      input.style.position = 'fixed';
+      input.style.top = '-9999px';
+      input.style.left = '-9999px';
+
+      document.body.appendChild(input);
+
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+
+        // Only update when user actually captured/selected an image
+        if (file) {
+          callback();
+        }
+
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+      };
+
+      input.click();
+      return;
+    }
+
+    // Native
+    try {
+      const permission =
+        await ImagePicker.requestCameraPermissionsAsync();
+
+      // Camera permission denied/rejected:
+      // do nothing and remain on VerificationScreen
+      if (!permission.granted) {
+        await clearPendingVerificationAction();
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        cameraType: isFrontCamera
+          ? ImagePicker.CameraType.front
+          : ImagePicker.CameraType.back,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      // User cancelled/closed camera:
+      // do nothing and remain on VerificationScreen
+      if (result.canceled) {
+        await clearPendingVerificationAction();
+        return;
+      }
+
+      // Update only when an actual photo was captured
+      if (result.assets?.length > 0) {
+        callback();
+      }
+      await clearPendingVerificationAction();
+    } catch (error) {
+      // Permission/camera error:
+      // do nothing and remain on VerificationScreen
+      await clearPendingVerificationAction();
+      return;
+    }
+  };
+
+  const handleSelectGovIdPhotos = async () => {
+    setShowGovIdModal(false);
+    await setPendingVerificationAction('govId_upload');
+
+    openPhotoPicker(() => {
+      setGovIdMethod('upload');
+      setGovIdUploaded(true);
+    });
+  };
+
+  const handleSelectGovIdCamera = async () => {
+    setShowGovIdModal(false);
+    await setPendingVerificationAction('govId_camera');
+
+    openCameraPicker(() => {
+      setGovIdMethod('camera');
+      setGovIdUploaded(true);
+    }, false);
+  };
+
+  const handleSelectSelfieCamera = async () => {
     setShowSelfieModal(false);
+    await setPendingVerificationAction('selfie');
+
+    openCameraPicker(() => {
+      setSelfieVerified(true);
+    }, true);
   };
 
   const handleNext = () => {
-    router.push('/photos');
+    setLastActiveRoute('/(onboarding)/photos');
+    router.push('/(onboarding)/photos' as any);
   };
 
   const handleBack = () => {
+    setLastActiveRoute('/(onboarding)/income');
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -61,6 +274,7 @@ export default function VerificationScreen() {
         >
           {/* Header Title & Subtitle */}
           <Text style={styles.title}>{"Let's verify it's really you"}</Text>
+
           <Text style={styles.subtitle}>
             One quick check helps keep our community safe and genuine.
           </Text>
@@ -76,8 +290,10 @@ export default function VerificationScreen() {
               <View style={styles.iconContainer}>
                 <GovernmentIdIcon size={46} color="#6B7280" />
               </View>
+
               <View style={styles.cardTextContent}>
                 <Text style={styles.cardTitle}>Government ID</Text>
+
                 <Text style={styles.cardSubtitle}>
                   {govIdUploaded
                     ? govIdMethod === 'camera'
@@ -86,7 +302,13 @@ export default function VerificationScreen() {
                     : 'Upload a valid government-issued ID'}
                 </Text>
               </View>
-              <View style={[styles.actionCircle, govIdUploaded && styles.actionCircleDone]}>
+
+              <View
+                style={[
+                  styles.actionCircle,
+                  govIdUploaded && styles.actionCircleDone,
+                ]}
+              >
                 <Ionicons
                   name={govIdUploaded ? 'checkmark' : 'chevron-forward'}
                   size={18}
@@ -107,13 +329,25 @@ export default function VerificationScreen() {
               <View style={styles.iconContainer}>
                 <SelfieScanIcon size={46} color="#6B7280" />
               </View>
+
               <View style={styles.cardTextContent}>
-                <Text style={styles.cardTitle}>Selfie Verification</Text>
+                <Text style={styles.cardTitle}>
+                  Selfie Verification
+                </Text>
+
                 <Text style={styles.cardSubtitle}>
-                  {selfieVerified ? 'Selfie confirmed via camera' : "Take a quick selfie to confirm it's you"}
+                  {selfieVerified
+                    ? 'Selfie confirmed via camera'
+                    : "Take a quick selfie to confirm it's you"}
                 </Text>
               </View>
-              <View style={[styles.actionCircle, selfieVerified && styles.actionCircleDone]}>
+
+              <View
+                style={[
+                  styles.actionCircle,
+                  selfieVerified && styles.actionCircleDone,
+                ]}
+              >
                 <Ionicons
                   name={selfieVerified ? 'checkmark' : 'chevron-forward'}
                   size={18}
@@ -125,7 +359,12 @@ export default function VerificationScreen() {
 
           {/* Security Notice Banner */}
           <View style={styles.securityRow}>
-            <Ionicons name="lock-closed" size={16} color="#16A34A" />
+            <Ionicons
+              name="lock-closed"
+              size={16}
+              color="#16A34A"
+            />
+
             <Text style={styles.securityText}>
               Your information is private and secure.
             </Text>
@@ -137,55 +376,100 @@ export default function VerificationScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isVerificationComplete
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
 
-      {/* Modal / Options Sheet for First Verification (Government ID) */}
+      {/* Government ID Modal */}
       <Modal
         visible={showGovIdModal}
         transparent
         animationType="fade"
         onRequestClose={() => setShowGovIdModal(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setShowGovIdModal(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setShowGovIdModal(false)}
+        >
           <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+            <TouchableWithoutFeedback
+              onPress={(e) => e.stopPropagation()}
+            >
               <View style={styles.modalSheetContainer}>
                 <View style={styles.grabHandle} />
-                <Text style={styles.modalTitle}>Government ID</Text>
-                <Text style={styles.modalSubtitle}>Choose an option to verify your ID</Text>
+
+                <Text style={styles.modalTitle}>
+                  Government ID
+                </Text>
+
+                <Text style={styles.modalSubtitle}>
+                  Choose an option to verify your ID
+                </Text>
 
                 <View style={styles.modalOptionsList}>
-                  {/* Upload Photo Option */}
+                  {/* Photos Option */}
                   <TouchableOpacity
                     style={styles.modalOptionCard}
-                    onPress={() => handleSelectGovIdMethod('upload')}
+                    onPress={handleSelectGovIdPhotos}
                     activeOpacity={0.7}
                   >
                     <View style={styles.modalOptionIconCircle}>
-                      <Ionicons name="images-outline" size={22} color="#0F766E" />
+                      <Ionicons
+                        name="images-outline"
+                        size={22}
+                        color="#0F766E"
+                      />
                     </View>
+
                     <View style={styles.modalOptionTextWrap}>
-                      <Text style={styles.modalOptionTitle}>Upload Photo</Text>
-                      <Text style={styles.modalOptionDesc}>Choose a photo from your library</Text>
+                      <Text style={styles.modalOptionTitle}>
+                        Photos
+                      </Text>
+
+                      <Text style={styles.modalOptionDesc}>
+                        Choose from device photo gallery
+                      </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color="#9CA3AF"
+                    />
                   </TouchableOpacity>
 
-                  {/* Open Camera Option */}
+                  {/* Camera Option */}
                   <TouchableOpacity
                     style={styles.modalOptionCard}
-                    onPress={() => handleSelectGovIdMethod('camera')}
+                    onPress={handleSelectGovIdCamera}
                     activeOpacity={0.7}
                   >
                     <View style={styles.modalOptionIconCircle}>
-                      <Ionicons name="camera-outline" size={22} color="#0F766E" />
+                      <Ionicons
+                        name="camera-outline"
+                        size={22}
+                        color="#0F766E"
+                      />
                     </View>
+
                     <View style={styles.modalOptionTextWrap}>
-                      <Text style={styles.modalOptionTitle}>Open Camera</Text>
-                      <Text style={styles.modalOptionDesc}>Take a photo of your ID card</Text>
+                      <Text style={styles.modalOptionTitle}>
+                        Camera
+                      </Text>
+
+                      <Text style={styles.modalOptionDesc}>
+                        Take a photo using your camera
+                      </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color="#9CA3AF"
+                    />
                   </TouchableOpacity>
                 </View>
 
@@ -195,7 +479,9 @@ export default function VerificationScreen() {
                   onPress={() => setShowGovIdModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -203,36 +489,61 @@ export default function VerificationScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Modal / Options Sheet for Selfie Verification */}
+      {/* Selfie Verification Modal */}
       <Modal
         visible={showSelfieModal}
         transparent
         animationType="fade"
         onRequestClose={() => setShowSelfieModal(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setShowSelfieModal(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setShowSelfieModal(false)}
+        >
           <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+            <TouchableWithoutFeedback
+              onPress={(e) => e.stopPropagation()}
+            >
               <View style={styles.modalSheetContainer}>
                 <View style={styles.grabHandle} />
-                <Text style={styles.modalTitle}>Selfie Verification</Text>
-                <Text style={styles.modalSubtitle}>Take a selfie to confirm your identity</Text>
+
+                <Text style={styles.modalTitle}>
+                  Selfie Verification
+                </Text>
+
+                <Text style={styles.modalSubtitle}>
+                  Take a selfie to confirm your identity
+                </Text>
 
                 <View style={styles.modalOptionsList}>
-                  {/* Open Camera Option */}
+                  {/* Camera Option */}
                   <TouchableOpacity
                     style={styles.modalOptionCard}
                     onPress={handleSelectSelfieCamera}
                     activeOpacity={0.7}
                   >
                     <View style={styles.modalOptionIconCircle}>
-                      <Ionicons name="camera-outline" size={22} color="#0F766E" />
+                      <Ionicons
+                        name="camera-outline"
+                        size={22}
+                        color="#0F766E"
+                      />
                     </View>
+
                     <View style={styles.modalOptionTextWrap}>
-                      <Text style={styles.modalOptionTitle}>Open Camera</Text>
-                      <Text style={styles.modalOptionDesc}>Take a selfie directly with your camera</Text>
+                      <Text style={styles.modalOptionTitle}>
+                        Camera
+                      </Text>
+
+                      <Text style={styles.modalOptionDesc}>
+                        Take a selfie directly with your camera
+                      </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color="#9CA3AF"
+                    />
                   </TouchableOpacity>
                 </View>
 
@@ -242,7 +553,9 @@ export default function VerificationScreen() {
                   onPress={() => setShowSelfieModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -259,16 +572,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
   },
+
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
+
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 20,
   },
+
   title: {
     fontSize: 22,
     fontWeight: '700',
@@ -277,6 +593,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'DM_Sans_700Bold',
   },
+
   subtitle: {
     fontSize: 13,
     color: '#6B7280',
@@ -286,25 +603,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontFamily: 'DM_Sans_400Regular',
   },
+
   cardsContainer: {
     width: '100%',
     marginBottom: 24,
   },
+
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
   },
+
   iconContainer: {
     width: 52,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
+
   cardTextContent: {
     flex: 1,
     paddingRight: 8,
   },
+
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
@@ -312,29 +634,34 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     fontFamily: 'DM_Sans_700Bold',
   },
+
   cardSubtitle: {
     fontSize: 12,
     color: '#6B7280',
     lineHeight: 16,
     fontFamily: 'DM_Sans_400Regular',
   },
+
   actionCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   actionCircleDone: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#00E4E8',
   },
+
   divider: {
     height: 1,
     backgroundColor: '#E5E7EB',
     marginVertical: 12,
     width: '100%',
   },
+
   securityRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -342,18 +669,21 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
+
   securityText: {
     fontSize: 12,
     color: '#16A34A',
     fontWeight: '500',
     fontFamily: 'DM_Sans_500Medium',
   },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
+
   modalSheetContainer: {
     width: '100%',
     maxWidth: 500,
@@ -369,6 +699,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
   },
+
   grabHandle: {
     width: 40,
     height: 4,
@@ -377,6 +708,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 16,
   },
+
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -384,16 +716,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'DM_Sans_700Bold',
   },
+
   modalSubtitle: {
     fontSize: 13,
     color: '#6B7280',
     marginBottom: 20,
     fontFamily: 'DM_Sans_400Regular',
   },
+
   modalOptionsList: {
     gap: 12,
     marginBottom: 16,
   },
+
   modalOptionCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -404,6 +739,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
+
   modalOptionIconCircle: {
     width: 42,
     height: 42,
@@ -413,9 +749,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 14,
   },
+
   modalOptionTextWrap: {
     flex: 1,
   },
+
   modalOptionTitle: {
     fontSize: 15,
     fontWeight: '700',
@@ -423,11 +761,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     fontFamily: 'DM_Sans_700Bold',
   },
+
   modalOptionDesc: {
     fontSize: 12,
     color: '#6B7280',
     fontFamily: 'DM_Sans_400Regular',
   },
+
   cancelButton: {
     paddingVertical: 14,
     alignItems: 'center',
@@ -435,6 +775,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F3F4F6',
   },
+
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',

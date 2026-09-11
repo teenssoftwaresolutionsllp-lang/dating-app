@@ -514,38 +514,18 @@ export default function ProfileReadyScreen() {
 
         {/* Footer Navigation */}
         <Animated.View
-          style={[
-            styles.footer,
-            {
-              paddingBottom: Math.max(insets.bottom, 16),
-              opacity: footerOpacity,
-              transform: [{ translateY: footerTranslateY }],
-            },
-          ]}
+          style={{
+            width: '100%',
+            opacity: footerOpacity,
+            transform: [{ translateY: footerTranslateY }],
+          }}
         >
-          <Pressable
-            onPress={handleBack}
-            style={[
-              styles.backButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-
-          <Pressable
-            onPress={handleLetsDate}
-            style={[
-              styles.letsDateButton,
-              { backgroundColor: theme.primaryButton },
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.letsDateButtonText}>Let’s Date</Text>
-          </Pressable>
+          <OnboardingFooter
+            showBack
+            onBack={() => router.back()}
+            onNext={handleLetsDate}
+            nextText="Let’s Date"
+          />
         </Animated.View>
       </View>
     </SafeAreaView>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface OnboardingFooterProps {
@@ -8,6 +8,7 @@ interface OnboardingFooterProps {
   onNext: () => void;
   nextText?: string;
   disabled?: boolean;
+  nextButtonStyle?: StyleProp<ViewStyle>;
 }
 
 export function   OnboardingFooter({
@@ -16,6 +17,7 @@ export function   OnboardingFooter({
   onNext,
   nextText = 'Next',
   disabled = false,
+  nextButtonStyle,
 }: OnboardingFooterProps) {
   return (
     <View style={styles.container}>
@@ -33,10 +35,11 @@ export function   OnboardingFooter({
           styles.nextButton,
           !showBack && styles.nextButtonFull,
           disabled && styles.nextButtonDisabled,
+          nextButtonStyle,
         ]}
         onPress={onNext}
         disabled={disabled}
-        activeOpacity={0.85}
+        activeOpacity={0.8}
       >
         <Text style={styles.nextText}>{nextText}</Text>
       </TouchableOpacity>
@@ -58,7 +61,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
     alignItems: 'center',
     justifyContent: 'center',
     bottom:30,
@@ -67,7 +70,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
     alignItems: 'center',
     justifyContent: 'center',
     bottom:30,

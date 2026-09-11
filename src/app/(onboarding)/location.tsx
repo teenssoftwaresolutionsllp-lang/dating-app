@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { useTheme } from '@/hooks/use-theme';
 import {
   HyderabadIcon,
   DelhiIcon,
@@ -35,14 +38,69 @@ const CITIES = [
 
 export default function LocationScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState(false);
+
+  const locationShakeAnim = useRef(new Animated.Value(0)).current;
 
   const isLocationValid = Boolean(selectedCity || searchQuery.trim().length > 0);
 
+  const triggerLocationShake = () => {
+    locationShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(locationShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(locationShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(locationShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(locationShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(locationShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(locationShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(locationShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const handleNext = () => {
-    if (!isLocationValid) return;
-    router.push('/relationship');
+    if (!isLocationValid) {
+      setLocationError(true);
+      triggerLocationShake();
+      return;
+    }
+    const chosenName = selectedCity
+      ? CITIES.find((c) => c.id === selectedCity)?.name || selectedCity
+      : searchQuery.trim();
+    if (chosenName) {
+      updateStoredUserProfile({ location: chosenName });
+    }
+    router.push('/(onboarding)/relationship' as any);
   };
 
   const handleBack = () => {
@@ -59,80 +117,121 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.19} />
+      <View style={styles.centerContainer}>
+        <OnboardingHeader progress={0.2} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {/* Header Title & Subtitle */}
-          <Text style={styles.title}>Set your location</Text>
-          <Text style={styles.subtitle}>
-            {"Choose where you'd like to meet people and find better matches."}
-          </Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header Title & Subtitle matching Screenshot 2 */}
+            <Text style={styles.title}>Set your location</Text>
+            <Text style={styles.subtitle}>
+              {"Choose where you'd like to meet people and find better matches."}
+            </Text>
 
-          {/* Capsule Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={(text) => {
-                setSearchQuery(text);
-              }}
-              placeholder="Search for Near by location"
-              placeholderTextColor="#9CA3AF"
-              returnKeyType="done"
-              onSubmitEditing={handleNext}
-            />
-          </View>
-
-          {/* City Grid - 2 columns */}
-          <View style={styles.citiesGrid}>
-            {filteredCities.map((city) => {
-              const isSelected = selectedCity === city.id;
-              const CityIcon = city.Icon;
-              return (
-                <TouchableOpacity
-                  key={city.id}
+            {/* Capsule Search Bar matching Screenshot 2 */}
+            <View style={styles.searchSection}>
+              <View
+                style={[
+                  styles.searchContainer,
+                  locationError && styles.searchContainerError,
+                ]}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={20}
+                  color={locationError ? '#9CA3AF' : '#9CA3AF'}
+                  style={styles.searchIcon}
+                />
+                <TextInput
                   style={[
-                    styles.cityCard,
-                    isSelected && styles.cityCardSelected,
+                    styles.searchInput,
+                    locationError && styles.searchInputError,
                   ]}
-                  onPress={() => setSelectedCity(city.id)}
-                  activeOpacity={0.8}
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    if (locationError && text.trim().length > 0) {
+                      setLocationError(false);
+                    }
+                  }}
+                  placeholder="Search for Near by location"
+                  placeholderTextColor={locationError ? '#9CA3AF' : '#9CA3AF'}
+                  returnKeyType="done"
+                  onSubmitEditing={handleNext}
+                />
+              </View>
+              {locationError && (
+                <Animated.Text
+                  style={[
+                    styles.locationErrorMessage,
+                    {
+                      transform: [{ translateX: locationShakeAnim }],
+                    },
+                  ]}
                 >
-                  <View style={styles.iconWrapper}>
-                    <CityIcon size={42} />
-                  </View>
-                  <Text
-                    style={[
-                      styles.cityName,
-                      isSelected && styles.cityNameSelected,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {city.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+                  Select your location
+                </Animated.Text>
+              )}
+            </View>
 
-      {/* Action Footer with Validation */}
-      <OnboardingFooter
-        showBack
-        onBack={handleBack}
-        onNext={handleNext}
-        disabled={!isLocationValid}
-      />
+            {/* City Grid - 2 columns side by side */}
+            <View style={styles.citiesGrid}>
+              {filteredCities.map((city) => {
+                const isSelected = selectedCity === city.id;
+                const CityIcon = city.Icon;
+                return (
+                  <TouchableOpacity
+                    key={city.id}
+                    style={[
+                      styles.cityCard,
+                      isSelected && styles.cityCardSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedCity(city.id);
+                      if (locationError) {
+                        setLocationError(false);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.iconWrapper}>
+                      <CityIcon size={42} />
+                    </View>
+                    <Text
+                      style={[
+                        styles.cityName,
+                        isSelected && styles.cityNameSelected,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {city.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* Action Footer with Validation */}
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isLocationValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -141,6 +240,12 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
   },
   keyboardView: {
     flex: 1,
@@ -166,6 +271,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     lineHeight: 18,
   },
+  searchSection: {
+    width: '100%',
+    position: 'relative',
+    marginBottom: 28,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,7 +286,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
-    marginBottom: 28,
+  },
+  searchContainerError: {
+    borderColor: '#FF3B30',
+    borderWidth: 1.5,
   },
   searchIcon: {
     marginRight: 10,
@@ -189,6 +302,17 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingVertical: 0,
     outlineStyle: 'none' as any,
+  },
+  searchInputError: {
+    color: '#FF3B30',
+  },
+  locationErrorMessage: {
+    position: 'absolute',
+    bottom: -20,
+    left: 16,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
   },
   citiesGrid: {
     flexDirection: 'row',

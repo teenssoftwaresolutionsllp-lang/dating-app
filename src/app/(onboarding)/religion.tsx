@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,17 +29,69 @@ export default function ReligionScreen() {
   ];
 
   const [selectedReligion, setSelectedReligion] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleSelect = (religion: string) => {
     setSelectedReligion(religion);
+    if (error) {
+      setError(false);
+    }
     setModalVisible(false);
   };
 
   const handleNext = () => {
+    if (!selectedReligion) {
+      setError(true);
+      triggerShake();
+      return;
+    }
     router.push({
-      pathname: '/looking-for',
-      params: { religion: selectedReligion || 'Not specified' },
+      pathname: '/(onboarding)/looking-for',
+      params: { religion: selectedReligion },
     });
   };
 
@@ -74,7 +126,7 @@ export default function ReligionScreen() {
             style={[
               styles.selectBox,
               {
-                borderColor: selectedReligion ? theme.primaryButton : isDark ? '#3E4044' : '#B9B9B9',
+                borderColor: selectedReligion ? theme.primaryButton : error ? '#FF3B30' : isDark ? '#3E4044' : '#B9B9B9',
                 backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
               },
               Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
@@ -98,6 +150,19 @@ export default function ReligionScreen() {
               color={selectedReligion ? theme.primaryButton : theme.textSecondary}
             />
           </Pressable>
+
+          {error && (
+            <Animated.Text
+              style={[
+                styles.errorMessage,
+                {
+                  transform: [{ translateX: shakeAnim }],
+                },
+              ]}
+            >
+              Please choose your Religion / Community
+            </Animated.Text>
+          )}
         </ScrollView>
 
         {/* Footer Navigation */}
@@ -105,7 +170,11 @@ export default function ReligionScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedReligion}
+          nextButtonStyle={{
+            backgroundColor: selectedReligion
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
 
@@ -272,5 +341,13 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 15,
+  },
+  errorMessage: {
+    marginTop: 8,
+    marginLeft: 16,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

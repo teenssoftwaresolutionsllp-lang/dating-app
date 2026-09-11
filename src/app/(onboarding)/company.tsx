@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   TextInput,
@@ -13,14 +14,67 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function CompanyScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [companyName, setCompanyName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [error, setError] = useState(false);
+
+  const isCompanyValid = Boolean(companyName.trim().length > 0);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleNext = () => {
-    router.push('/income');
+    if (!companyName.trim()) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    router.push('/(onboarding)/income' as any);
   };
 
   const handleBack = () => {
@@ -57,25 +111,49 @@ export default function CompanyScreen() {
             </View>
 
             {/* Capsule Input Container */}
-            <View
-              style={[
-                styles.inputContainer,
-                isFocused && styles.inputContainerFocused,
-              ]}
-            >
-              <TextInput
-                style={styles.textInput}
-                value={companyName}
-                onChangeText={setCompanyName}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Enter Company Name"
-                placeholderTextColor="#9CA3AF"
-                selectionColor="#00F5D4"
-                autoCapitalize="words"
-                returnKeyType="done"
-                onSubmitEditing={handleNext}
-              />
+            <View style={styles.inputSection}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  isFocused && styles.inputContainerFocused,
+                  error && styles.inputContainerError,
+                ]}
+              >
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    error && styles.textInputError,
+                  ]}
+                  value={companyName}
+                  onChangeText={(text) => {
+                    setCompanyName(text);
+                    if (error && text.trim().length > 0) {
+                      setError(false);
+                    }
+                  }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  placeholder="Enter company name"
+                  placeholderTextColor={error ? '#9CA3AF' : '#9CA3AF'}
+                  selectionColor="#00F5D4"
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  onSubmitEditing={handleNext}
+                />
+              </View>
+
+              {error && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please enter your company name/organization
+                </Animated.Text>
+              )}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -85,7 +163,11 @@ export default function CompanyScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!companyName && companyName.trim().length === 0}
+          nextButtonStyle={{
+            backgroundColor: isCompanyValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -101,7 +183,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
   keyboardView: {
     flex: 1,
@@ -134,6 +216,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
+  inputSection: {
+    width: '100%',
+    position: 'relative',
+  },
   inputContainer: {
     width: '100%',
     height: 48,
@@ -148,6 +234,10 @@ const styles = StyleSheet.create({
     borderColor: '#00F5D4',
     borderWidth: 1.5,
   },
+  inputContainerError: {
+    borderColor: '#FF3B30',
+    borderWidth: 1.5,
+  },
   textInput: {
     fontSize: 14,
     color: '#111827',
@@ -156,5 +246,17 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 0,
     outlineStyle: 'none' as any,
+  },
+  textInputError: {
+    color: '#FF3B30',
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -20,
+    left: 16,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
@@ -18,14 +19,61 @@ export default function LookingForScreen() {
   ];
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleNext = () => {
-    if (selected) {
-      router.push({
-        pathname: '/ideal-match',
-        params: { lookingFor: selected },
-      });
+    if (!selected) {
+      setError(true);
+      triggerShake();
+      return;
     }
+    router.push({
+      pathname: '/(onboarding)/ideal-match',
+      params: { lookingFor: selected },
+    });
   };
 
   const handleBack = () => {
@@ -48,10 +96,24 @@ export default function LookingForScreen() {
             Tell us a little about yourself so we can help you find better matches.
           </Text>
 
-          {/* Section Title */}
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            What are you looking for?
-          </Text>
+          {/* Section Header */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              What are you looking for?
+            </Text>
+            {error && (
+              <Animated.Text
+                style={[
+                  styles.errorMessage,
+                  {
+                    transform: [{ translateX: shakeAnim }],
+                  },
+                ]}
+              >
+                Please choose any one option
+              </Animated.Text>
+            )}
+          </View>
 
           {/* Radio list options */}
           <View style={styles.optionsList}>
@@ -60,7 +122,12 @@ export default function LookingForScreen() {
               return (
                 <Pressable
                   key={option}
-                  onPress={() => setSelected(option)}
+                  onPress={() => {
+                    setSelected(option);
+                    if (error) {
+                      setError(false);
+                    }
+                  }}
                   style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: isSelected }}
@@ -97,7 +164,11 @@ export default function LookingForScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selected}
+          nextButtonStyle={{
+            backgroundColor: selected
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -134,11 +205,20 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     maxWidth: 290,
   },
+  sectionHeader: {
+    marginTop: 34,
+    marginBottom: 24,
+  },
   sectionTitle: {
     fontFamily: 'DM_Sans_700Bold',
     fontSize: 16,
-    marginTop: 34,
-    marginBottom: 24,
+  },
+  errorMessage: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
   optionsList: {
     width: '100%',

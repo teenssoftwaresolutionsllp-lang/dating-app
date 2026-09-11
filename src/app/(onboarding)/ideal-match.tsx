@@ -97,8 +97,15 @@ export default function IdealMatchScreen() {
     })
   );
 
+  const isComplete = Boolean(
+    selectedDistance &&
+    selectedReligion &&
+    selectedInterests.length > 0
+  );
+
   const handleNext = () => {
-    router.push('/ready');
+    if (!isComplete) return;
+    router.push('/(onboarding)/ready');
   };
 
   const handleBack = () => {
@@ -289,6 +296,11 @@ export default function IdealMatchScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isComplete
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
 

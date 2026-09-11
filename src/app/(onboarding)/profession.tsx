@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   TextInput,
@@ -15,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { useTheme } from '@/hooks/use-theme';
 
 const PROFESSIONS = [
   'Software Engineer',
@@ -38,16 +41,69 @@ const PROFESSIONS = [
 
 export default function ProfessionScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  const isProfessionValid = Boolean(selectedProfession || searchQuery.trim().length > 0);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const filteredProfessions = PROFESSIONS.filter((item) =>
     item.toLowerCase().includes(searchQuery.toLowerCase().trim())
   );
 
   const handleNext = () => {
-    if (!selectedProfession && !searchQuery.trim()) return;
-    router.push('/company');
+    if (!selectedProfession && !searchQuery.trim()) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    const finalProfession = selectedProfession || searchQuery.trim();
+    updateStoredUserProfile({ profession: finalProfession });
+    router.push('/(onboarding)/company' as any);
   };
 
   const handleBack = () => {
@@ -84,22 +140,40 @@ export default function ProfessionScreen() {
             </View>
 
             {/* Search Input Capsule */}
-            <View style={styles.searchContainer}>
-              <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={(text) => {
-                  setSearchQuery(text);
-                  if (text && !selectedProfession) {
-                    setSelectedProfession(text);
-                  }
-                }}
-                placeholder="Search Profession"
-                placeholderTextColor="#9CA3AF"
-                returnKeyType="done"
-                onSubmitEditing={handleNext}
-              />
+            <View style={styles.searchSection}>
+              <View style={[styles.searchContainer, error && styles.searchContainerWithError]}>
+                <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    if (error && text.trim().length > 0) {
+                      setError(false);
+                    }
+                    if (text && !selectedProfession) {
+                      setSelectedProfession(text);
+                    }
+                  }}
+                  placeholder="Search Profession"
+                  placeholderTextColor="#9CA3AF"
+                  returnKeyType="done"
+                  onSubmitEditing={handleNext}
+                />
+              </View>
+
+              {error && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose your Profession
+                </Animated.Text>
+              )}
             </View>
 
             {/* Profession Options List */}
@@ -116,6 +190,9 @@ export default function ProfessionScreen() {
                     onPress={() => {
                       setSelectedProfession(profession);
                       setSearchQuery(profession);
+                      if (error) {
+                        setError(false);
+                      }
                     }}
                     activeOpacity={0.7}
                   >
@@ -142,7 +219,11 @@ export default function ProfessionScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedProfession && searchQuery.trim().length === 0}
+          nextButtonStyle={{
+            backgroundColor: isProfessionValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -158,7 +239,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
   keyboardView: {
     flex: 1,
@@ -191,6 +272,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
+  searchSection: {
+    width: '100%',
+    position: 'relative',
+    marginBottom: 24,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -201,7 +287,18 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
-    marginBottom: 24,
+  },
+  searchContainerWithError: {
+    borderColor: '#FF3B30',
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -18,
+    left: 12,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
   searchIcon: {
     marginRight: 10,

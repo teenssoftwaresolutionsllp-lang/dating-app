@@ -1,9 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
-  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -23,13 +23,27 @@ const RESEND_SECONDS = 30;
 
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone?: string }>();
-  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
-  const [seconds, setSeconds] = useState(RESEND_SECONDS);
+  const [code, setCode] = useState(['', '', '', '']);
+  const [seconds, setSeconds] = useState(30);
+  const [error, setError] = useState('');
   const inputs = useRef<(TextInput | null)[]>([]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const isDark = theme.text.toLowerCase() === '#ffffff';
-  const complete = code.every(Boolean);
+  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -3, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  };
 
   useEffect(() => {
     if (seconds <= 0) return;
@@ -49,6 +63,13 @@ export default function OtpScreen() {
       next[index + offset] = digit;
     });
     setCode(next);
+    if (error) {
+      setError('');
+    }
+    if (digit && index < 3) {
+      inputs.current[index + 1]?.focus();
+    }
+  }
 
     const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
     if (next.every(Boolean)) {
@@ -83,6 +104,16 @@ export default function OtpScreen() {
     else router.replace('/login');
   };
 
+  const handleVerify = () => {
+    if (!complete) {
+      setError('Invalid OTP');
+      triggerShake();
+      return;
+    }
+    setError('');
+    router.replace('/(onboarding)/set-profile');
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Pressable
@@ -95,21 +126,19 @@ export default function OtpScreen() {
         <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
       </Pressable>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={false}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.responsiveWrapper}>
-            <RelationshipArtwork variant="otp" />
-            <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
-              <View style={styles.content}>
+        <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
+          <RelationshipArtwork variant="otp" />
+
+          <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
+            <View style={styles.content}>
+              <View style={styles.formTopSection}>
                 <View style={styles.headingRow}>
                   <Text style={[styles.heading, { color: theme.text }]}>Enter OTP to Verify</Text>
                   <Pressable
@@ -162,32 +191,47 @@ export default function OtpScreen() {
                   ))}
                 </View>
 
-                <View style={styles.sentRow}>
-                  <Text style={[styles.sent, { color: theme.textSecondary }]}>We have sent OTP to {phone || '00000 00000'}</Text>
-                  <Pressable
-                    onPress={() => router.back()}
-                    accessibilityRole="button"
-                    accessibilityLabel="Edit phone number"
-                    hitSlop={8}
-                    style={[styles.editButton, styles.webPointer]}
-                  >
-                    <Ionicons name="pencil" size={14} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
+                <View style={styles.sentContainer}>
+                  <View style={styles.sentRow}>
+                    <Text style={[styles.sent, { color: theme.textSecondary }]}>
+                      We have sent OTP to {phone || '00000 00000'}
+                    </Text>
+                    <Pressable
+                      onPress={() => router.back()}
+                      style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                    >
+                      <Ionicons name="pencil" size={14} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
 
+                  {!!error && (
+                    <Animated.View style={[styles.errorWrapper, { transform: [{ translateX: shakeAnim }] }]}>
+                      <Text style={styles.errorText}>{error}</Text>
+                    </Animated.View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.bottomButtonSection}>
                 <PrimaryButton
-                  disabled={!complete}
-                  onPress={() => router.replace('/set-profile')}
-                  style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
+                  onPress={handleVerify}
+                  style={[
+                    styles.verifyButton,
+                    {
+                      backgroundColor: complete
+                        ? theme.primaryButton
+                        : '#BDFFF9',
+                    },
+                  ]}
                 >
                   Verify
                 </PrimaryButton>
                 <LegalFooter />
               </View>
-            </SafeAreaView>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            </View>
+          </SafeAreaView>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -206,6 +250,41 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+  },
+  contentSafeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+    justifyContent: 'space-between',
+  },
+  formTopSection: {
+    width: '100%',
+  },
+  headingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  heading: {
+    fontFamily: 'DM_Sans_500Medium',
+    fontSize: 14,
+  },
+  resend: {
+    fontFamily: 'DM_Sans_500Medium',
+    fontSize: 12,
+  },
+  disabled: {
+    opacity: 0.65,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 26,
   },
   webPointer: Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined,
   contentSafeArea: { flex: 1 },
@@ -220,14 +299,44 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 14,
     borderWidth: 1,
-    fontFamily: 'DM_Sans_500Medium',
-    fontSize: 20,
-    padding: 0,
-    textAlign: 'center',
-    outlineStyle: 'none' as any,
   },
-  sentRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
-  sent: { fontFamily: 'DM_Sans_400Regular', fontSize: 12 },
-  editButton: { padding: 4, marginLeft: 2 },
-  verifyButton: { marginTop: 24, marginBottom: 20 },
+  sentContainer: {
+    width: '100%',
+    marginTop: 16,
+    position: 'relative',
+  },
+  sentRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  sent: {
+    flex: 1,
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 12,
+  },
+  editButton: {
+    padding: 4,
+    marginLeft: 2,
+  },
+  errorWrapper: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+  },
+  errorText: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  bottomButtonSection: {
+    width: '100%',
+    paddingBottom: 8,
+  },
+  verifyButton: {
+    marginBottom: 16,
+  },
 });

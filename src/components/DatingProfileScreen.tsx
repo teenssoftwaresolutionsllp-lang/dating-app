@@ -1279,7 +1279,7 @@ const styles = StyleSheet.create({
   mainScrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop:20,
+    // marginTop:5,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1630,6 +1630,7 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   tabLabel: {
     fontSize: 11,
