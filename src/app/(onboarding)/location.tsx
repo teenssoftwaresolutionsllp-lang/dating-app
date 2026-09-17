@@ -140,6 +140,7 @@ export default function LocationScreen() {
               <View
                 style={[
                   styles.searchContainer,
+                  searchQuery.trim().length > 0 && styles.searchContainerActive,
                   locationError && styles.searchContainerError,
                 ]}
               >
@@ -287,6 +288,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
   },
+  searchContainerActive: {
+  borderColor: '#00E4E8',
+},
   searchContainerError: {
     borderColor: '#FF3B30',
     borderWidth: 1.5,

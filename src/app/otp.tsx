@@ -4,6 +4,7 @@ import {
   Animated,
   Dimensions,
   Keyboard,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -23,12 +24,14 @@ const RESEND_SECONDS = 30;
 
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone?: string }>();
-  const [code, setCode] = useState(['', '', '', '']);
-  const [seconds, setSeconds] = useState(30);
+  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState('');
   const inputs = useRef<(TextInput | null)[]>([]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const isDark = theme.text.toLowerCase() === '#ffffff';
+  const complete = code.every(Boolean);
   const initialHeight = useRef(Dimensions.get('window').height).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -53,6 +56,8 @@ export default function OtpScreen() {
 
   const updateCode = (value: string, index: number) => {
     const digits = value.replace(/\D/g, '');
+    if (error) setError('');
+
     if (!digits) {
       setCode((current) => current.map((digit, position) => (position === index ? '' : digit)));
       return;
@@ -60,21 +65,16 @@ export default function OtpScreen() {
 
     const next = [...code];
     digits.slice(0, OTP_LENGTH - index).split('').forEach((digit, offset) => {
-      next[index + offset] = digit;
+      if (index + offset < OTP_LENGTH) {
+        next[index + offset] = digit;
+      }
     });
     setCode(next);
-    if (error) {
-      setError('');
-    }
-    if (digit && index < 3) {
-      inputs.current[index + 1]?.focus();
-    }
-  }
 
-    const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
     if (next.every(Boolean)) {
       Keyboard.dismiss();
     } else {
+      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
       inputs.current[nextIndex]?.focus();
     }
   };
@@ -96,6 +96,7 @@ export default function OtpScreen() {
     if (seconds > 0) return;
     setCode(Array(OTP_LENGTH).fill(''));
     setSeconds(RESEND_SECONDS);
+    setError('');
     requestAnimationFrame(() => inputs.current[0]?.focus());
   };
 
@@ -123,7 +124,7 @@ export default function OtpScreen() {
         hitSlop={8}
         style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
       >
-        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
       </Pressable>
 
       <ScrollView
@@ -181,9 +182,10 @@ export default function OtpScreen() {
                         styles.otpInput,
                         {
                           color: theme.text,
-                          borderColor: theme.border,
+                          borderColor: error ? '#FF3B30' : theme.border,
                           backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
                         },
+                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
                       ]}
                       textAlign="center"
                       accessibilityLabel={`OTP digit ${index + 1}`}
@@ -197,7 +199,10 @@ export default function OtpScreen() {
                       We have sent OTP to {phone || '00000 00000'}
                     </Text>
                     <Pressable
-                      onPress={() => router.back()}
+                      onPress={handleBack}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit phone number"
+                      hitSlop={8}
                       style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
                     >
                       <Ionicons name="pencil" size={14} color={theme.textSecondary} />
@@ -238,7 +243,6 @@ export default function OtpScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, width: '100%' },
-  keyboardContainer: { flex: 1, width: '100%' },
   scrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start' },
   responsiveWrapper: { width: '100%', maxWidth: 480, flex: 1, justifyContent: 'space-between' },
   backButton: {
@@ -287,18 +291,15 @@ const styles = StyleSheet.create({
     marginTop: 26,
   },
   webPointer: Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined,
-  contentSafeArea: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
-  headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heading: { fontFamily: 'DM_Sans_500Medium', fontSize: 14 },
-  resend: { fontFamily: 'DM_Sans_500Medium', fontSize: 12 },
-  disabled: { opacity: 0.65 },
-  otpRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 26 },
   otpInput: {
     width: 58,
     height: 58,
     borderRadius: 14,
     borderWidth: 1,
+    fontFamily: 'DM_Sans_500Medium',
+    fontSize: 20,
+    textAlign: 'center',
+    padding: 0,
   },
   sentContainer: {
     width: '100%',

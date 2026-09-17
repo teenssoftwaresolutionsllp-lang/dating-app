@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+// import { Image } from 'expo-image';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
@@ -262,22 +262,7 @@ export default function SetProfileScreen() {
                   Select your gender
                 </Animated.Text>
               )}
-              {/* Male Card */}
-              <TouchableOpacity
-                style={[
-                  styles.genderCard,
-                  gender === 'Male' && styles.genderCardSelected,
-                ]}
-                onPress={() => setGender('Male')}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={require('@/assets/images/male-avatar.jpg')}
-                  style={styles.genderImage}
-                  contentFit="contain"
-                />
-                <Text style={styles.genderLabel}>Male</Text>
-              </TouchableOpacity>
+            
             </View>
 
             {/* Warning Banner */}
@@ -394,7 +379,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 150,
     height: 150,
-    backgroundColor: '#E0FDFD',
+    // backgroundColor: '#E0FDFD',
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -407,8 +392,8 @@ const styles = StyleSheet.create({
     // backgroundColor: '#ccf8fb',
   },
   genderImage: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 16,
   },
   genderLabel: {

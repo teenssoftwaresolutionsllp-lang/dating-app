@@ -16,6 +16,8 @@ import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
+import { setUserLoggedIn } from '@/utils/authPersistence';
 
 
 // Vibrant celebratory color palette for ribbons, stars, hearts, and balls
@@ -264,7 +266,8 @@ export default function ProfileReadyScreen() {
     titleTranslateY,
   ]);
 
-  const handleLetsDate = () => {
+  const handleLetsDate = async () => {
+    await setUserLoggedIn(true, { isOnboardingCompleted: true });
     router.replace('/(tab)/home');
   };
 

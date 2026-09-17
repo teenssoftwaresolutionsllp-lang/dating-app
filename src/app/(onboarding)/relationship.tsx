@@ -161,13 +161,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   radioCircleSelected: {
-    borderColor: '#00F5D4',
+    borderColor: '#00E4E8',
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00F5D4',
+    backgroundColor: '#00E4E8',
   },
   optionText: {
     fontSize: 14,

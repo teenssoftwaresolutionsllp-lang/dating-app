@@ -135,7 +135,7 @@ export default function CompanyScreen() {
                   onBlur={() => setIsFocused(false)}
                   placeholder="Enter company name"
                   placeholderTextColor={error ? '#9CA3AF' : '#9CA3AF'}
-                  selectionColor="#00F5D4"
+                  selectionColor="#00E4E8"
                   autoCapitalize="words"
                   returnKeyType="done"
                   onSubmitEditing={handleNext}
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   inputContainerFocused: {
-    borderColor: '#00F5D4',
+    borderColor: '#00E4E8',
     borderWidth: 1.5,
   },
   inputContainerError: {
