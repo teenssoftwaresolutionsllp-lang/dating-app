@@ -53,7 +53,7 @@ export default function QualificationScreen() {
             accessibilityRole="button"
             hitSlop={12}
           >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+            <Ionicons name="chevron-back-outline" size={24} color="#000000" />
           </Pressable>
         </View>
 

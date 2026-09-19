@@ -20,6 +20,7 @@ import { useTheme } from '@/hooks/use-theme';
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const initialHeight = useRef(Dimensions.get('window').height).current;
@@ -64,11 +65,11 @@ export default function LoginScreen() {
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Pressable 
         onPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
+          // if (router.canGoBack()) {
+          //   router.back();
+          // } else {
             router.replace('/select-language' as any);
-          }
+          // }
         }} 
         style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
         accessibilityRole="button"
@@ -95,11 +96,32 @@ export default function LoginScreen() {
                 </Text>
 
                 <View style={styles.phoneInputContainer}>
-                  <View style={[styles.phoneInput, { borderColor: error ? '#FF3B30' : theme.border, backgroundColor: theme.background }]}>
-                    <Text style={[styles.countryCode, { color: theme.text, borderRightColor: error ? '#FF3B30' : theme.border }]}>+91</Text>
+                  <View
+                    style={[
+                      styles.phoneInput,
+                      {
+                        borderColor: error ? '#FF3B30' : isFocused ? '#00E4E8' : theme.border,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.countryCode,
+                        {
+                          color: theme.text,
+                          borderRightColor: error ? '#FF3B30' : isFocused ? '#00E4E8' : theme.border,
+                        },
+                      ]}
+                    >
+                      +91
+                    </Text>
                     <TextInput
                       value={phone}
                       onChangeText={handlePhoneChange}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
+                      selectionColor="#00E4E8"
                       keyboardType="phone-pad"
                       maxLength={10}
                       placeholder="00000 00000"

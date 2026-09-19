@@ -183,7 +183,7 @@ export default function ChatScreen({
               onPress={() => setSelectedConversation(null)}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={22} color="#111827" />
+              <Ionicons name="chevron-back-outline" size={22} color="#111827" />
             </TouchableOpacity>
             <Image source={selectedConversation.avatar} style={styles.detailAvatar} />
             <View style={styles.detailHeaderInfo}>
@@ -306,7 +306,7 @@ export default function ChatScreen({
               onPress={() => setSelectedCall(null)}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={22} color="#111827" />
+              <Ionicons name="chevron-back-outline" size={22} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.detailHeaderTitle}>Call Details</Text>
           </View>
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop:10,
+    // paddingTop:10,
   },
   mainContainer: {
     flex: 1,

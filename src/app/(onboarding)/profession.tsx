@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -44,8 +44,10 @@ export default function ProfessionScreen() {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
 
+  const initialHeight = useRef(Dimensions.get('window').height).current;
   const isProfessionValid = Boolean(selectedProfession || searchQuery.trim().length > 0);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -115,14 +117,11 @@ export default function ProfessionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
         <OnboardingHeader progress={0.45} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -141,7 +140,13 @@ export default function ProfessionScreen() {
 
             {/* Search Input Capsule */}
             <View style={styles.searchSection}>
-              <View style={[styles.searchContainer, error && styles.searchContainerWithError]}>
+              <View
+                style={[
+                  styles.searchContainer,
+                  isFocused && styles.searchContainerFocused,
+                  error && styles.searchContainerWithError,
+                ]}
+              >
                 <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
                 <TextInput
                   style={styles.searchInput}
@@ -155,6 +160,9 @@ export default function ProfessionScreen() {
                       setSelectedProfession(text);
                     }
                   }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  selectionColor="#00E4E8"
                   placeholder="Search Profession"
                   placeholderTextColor="#9CA3AF"
                   returnKeyType="done"
@@ -212,7 +220,7 @@ export default function ProfessionScreen() {
               })}
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Footer */}
         <OnboardingFooter
@@ -287,6 +295,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
+  },
+  searchContainerFocused: {
+    borderColor: '#00E4E8',
   },
   searchContainerWithError: {
     borderColor: '#FF3B30',

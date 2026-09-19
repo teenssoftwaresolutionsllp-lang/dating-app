@@ -6,8 +6,8 @@ import {
   TextInput,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,6 +23,7 @@ export default function CompanyScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
 
+  const initialHeight = useRef(Dimensions.get('window').height).current;
   const isCompanyValid = Boolean(companyName.trim().length > 0);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -86,14 +87,11 @@ export default function CompanyScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
         <OnboardingHeader progress={0.5} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -135,7 +133,7 @@ export default function CompanyScreen() {
                   onBlur={() => setIsFocused(false)}
                   placeholder="Enter company name"
                   placeholderTextColor={error ? '#9CA3AF' : '#9CA3AF'}
-                  selectionColor="#00F5D4"
+                  selectionColor="#00E4E8"
                   autoCapitalize="words"
                   returnKeyType="done"
                   onSubmitEditing={handleNext}
@@ -156,7 +154,7 @@ export default function CompanyScreen() {
               )}
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Footer */}
         <OnboardingFooter
@@ -223,7 +221,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: '100%',
     height: 48,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#D1D5DB',
     borderRadius: 24,
     paddingHorizontal: 20,
@@ -231,12 +229,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   inputContainerFocused: {
-    borderColor: '#00F5D4',
-    borderWidth: 1.5,
+    borderColor: '#00E4E8',
   },
   inputContainerError: {
     borderColor: '#FF3B30',
-    borderWidth: 1.5,
   },
   textInput: {
     fontSize: 14,

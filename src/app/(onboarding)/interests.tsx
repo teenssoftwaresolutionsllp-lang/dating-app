@@ -228,6 +228,7 @@ const styles = StyleSheet.create({
     maxWidth: 290,
   },
   sectionHeader: {
+    position: 'relative',
     marginTop: 32,
     marginBottom: 18,
   },
@@ -286,7 +287,9 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   errorMessage: {
-    marginTop: 6,
+    position: 'absolute',
+    bottom: -18,
+    left: 0,
     fontSize: 12,
     fontWeight: '500',
     color: '#FF3B30',

@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+// import { Image } from 'expo-image';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
@@ -34,6 +34,7 @@ export default function SetProfileScreen() {
 
   const userNameShakeAnim = useRef(new Animated.Value(0)).current;
   const genderShakeAnim = useRef(new Animated.Value(0)).current;
+  const initialHeight = useRef(Dimensions.get('window').height).current;
 
   const triggerUserNameShake = () => {
     userNameShakeAnim.setValue(0);
@@ -134,14 +135,11 @@ export default function SetProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
         <OnboardingHeader progress={0.05} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -262,22 +260,7 @@ export default function SetProfileScreen() {
                   Select your gender
                 </Animated.Text>
               )}
-              {/* Male Card */}
-              <TouchableOpacity
-                style={[
-                  styles.genderCard,
-                  gender === 'Male' && styles.genderCardSelected,
-                ]}
-                onPress={() => setGender('Male')}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={require('@/assets/images/male-avatar.jpg')}
-                  style={styles.genderImage}
-                  contentFit="contain"
-                />
-                <Text style={styles.genderLabel}>Male</Text>
-              </TouchableOpacity>
+            
             </View>
 
             {/* Warning Banner */}
@@ -286,7 +269,7 @@ export default function SetProfileScreen() {
               <Text style={styles.warningText}>{"Gender can't be changed later"}</Text>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Action Button */}
         <OnboardingFooter
@@ -394,7 +377,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 150,
     height: 150,
-    backgroundColor: '#E0FDFD',
+    // backgroundColor: '#E0FDFD',
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -407,8 +390,8 @@ const styles = StyleSheet.create({
     // backgroundColor: '#ccf8fb',
   },
   genderImage: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 16,
   },
   genderLabel: {
