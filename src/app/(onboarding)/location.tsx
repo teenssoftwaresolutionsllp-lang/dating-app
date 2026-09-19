@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Animated,
-  KeyboardAvoidingView,
+  Dimensions,
   Platform,
   ScrollView,
   StyleSheet,
@@ -41,8 +41,10 @@ export default function LocationScreen() {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
   const [locationError, setLocationError] = useState(false);
 
+  const initialHeight = useRef(Dimensions.get('window').height).current;
   const locationShakeAnim = useRef(new Animated.Value(0)).current;
 
   const isLocationValid = Boolean(selectedCity || searchQuery.trim().length > 0);
@@ -116,14 +118,11 @@ export default function LocationScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
         <OnboardingHeader progress={0.2} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -140,7 +139,7 @@ export default function LocationScreen() {
               <View
                 style={[
                   styles.searchContainer,
-                  searchQuery.trim().length > 0 && styles.searchContainerActive,
+                  (isFocused || searchQuery.trim().length > 0) && styles.searchContainerActive,
                   locationError && styles.searchContainerError,
                 ]}
               >
@@ -162,6 +161,9 @@ export default function LocationScreen() {
                       setLocationError(false);
                     }
                   }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  selectionColor="#00E4E8"
                   placeholder="Search for Near by location"
                   placeholderTextColor={locationError ? '#9CA3AF' : '#9CA3AF'}
                   returnKeyType="done"
@@ -219,7 +221,7 @@ export default function LocationScreen() {
               })}
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Action Footer with Validation */}
         <OnboardingFooter

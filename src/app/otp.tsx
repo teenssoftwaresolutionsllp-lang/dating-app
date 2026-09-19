@@ -27,6 +27,7 @@ export default function OtpScreen() {
   const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputs = useRef<(TextInput | null)[]>([]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -171,6 +172,9 @@ export default function OtpScreen() {
                       value={digit}
                       onChangeText={(value) => updateCode(value, index)}
                       onKeyPress={(event) => handleKeyPress(event, index)}
+                      onFocus={() => setFocusedIndex(index)}
+                      onBlur={() => setFocusedIndex(null)}
+                      selectionColor="#00E4E8"
                       keyboardType="number-pad"
                       inputMode="numeric"
                       textContentType="oneTimeCode"
@@ -182,7 +186,11 @@ export default function OtpScreen() {
                         styles.otpInput,
                         {
                           color: theme.text,
-                          borderColor: error ? '#FF3B30' : theme.border,
+                          borderColor: error
+                            ? '#FF3B30'
+                            : focusedIndex === index
+                            ? '#00E4E8'
+                            : theme.border,
                           backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
                         },
                         Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),

@@ -1,47 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { isUserLoggedIn } from '@/utils/authPersistence';
 
 export default function WelcomeScreen() {
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const loggedIn = await isUserLoggedIn();
-        if (loggedIn && active) {
-          router.replace('/(tab)/home');
-          return;
-        }
-      } catch {
-        // Ignore errors
-      }
-      if (active) {
-        setCheckingAuth(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const handleGetStart = () => {
     router.push('/verified-profiles' as any);
   };
-
-  if (checkingAuth) {
-    return (
-      <View style={styles.root}>
-        <StatusBar style="dark" />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.root}>

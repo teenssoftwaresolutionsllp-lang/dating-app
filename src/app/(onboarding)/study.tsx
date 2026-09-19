@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -124,9 +125,17 @@ export default function StudyScreen() {
   const otherInputRef = useRef<TextInput>(null);
   const otherInputContainerRef = useRef<View>(null);
   const scrollYRef = useRef(0);
+  const { height: windowHeight } = useWindowDimensions();
+  const initialHeightRef = useRef(Dimensions.get('window').height);
   const keyboardHeightRef = useRef(0);
   const keyboardTopRef = useRef<number | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (keyboardHeight === 0 && windowHeight > 0) {
+      initialHeightRef.current = windowHeight;
+    }
+  }, [keyboardHeight, windowHeight]);
 
   const isOtherSelected = selected === 'Other' || (selected ? selected.endsWith('Other') : false);
   const isFormValid = Boolean(
@@ -142,7 +151,7 @@ export default function StudyScreen() {
     otherInputContainerRef.current.measureInWindow((x, y, width, height) => {
       if (y === undefined || height === undefined || isNaN(y) || isNaN(height)) return;
 
-      const screenHeight = Dimensions.get('window').height;
+      const screenHeight = initialHeightRef.current || Dimensions.get('window').height;
       const keyboardTop = kt ?? (screenHeight - kh);
       const visibleBottom = kh > 0 ? keyboardTop : screenHeight - 75 - insets.bottom;
       const desiredMargin = 20;
@@ -248,9 +257,23 @@ export default function StudyScreen() {
     }
   };
 
+  const fixedHeightStyle = isOtherSelected
+    ? {
+        height: initialHeightRef.current,
+        minHeight: initialHeightRef.current,
+      }
+    : null;
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.responsiveContainer}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: theme.background },
+        fixedHeightStyle,
+      ]}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
+      <View style={[styles.responsiveContainer, fixedHeightStyle]}>
         {/* Progress Bar */}
         <OnboardingHeader progress={0.4} />
 

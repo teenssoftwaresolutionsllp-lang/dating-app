@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -34,6 +34,7 @@ export default function SetProfileScreen() {
 
   const userNameShakeAnim = useRef(new Animated.Value(0)).current;
   const genderShakeAnim = useRef(new Animated.Value(0)).current;
+  const initialHeight = useRef(Dimensions.get('window').height).current;
 
   const triggerUserNameShake = () => {
     userNameShakeAnim.setValue(0);
@@ -134,14 +135,11 @@ export default function SetProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
         <OnboardingHeader progress={0.05} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -271,7 +269,7 @@ export default function SetProfileScreen() {
               <Text style={styles.warningText}>{"Gender can't be changed later"}</Text>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Action Button */}
         <OnboardingFooter
