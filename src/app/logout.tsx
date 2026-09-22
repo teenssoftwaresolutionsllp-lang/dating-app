@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LogoutDoorGraphic, LogoutModalIcon } from '@/components/SettingsIcons';
 import { clearUserAuth } from '@/utils/authPersistence';
+import { logout } from '@/utils/api';
 
 export default function LogoutScreen() {
   const router = useRouter();
@@ -31,7 +32,11 @@ export default function LogoutScreen() {
 
   const handleConfirmLogout = async () => {
     setShowConfirm(false);
-    await clearUserAuth();
+    try {
+      await logout();
+    } catch {
+      await clearUserAuth();
+    }
     router.replace('/login');
   };
 

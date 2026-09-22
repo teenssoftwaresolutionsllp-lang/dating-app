@@ -19,6 +19,7 @@ import {
   TrustRosetteIcon,
 } from '@/components/SettingsIcons';
 import { clearUserAuth } from '@/utils/authPersistence';
+import { logout } from '@/utils/api';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -39,7 +40,11 @@ export default function SettingsScreen() {
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
-    await clearUserAuth();
+    try {
+      await logout();
+    } catch {
+      await clearUserAuth();
+    }
     router.replace('/login');
   };
 

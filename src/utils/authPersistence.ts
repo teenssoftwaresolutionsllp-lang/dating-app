@@ -7,6 +7,9 @@ export interface UserAuthState {
   isLoggedIn: boolean;
   isOnboardingCompleted: boolean;
   phoneNumber?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: any;
   updatedAt?: number;
 }
 
@@ -21,6 +24,9 @@ export async function setUserLoggedIn(
     isLoggedIn: loggedIn,
     isOnboardingCompleted: extra?.isOnboardingCompleted ?? loggedIn,
     phoneNumber: extra?.phoneNumber ?? inMemoryAuthState?.phoneNumber,
+    accessToken: extra?.accessToken !== undefined ? extra.accessToken : inMemoryAuthState?.accessToken,
+    refreshToken: extra?.refreshToken !== undefined ? extra.refreshToken : inMemoryAuthState?.refreshToken,
+    user: extra?.user !== undefined ? extra.user : inMemoryAuthState?.user,
     updatedAt: Date.now(),
     ...extra,
   };
@@ -79,6 +85,31 @@ export async function getAuthState(): Promise<UserAuthState | null> {
 
   isLoaded = true;
   return null;
+}
+
+export async function getAccessToken(): Promise<string | undefined> {
+  const state = await getAuthState();
+  return state?.accessToken;
+}
+
+export async function getRefreshToken(): Promise<string | undefined> {
+  const state = await getAuthState();
+  return state?.refreshToken;
+}
+
+export async function updateAuthTokens(tokens: {
+  accessToken: string;
+  refreshToken?: string;
+}): Promise<void> {
+  const state = (await getAuthState()) || {
+    isLoggedIn: true,
+    isOnboardingCompleted: false,
+  };
+  await setUserLoggedIn(state.isLoggedIn, {
+    ...state,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken ?? state.refreshToken,
+  });
 }
 
 export async function isUserLoggedIn(): Promise<boolean> {

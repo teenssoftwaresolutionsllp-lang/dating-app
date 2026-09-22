@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
+import { resendOtp, verifyOtp } from '@/utils/api';
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
@@ -28,6 +29,7 @@ export default function OtpScreen() {
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -93,12 +95,26 @@ export default function OtpScreen() {
     }
   };
 
-  const resend = () => {
+  const resend = async () => {
     if (seconds > 0) return;
     setCode(Array(OTP_LENGTH).fill(''));
     setSeconds(RESEND_SECONDS);
     setError('');
     requestAnimationFrame(() => inputs.current[0]?.focus());
+
+    const digits = phone ? phone.replace(/\D/g, '') : '';
+    if (!digits) {
+      setError('Phone number is missing');
+      triggerShake();
+      return;
+    }
+
+    try {
+      await resendOtp(digits, '+91');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to resend OTP. Please try again.');
+      triggerShake();
+    }
   };
 
   const handleBack = () => {
@@ -106,14 +122,28 @@ export default function OtpScreen() {
     else router.replace('/login');
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
+    if (isVerifying) return;
     if (!complete) {
       setError('Invalid OTP');
       triggerShake();
       return;
     }
     setError('');
-    router.replace('/(onboarding)/set-profile');
+    setIsVerifying(true);
+
+    const digits = phone ? phone.replace(/\D/g, '') : '';
+    const enteredOtp = code.join('');
+
+    try {
+      await verifyOtp(digits, enteredOtp, '+91');
+      router.replace('/(onboarding)/set-profile');
+    } catch (err: any) {
+      setError(err?.message || 'Invalid OTP');
+      triggerShake();
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   return (
