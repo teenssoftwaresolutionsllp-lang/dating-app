@@ -16,11 +16,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
+import { sendOtp } from '@/utils/api';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const initialHeight = useRef(Dimensions.get('window').height).current;
@@ -39,7 +41,8 @@ export default function LoginScreen() {
     ]).start();
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (isSubmitting) return;
     const digits = phone.replace(/\D/g, '');
     if (digits.length !== 10) {
       setError('Please enter a valid number');
@@ -47,7 +50,16 @@ export default function LoginScreen() {
       return;
     }
     setError('');
-    router.push({ pathname: '/otp' as any, params: { phone: digits } });
+    setIsSubmitting(true);
+    try {
+      await sendOtp(digits, '+91');
+      router.push({ pathname: '/otp' as any, params: { phone: digits } });
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send OTP. Please try again.');
+      triggerShake();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePhoneChange = (text: string) => {
