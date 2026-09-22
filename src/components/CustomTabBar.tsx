@@ -102,8 +102,8 @@ export const CustomTabBar: React.FC = () => {
       {TABS.map((tab) => {
         const isActive =
           pathname === tab.route ||
-          (tab.id === 'people' && (pathname === '/(tab)/home' || pathname === '/(tab)')) ||
-          pathname.includes(tab.id);
+          (tab.id === 'matches' && (pathname === '/(tab)/home' || pathname === '/(tab)' || pathname === '/(tab)/matches')) ||
+          (tab.id !== 'matches' && pathname.includes(tab.id));
 
         const color = isActive ? '#0D7A74' : '#78B0A8';
 

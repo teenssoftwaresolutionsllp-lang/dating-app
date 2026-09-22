@@ -25,6 +25,7 @@ import {
   SameReligionUser,
   RecentlyActiveUser,
 } from '@/constants/datingData';
+import { getDiscoveryFeed, type DiscoveryCard } from '@/services/matchApi';
 
 interface PeopleScreenProps {
   showTabBar?: boolean;
@@ -32,12 +33,44 @@ interface PeopleScreenProps {
 }
 
 export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }: PeopleScreenProps = {}) {
+  const [liveFeed, setLiveFeed] = React.useState<DiscoveryCard[]>([]);
+
+  React.useEffect(() => {
+    getDiscoveryFeed(1, 20).then((cards) => {
+      if (cards && cards.length > 0) {
+        setLiveFeed(cards);
+      }
+    });
+  }, []);
+
   const navigateToViewAll = (sectionId: string, title: string) => {
     router.push({
       pathname: '/view-all',
       params: { sectionId, title },
     });
   };
+
+  // Convert live cards to active user avatars if available
+  const activeUsers: ActiveUser[] = liveFeed.length > 0
+    ? liveFeed.map((c, i) => ({
+        id: c.userId,
+        name: c.name,
+        age: c.age || 23,
+        image: c.photos && c.photos.length > 0 ? { uri: c.photos[0].url } : ACTIVE_USERS[i % ACTIVE_USERS.length].image,
+        isOnline: true,
+      }))
+    : ACTIVE_USERS;
+
+  const nearYouUsers: NearYouUser[] = liveFeed.length > 0
+    ? liveFeed.map((c, i) => ({
+        id: c.userId,
+        name: c.name,
+        age: c.age || 24,
+        location: c.city || 'Hyderabad',
+        distance: `${c.distanceKm || (3 + (i % 5) * 0.5)} Km`,
+        image: c.photos && c.photos.length > 0 ? { uri: c.photos[0].url } : NEAR_YOU_USERS[i % NEAR_YOU_USERS.length].image,
+      }))
+    : NEAR_YOU_USERS;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -61,7 +94,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {ACTIVE_USERS.map((user: ActiveUser) => (
+            {activeUsers.map((user: ActiveUser) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.activeUserItem}
@@ -91,7 +124,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {NEAR_YOU_USERS.map((user: NearYouUser) => (
+            {nearYouUsers.map((user: NearYouUser) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.cardItem}

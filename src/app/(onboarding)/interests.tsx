@@ -1,35 +1,49 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { getInterestsCatalog, updateInterests, type CatalogItem } from '@/services/profileApi';
+
+const DEFAULT_INTERESTS = [
+  'Music',
+  'Movies',
+  'Travel',
+  'Concerts',
+  'Nature',
+  'Dance',
+  'Food',
+  'Fitness',
+  'Gaming',
+  'Books',
+  'Sports',
+  'Cooking',
+  'Photography',
+  'Art',
+  'Pets',
+];
 
 export default function InterestsScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
 
-  const interestsList = [
-    'Music',
-    'Movies',
-    'Travel',
-    'Concerts',
-    'Nature',
-    'Dance',
-    'Food',
-    'Fitness',
-    'Gaming',
-    'Books',
-    'Sports',
-    'Cooking',
-    'Photography',
-    'Art',
-    'Pets',
-  ];
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(['Music', 'Movies', 'Travel']);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  useEffect(() => {
+    getInterestsCatalog().then((items) => {
+      if (items && items.length > 0) {
+        setCatalog(items);
+      }
+    });
+  }, []);
+
+  const availableInterests = catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_INTERESTS;
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
@@ -39,12 +53,28 @@ export default function InterestsScreen() {
     }
   };
 
-  const handleNext = () => {
-    if (selectedInterests.length >= 3) {
+  const handleNext = async () => {
+    if (selectedInterests.length < 1 || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ interests: selectedInterests });
+      const interestIds = selectedInterests.map((name) => {
+        const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
+        return found ? found.id : DEFAULT_INTERESTS.indexOf(name) + 1;
+      }).filter((id) => id > 0);
+
+      if (interestIds.length > 0) {
+        await updateInterests(interestIds).catch((e) => {
+          console.warn('Backend sync warning on interests update:', e);
+        });
+      }
+
       router.push({
-        pathname: '/religion',
+        pathname: '/looking-for',
         params: { interests: JSON.stringify(selectedInterests) },
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -56,7 +86,7 @@ export default function InterestsScreen() {
     }
   };
 
-  const isNextEnabled = selectedInterests.length >= 3;
+  const isNextEnabled = selectedInterests.length >= 1;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
@@ -78,7 +108,7 @@ export default function InterestsScreen() {
 
           {/* Interests Chips Grid */}
           <View style={styles.chipsContainer}>
-            {interestsList.map((interest) => {
+            {availableInterests.map((interest: string) => {
               const isSelected = selectedInterests.includes(interest);
               return (
                 <Pressable

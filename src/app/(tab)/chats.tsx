@@ -14,17 +14,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
 import { CHAT_MESSAGES, CALL_LOGS, ChatMessage, CallLog } from '@/constants/datingData';
+import {
+  getConversations,
+  getConversation,
+  sendMessage,
+  deleteMessage,
+  type ChatConversationItem,
+  type SingleChatMessage,
+} from '@/services/messageApi';
 
 interface ChatScreenProps {
   showTabBar?: boolean;
   showHeaderBar?: boolean;
   initialConversation?: {
+    partnerId?: string;
     name: string;
     avatar: ImageSourcePropType;
   } | null;
 }
 
 interface SelectedConversation {
+  partnerId?: string;
   name: string;
   avatar: ImageSourcePropType;
   messages: { id: string; sender: 'user' | 'contact'; text: string; time: string }[];
@@ -39,6 +49,29 @@ export default function ChatScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [chats, setChats] = useState<ChatMessage[]>(CHAT_MESSAGES);
   const [calls] = useState<CallLog[]>(CALL_LOGS);
+
+  // Load backend conversations on mount
+  React.useEffect(() => {
+    getConversations().then((conversations) => {
+      if (conversations && conversations.length > 0) {
+        const liveChats: ChatMessage[] = conversations.map((conv) => ({
+          id: conv.conversationId,
+          partnerId: conv.partner.id,
+          name: conv.partner.name,
+          avatar: conv.partner.primaryPhoto
+            ? { uri: conv.partner.primaryPhoto }
+            : CHAT_MESSAGES[0].avatar,
+          lastMessage: conv.lastMessage?.content || 'Started a conversation',
+          timestamp: conv.lastMessage?.createdAt
+            ? new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : 'Just now',
+          unreadCount: conv.unreadCount > 0 ? conv.unreadCount : undefined,
+          isOnline: conv.partner.isOnline,
+        }));
+        setChats(liveChats);
+      }
+    });
+  }, []);
 
   // Active detail screens for back navigation
   const [selectedConversation, setSelectedConversation] = useState<SelectedConversation | null>(() => {
@@ -102,13 +135,14 @@ export default function ChatScreen({
   );
 
   // Handle open individual chat detail screen
-  const openChatDetail = (chat: ChatMessage) => {
+  const openChatDetail = (chat: ChatMessage & { partnerId?: string }) => {
     // Clear unread count on open
     setChats((prev) =>
       prev.map((c) => (c.id === chat.id ? { ...c, unreadCount: undefined } : c))
     );
 
     setSelectedConversation({
+      partnerId: chat.partnerId,
       name: chat.name,
       avatar: chat.avatar,
       messages: [
@@ -118,13 +152,42 @@ export default function ChatScreen({
           text: chat.lastMessage,
           time: chat.timestamp,
         },
-        {
-          id: 'm2',
-          sender: 'user',
-          text: 'Hey! Nice to hear from you 😊',
-          time: 'Just now',
-        },
       ],
+    });
+
+    if (chat.partnerId) {
+      getConversation(chat.partnerId).then((history) => {
+        if (history && history.length > 0) {
+          setSelectedConversation((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  messages: history.map((m) => ({
+                    id: m.id,
+                    sender: m.isOwn ? 'user' : 'contact',
+                    text: m.content || '',
+                    time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  })),
+                }
+              : null
+          );
+        }
+      });
+    }
+  };
+
+  // Delete message
+  const handleDeleteMessage = (msgId: string) => {
+    setSelectedConversation((prev) =>
+      prev
+        ? {
+            ...prev,
+            messages: prev.messages.filter((m) => m.id !== msgId),
+          }
+        : null
+    );
+    deleteMessage(msgId).catch((e) => {
+      console.warn('Backend sync warning on delete message:', e);
     });
   };
 
@@ -149,26 +212,16 @@ export default function ChatScreen({
         : null
     );
 
-    if (!textToSend) setInputText('');
+    if (selectedConversation.partnerId) {
+      sendMessage({
+        receiverId: selectedConversation.partnerId,
+        content: text.trim(),
+      }).catch((e) => {
+        console.warn('Backend sync warning on send message:', e);
+      });
+    }
 
-    setTimeout(() => {
-      setSelectedConversation((prev) =>
-        prev
-          ? {
-              ...prev,
-              messages: [
-                ...prev.messages,
-                {
-                  id: (Date.now() + 1).toString(),
-                  sender: 'contact',
-                  text: 'Sounds great! Let’s stay in touch ✨',
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                },
-              ],
-            }
-          : null
-      );
-    }, 1200);
+    if (!textToSend) setInputText('');
   };
 
   // RENDER DETAILED CHAT VIEW (WITH BACK NAVIGATION)

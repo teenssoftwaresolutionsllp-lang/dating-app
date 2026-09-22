@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile, updateEducation } from '@/services/profileApi';
 
 const EDUCATION_OPTIONS = [
   'Graduation / B.Tech',
@@ -54,17 +55,40 @@ export default function EditDetailsScreen() {
     profile.relationshipStatus || 'Single'
   );
   const [height, setHeight] = useState(profile.height || `5'10" (178 cm)`);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
-    updateStoredUserProfile({
-      education: education.trim(),
-      languages: languages.trim(),
-      religion: religion.trim(),
-      profession: profession.trim(),
-      relationshipStatus: relationshipStatus.trim(),
-      height: height.trim(),
-    });
-    router.back();
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({
+        education: education.trim(),
+        languages: languages.trim(),
+        religion: religion.trim(),
+        profession: profession.trim(),
+        relationshipStatus: relationshipStatus.trim(),
+        height: height.trim(),
+      });
+
+      const cmMatch = height.match(/(\d+)\s*cm/i);
+      const heightCm = cmMatch ? parseInt(cmMatch[1], 10) : 178;
+
+      await Promise.allSettled([
+        updateCurrentProfile({
+          religion: religion.trim(),
+          relationshipStatus: relationshipStatus.trim(),
+          heightCm,
+        }),
+        updateEducation({
+          educationLevel: education.trim(),
+          profession: profession.trim(),
+        }),
+      ]);
+
+      router.back();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

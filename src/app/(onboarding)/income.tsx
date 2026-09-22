@@ -11,6 +11,8 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { getStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 
 const INCOME_OPTIONS = [
   'Below ₹2 Lakh',
@@ -24,10 +26,30 @@ const INCOME_OPTIONS = [
 export default function IncomeScreen() {
   const router = useRouter();
   const [selectedIncome, setSelectedIncome] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
-    if (!selectedIncome) return;
-    router.push('/verification');
+  const handleNext = async () => {
+    if (!selectedIncome || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const profile = getStoredUserProfile();
+      const eduParts = (profile.education || 'Bachelors').split('-');
+      const eduLevel = eduParts[0]?.trim() || 'Bachelors';
+      const qual = eduParts[1]?.trim() || eduLevel;
+
+      await updateEducation({
+        educationLevel: eduLevel,
+        qualification: qual,
+        profession: profile.profession || 'Professional',
+        incomeRange: selectedIncome,
+      }).catch((e) => {
+        console.warn('Backend sync warning on education update:', e);
+      });
+
+      router.push('/religion');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

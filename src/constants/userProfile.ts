@@ -13,6 +13,7 @@ export interface UserProfile {
   lookingFor: string[];
   vibes?: string[];
   avatarUri?: string;
+  gender?: string;
 }
 
 /**

@@ -16,18 +16,31 @@ import { Image } from 'expo-image';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
 export default function SetProfileScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState('');
   const [gender, setGender] = useState<'Female' | 'Male' | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isProfileValid = userName.trim().length > 0 && gender !== null;
 
-  const handleNext = () => {
-    if (!isProfileValid) return;
-    router.push('/birthday');
+  const handleNext = async () => {
+    if (!isProfileValid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const selectedGender = gender?.toLowerCase() || 'female';
+      updateStoredUserProfile({ name: userName.trim(), gender: selectedGender });
+      await updateCurrentProfile({ name: userName.trim(), gender: selectedGender }).catch((e) => {
+        console.warn('Backend sync warning on profile update:', e);
+      });
+      router.push('/birthday');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

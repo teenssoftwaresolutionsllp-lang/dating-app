@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
 import { LIKED_YOU_DATA, YOU_LIKED_DATA } from '@/constants/datingData';
+import { getLikesReceived, type LikeReceivedItem } from '@/services/matchApi';
 
 export default function LikesScreen() {
   const [likesSubTab, setLikesSubTab] = useState<'likedYou' | 'youLiked'>('likedYou');
+  const [liveLikes, setLiveLikes] = useState<LikeReceivedItem[]>([]);
+
+  useEffect(() => {
+    getLikesReceived().then((data) => {
+      if (data && data.length > 0) {
+        setLiveLikes(data);
+      }
+    });
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -70,7 +80,15 @@ export default function LikesScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.grid}>
-                {LIKED_YOU_DATA.map((item) => (
+                {(liveLikes.length > 0
+                  ? liveLikes.map((item, idx) => ({
+                      id: item.swipeId || item.userId || `like-${idx}`,
+                      name: item.user?.name ? `${item.user.name}, ${item.user.age || 23}` : item.name || 'Admirer',
+                      image: item.user?.primaryPhoto ? { uri: item.user.primaryPhoto } : item.photo ? { uri: item.photo } : LIKED_YOU_DATA[idx % LIKED_YOU_DATA.length].image,
+                      userId: item.user?.userId || item.userId,
+                    }))
+                  : LIKED_YOU_DATA
+                ).map((item) => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.blurredCard}

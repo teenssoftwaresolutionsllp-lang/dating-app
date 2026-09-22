@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 import {
   HyderabadIcon,
   DelhiIcon,
@@ -37,12 +39,26 @@ export default function LocationScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isLocationValid = Boolean(selectedCity || searchQuery.trim().length > 0);
 
-  const handleNext = () => {
-    if (!isLocationValid) return;
-    router.push('/relationship');
+  const handleNext = async () => {
+    if (!isLocationValid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const cityName = selectedCity || searchQuery.trim();
+      updateStoredUserProfile({ location: `${cityName}, India` });
+      await updateCurrentProfile({
+        city: cityName,
+        country: 'India',
+      }).catch((e) => {
+        console.warn('Backend sync warning on location update:', e);
+      });
+      router.push('/relationship');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

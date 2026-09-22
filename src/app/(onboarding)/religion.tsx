@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
 export default function ReligionScreen() {
   const theme = useTheme();
@@ -28,19 +30,30 @@ export default function ReligionScreen() {
     'Open to all',
   ];
 
-  const [selectedReligion, setSelectedReligion] = useState<string | null>(null);
+  const [selectedReligion, setSelectedReligion] = useState<string | null>('Hindu');
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSelect = (religion: string) => {
     setSelectedReligion(religion);
     setModalVisible(false);
   };
 
-  const handleNext = () => {
-    router.push({
-      pathname: '/looking-for',
-      params: { religion: selectedReligion || 'Not specified' },
-    });
+  const handleNext = async () => {
+    if (!selectedReligion || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ religion: selectedReligion });
+      await updateCurrentProfile({ religion: selectedReligion }).catch((e) => {
+        console.warn('Backend sync warning on religion update:', e);
+      });
+      router.push({
+        pathname: '/verification',
+        params: { religion: selectedReligion },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

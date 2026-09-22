@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateDatingPreferences } from '@/services/profileApi';
 
 export default function LookingForScreen() {
   const theme = useTheme();
@@ -17,14 +19,26 @@ export default function LookingForScreen() {
     'Still figuring it out',
   ];
 
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>('A serious relationship');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
-    if (selected) {
+  const handleNext = async () => {
+    if (!selected || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ lookingFor: [selected] });
+      await updateDatingPreferences({
+        relationshipIntentions: [selected],
+      }).catch((e) => {
+        console.warn('Backend sync warning on preferences update:', e);
+      });
+
       router.push({
         pathname: '/ideal-match',
         params: { lookingFor: selected },
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
 
 const PROFESSIONS = [
   'Software Engineer',
@@ -46,8 +47,13 @@ export default function ProfessionScreen() {
   );
 
   const handleNext = () => {
-    if (!selectedProfession && !searchQuery.trim()) return;
-    router.push('/company');
+    const prof = selectedProfession || searchQuery.trim();
+    if (!prof) return;
+    updateStoredUserProfile({ profession: prof });
+    router.push({
+      pathname: '/company',
+      params: { profession: prof },
+    });
   };
 
   const handleBack = () => {

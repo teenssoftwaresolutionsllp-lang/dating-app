@@ -11,6 +11,8 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
 const STATUS_OPTIONS = [
   'Single',
@@ -25,10 +27,20 @@ const STATUS_OPTIONS = [
 export default function RelationshipScreen() {
   const router = useRouter();
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
-    if (!selectedStatus) return;
-    router.push('/languages');
+  const handleNext = async () => {
+    if (!selectedStatus || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ relationshipStatus: selectedStatus });
+      await updateCurrentProfile({ relationshipStatus: selectedStatus }).catch((e) => {
+        console.warn('Backend sync warning on relationship status update:', e);
+      });
+      router.push('/languages');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

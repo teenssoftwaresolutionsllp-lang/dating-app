@@ -16,7 +16,7 @@ import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
-
+import { completeOnboarding } from '@/services/profileApi';
 
 // Vibrant celebratory color palette for ribbons, stars, hearts, and balls
 const CELEBRATION_COLORS = [
@@ -264,8 +264,14 @@ export default function ProfileReadyScreen() {
     titleTranslateY,
   ]);
 
-  const handleLetsDate = () => {
-    router.replace('/(tab)/home');
+  const handleLetsDate = async () => {
+    try {
+      await completeOnboarding().catch((e) => {
+        console.warn('Backend sync warning on complete onboarding:', e);
+      });
+    } finally {
+      router.replace('/(tab)/home');
+    }
   };
 
   const handleBack = () => {

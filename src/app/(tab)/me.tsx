@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ import {
   updateStoredUserProfile,
   subscribeUserProfile,
 } from '@/constants/userProfile';
+import { getCurrentProfile, updateCurrentProfile, type BackendProfile } from '@/services/profileApi';
 
 interface MeScreenProps {
   showTabBar?: boolean;
@@ -65,6 +67,36 @@ function getVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
   return VIBE_ICON_MAP[vibe] || 'sparkles-outline';
 }
 
+function parseHeightToCm(height: string): number | null {
+  if (!height) return null;
+  const match = height.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? Math.round(value * 30.48) : null;
+}
+
+function normalizeBackendProfile(backendProfile: BackendProfile | null): UserProfile {
+  const fallback = getStoredUserProfile();
+
+  if (!backendProfile) {
+    return fallback;
+  }
+
+  const locationParts = [backendProfile.city, backendProfile.state, backendProfile.country].filter(Boolean);
+
+  return {
+    ...fallback,
+    name: backendProfile.name || fallback.name,
+    dateOfBirth: backendProfile.dateOfBirth || fallback.dateOfBirth,
+    location: locationParts.length > 0 ? locationParts.join(', ') : fallback.location,
+    about: backendProfile.bio || fallback.about,
+    religion: backendProfile.religion || fallback.religion,
+    relationshipStatus: backendProfile.relationshipStatus || fallback.relationshipStatus,
+    height: backendProfile.heightCm ? `${Math.round(backendProfile.heightCm / 30.48)} ft` : fallback.height,
+    gender: backendProfile.gender || 'female',
+  };
+}
+
 export default function MeScreen({ showTabBar = true, showHeaderBar = true }: MeScreenProps = {}) {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>(() => getStoredUserProfile());
@@ -72,11 +104,32 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
   const [editForm, setEditForm] = useState<UserProfile>(() => getStoredUserProfile());
   const [showToast, setShowToast] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeUserProfile((updated) => {
       setProfile(updated);
+      setEditForm(updated);
     });
+
+    const loadProfile = async () => {
+      setIsLoadingProfile(true);
+      try {
+        const backendProfile = await getCurrentProfile();
+        const mapped = normalizeBackendProfile(backendProfile);
+        updateStoredUserProfile(mapped);
+        setProfile(mapped);
+        setEditForm(mapped);
+      } catch (error) {
+        const fallback = getStoredUserProfile();
+        setProfile(fallback);
+        setEditForm(fallback);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    void loadProfile();
     return unsubscribe;
   }, []);
 
@@ -97,14 +150,40 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
   };
 
   // Save Edit Changes
-  const handleSaveEdit = () => {
-    const updated = updateStoredUserProfile({ ...editForm });
-    setProfile(updated);
-    setIsEditing(false);
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
+  const handleSaveEdit = async () => {
+    const updated = { ...editForm };
+
+    try {
+      const backendPayload = {
+        name: updated.name,
+        dateOfBirth: updated.dateOfBirth,
+        gender: updated.gender || 'female',
+        bio: updated.about,
+        relationshipStatus: updated.relationshipStatus,
+        religion: updated.religion,
+        heightCm: parseHeightToCm(updated.height),
+        city: updated.location?.split(',')[0] || undefined,
+        state: updated.location?.split(',')[1] || undefined,
+        country: updated.location?.split(',')[2] || undefined,
+      };
+
+      const backendProfile = await updateCurrentProfile(backendPayload);
+      const mapped = normalizeBackendProfile(backendProfile);
+      updateStoredUserProfile(mapped);
+      setProfile(mapped);
+      setEditForm(mapped);
+      setIsEditing(false);
+      setShowToast(true);
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+    } catch (error) {
+      const fallback = updateStoredUserProfile(updated);
+      setProfile(fallback);
+      setEditForm(fallback);
+      setIsEditing(false);
+      Alert.alert('Profile sync warning', 'Your local profile was saved, but the backend could not be reached.');
+    }
   };
 
   // Cancel Edit
@@ -365,6 +444,11 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {isLoadingProfile && (
+            <View style={styles.loadingState}>
+              <Text style={styles.loadingText}>Loading profile…</Text>
+            </View>
+          )}
           {/* User Profile Card Header */}
           <View style={styles.profileHeaderCard}>
             <View style={styles.avatarContainer}>
@@ -639,6 +723,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'DM_Sans_700Bold',
+  },
+  loadingState: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  loadingText: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'DM_Sans_500Medium',
   },
   scrollContent: {
     paddingHorizontal: 20,
