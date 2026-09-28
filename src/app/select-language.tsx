@@ -14,11 +14,11 @@ export default function LanguageSelectionScreen() {
       <View style={styles.container}>
         <Pressable 
                 onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
+                //   if (router.canGoBack()) {
+                //     router.back();
+                //   } else {
                     router.replace('/verified-profiles' as any);
-                  }
+                  // }
                 }} 
                 style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
                 accessibilityRole="button"

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
@@ -26,6 +27,9 @@ export default function ChooseLanguagesScreen() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selected, setSelected] = useState<string[]>(['English', 'Telugu']);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [languageError, setLanguageError] = useState(false);
+
+  const languageShakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     getLanguagesCatalog().then((items) => {
@@ -37,6 +41,51 @@ export default function ChooseLanguagesScreen() {
 
   const availableLanguages = catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_LANGUAGES;
 
+  const triggerLanguageShake = () => {
+    shakeAnimSequence();
+  };
+
+  const shakeAnimSequence = () => {
+    languageShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(languageShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const toggleLanguage = (lang: string) => {
     if (selected.includes(lang)) {
       if (selected.length > 1) {
@@ -44,19 +93,28 @@ export default function ChooseLanguagesScreen() {
       }
     } else {
       setSelected([...selected, lang]);
+      if (languageError) {
+        setLanguageError(false);
+      }
     }
   };
 
   const handleNext = async () => {
-    if (selected.length === 0 || isSubmitting) return;
+    if (selected.length === 0) {
+      setLanguageError(true);
+      triggerLanguageShake();
+      return;
+    }
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       updateStoredUserProfile({ languages: selected.join(', ') });
-      // Map names to catalog IDs if available, else standard 1-based index
-      const languageIds = selected.map((name) => {
-        const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
-        return found ? found.id : DEFAULT_LANGUAGES.indexOf(name) + 1;
-      }).filter((id) => id > 0);
+      const languageIds = selected
+        .map((name) => {
+          const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
+          return found ? found.id : DEFAULT_LANGUAGES.indexOf(name) + 1;
+        })
+        .filter((id) => id > 0);
 
       if (languageIds.length > 0) {
         await updateLanguages(languageIds).catch((e) => {
@@ -86,11 +144,25 @@ export default function ChooseLanguagesScreen() {
         <OnboardingHeader progress={0.3} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>Choose your languages</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Select the languages you speak or prefer to chat in.
-          </Text>
+          <View style={styles.headerSection}>
+            <Text style={[styles.title, { color: theme.text }]}>Choose your languages</Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Select the languages you speak or prefer to chat in.
+            </Text>
+
+            {languageError && (
+              <Animated.Text
+                style={[
+                  styles.errorMessage,
+                  {
+                    transform: [{ translateX: languageShakeAnim }],
+                  },
+                ]}
+              >
+                Please choose a language
+              </Animated.Text>
+            )}
+          </View>
 
           {/* Options List */}
           <View style={styles.optionsList}>
@@ -133,7 +205,11 @@ export default function ChooseLanguagesScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={selected.length === 0}
+          nextButtonStyle={{
+            backgroundColor: selected.length > 0
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -155,6 +231,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 20,
     alignItems: 'center',
+  },
+  headerSection: {
+    width: '100%',
+    alignItems: 'center',
+    position: 'relative',
   },
   title: {
     fontFamily: 'DM_Sans_700Bold',
@@ -188,5 +269,40 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 15,
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -22,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    textAlign: 'center',
+    fontFamily: 'DM_Sans_500Medium',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextButtonText: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 16,
+    color: '#000000',
   },
 });

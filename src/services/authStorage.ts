@@ -1,64 +1,67 @@
-// In-memory + storage fallback for authentication token and active user ID
+import {
+  getAccessToken,
+  getAuthState,
+  setUserLoggedIn,
+  updateAuthTokens,
+  clearUserAuth,
+} from '@/utils/authPersistence';
+
 let inMemoryToken: string | null = null;
 let inMemoryUserId: string | null = null;
 
 export const authStorage = {
   async setToken(token: string) {
     inMemoryToken = token;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('auth_access_token', token);
-      }
-    } catch {
-      // Storage access ignored
-    }
+    await setUserLoggedIn(true, { accessToken: token });
   },
 
   async getToken(): Promise<string | null> {
     if (inMemoryToken) return inMemoryToken;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        inMemoryToken = window.localStorage.getItem('auth_access_token');
-      }
-    } catch {
-      // Storage access ignored
+    const token = await getAccessToken();
+    if (token) {
+      inMemoryToken = token;
+      return token;
     }
-    return inMemoryToken;
+    return null;
   },
 
   async setUserId(userId: string) {
     inMemoryUserId = userId;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('auth_user_id', userId);
-      }
-    } catch {
-      // Storage access ignored
-    }
+    const state = await getAuthState();
+    await setUserLoggedIn(true, {
+      user: { ...(state?.user || {}), id: userId },
+    });
   },
 
   async getUserId(): Promise<string | null> {
     if (inMemoryUserId) return inMemoryUserId;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        inMemoryUserId = window.localStorage.getItem('auth_user_id');
-      }
-    } catch {
-      // Storage access ignored
+    const state = await getAuthState();
+    const userId = state?.user?.id || state?.user?.userId || null;
+    if (userId) {
+      inMemoryUserId = userId;
+      return userId;
     }
-    return inMemoryUserId;
+    return null;
+  },
+
+  async getRefreshToken(): Promise<string | null> {
+    const state = await getAuthState();
+    return state?.refreshToken || null;
+  },
+
+  async setTokens(accessToken: string, refreshToken?: string) {
+    inMemoryToken = accessToken;
+    const state = (await getAuthState()) || {
+      isLoggedIn: true,
+      isOnboardingCompleted: false,
+    };
+    await updateAuthTokens({ accessToken, refreshToken: refreshToken ?? state.refreshToken });
   },
 
   async clearAuth() {
     inMemoryToken = null;
     inMemoryUserId = null;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem('auth_access_token');
-        window.localStorage.removeItem('auth_user_id');
-      }
-    } catch {
-      // Storage access ignored
-    }
+    await clearUserAuth();
   },
 };
+

@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-import { HeaderStatusBar } from '@/components/HeaderStatusBar';
+// import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import {
   ACTIVE_USERS,
   NEAR_YOU_USERS,
@@ -122,7 +122,7 @@ export default function ViewAllScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {/* Status Bar */}
-        <HeaderStatusBar title="" />
+        {/* <HeaderStatusBar title="" /> */}
 
         {/* Custom Header Bar with Back Button */}
         <View style={styles.headerBar}>
@@ -130,7 +130,7 @@ export default function ViewAllScreen() {
             style={styles.backButton}
             activeOpacity={0.7}
             onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Ionicons name="chevron-back-outline" size={24} color="#111827" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>{title}</Text>
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },

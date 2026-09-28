@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
@@ -34,6 +34,9 @@ export default function InterestsScreen() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(['Music', 'Movies', 'Travel']);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(false);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     getInterestsCatalog().then((items) => {
@@ -45,23 +48,75 @@ export default function InterestsScreen() {
 
   const availableInterests = catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_INTERESTS;
 
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
       setSelectedInterests(selectedInterests.filter((item) => item !== interest));
     } else {
-      setSelectedInterests([...selectedInterests, interest]);
+      const updated = [...selectedInterests, interest];
+      setSelectedInterests(updated);
+      if (error && updated.length >= 3) {
+        setError(false);
+      }
     }
   };
 
   const handleNext = async () => {
-    if (selectedInterests.length < 1 || isSubmitting) return;
+    if (selectedInterests.length < 3) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       updateStoredUserProfile({ interests: selectedInterests });
-      const interestIds = selectedInterests.map((name) => {
-        const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
-        return found ? found.id : DEFAULT_INTERESTS.indexOf(name) + 1;
-      }).filter((id) => id > 0);
+      const interestIds = selectedInterests
+        .map((name) => {
+          const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
+          return found ? found.id : DEFAULT_INTERESTS.indexOf(name) + 1;
+        })
+        .filter((id) => id > 0);
 
       if (interestIds.length > 0) {
         await updateInterests(interestIds).catch((e) => {
@@ -70,7 +125,7 @@ export default function InterestsScreen() {
       }
 
       router.push({
-        pathname: '/looking-for',
+        pathname: '/(onboarding)/food-preference' as any,
         params: { interests: JSON.stringify(selectedInterests) },
       });
     } finally {
@@ -91,6 +146,7 @@ export default function InterestsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
+        {/* Progress Bar */}
         <OnboardingHeader progress={0.7} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -103,7 +159,18 @@ export default function InterestsScreen() {
           {/* Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Your Interests</Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>Choose at least 3</Text>
+            {error && (
+              <Animated.Text
+                style={[
+                  styles.errorMessage,
+                  {
+                    transform: [{ translateX: shakeAnim }],
+                  },
+                ]}
+              >
+                Please select at least 3 interests
+              </Animated.Text>
+            )}
           </View>
 
           {/* Interests Chips Grid */}
@@ -153,7 +220,11 @@ export default function InterestsScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!isNextEnabled}
+          nextButtonStyle={{
+            backgroundColor: isNextEnabled
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -191,6 +262,7 @@ const styles = StyleSheet.create({
     maxWidth: 290,
   },
   sectionHeader: {
+    position: 'relative',
     marginTop: 32,
     marginBottom: 18,
   },
@@ -221,5 +293,40 @@ const styles = StyleSheet.create({
   },
   chipIcon: {
     marginLeft: 6,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextButtonText: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 16,
+    color: '#000000',
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

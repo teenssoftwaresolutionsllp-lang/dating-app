@@ -10,6 +10,11 @@ export interface BackendProfile {
   heightCm?: number | null;
   bio?: string | null;
   relationshipStatus?: string | null;
+  foodPreference?: string | null;
+  drinking?: string | null;
+  smoking?: string | null;
+  vibes?: string[] | null;
+  nature?: string[] | null;
   city?: string | null;
   state?: string | null;
   country?: string | null;
@@ -113,6 +118,20 @@ export async function updateEducation(payload: EducationData) {
 }
 
 // 4. KYC Verification
+export async function verifyKycDocumentApi(formData: FormData) {
+  return apiRequest<{ valid: boolean; message: string }>('/api/v1/profile/kyc/verify-document', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export async function verifySelfieApi(formData: FormData) {
+  return apiRequest<{ valid: boolean; message: string }>('/api/v1/profile/kyc/verify-selfie', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 export async function submitKyc(formData: FormData) {
   return apiRequest<{ status: string }>('/api/v1/profile/kyc', {
     method: 'POST',
@@ -129,6 +148,16 @@ export async function getKycStatus(): Promise<{ status: string } | null> {
 }
 
 // 5. Photos
+export async function validatePhotoApi(formData: FormData) {
+  return apiRequest<{ valid: boolean; message: string; metadata?: any }>(
+    '/api/v1/profile/photos/validate-photo',
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+}
+
 export async function uploadPhotos(formData: FormData) {
   return apiRequest<any[]>('/api/v1/profile/photos', {
     method: 'POST',

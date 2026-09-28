@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
 import { CHAT_MESSAGES, CALL_LOGS, ChatMessage, CallLog } from '@/constants/datingData';
+import { formatApiImageUrl } from '@/services/api';
 import {
   getConversations,
   getConversation,
@@ -59,7 +60,7 @@ export default function ChatScreen({
           partnerId: conv.partner.id,
           name: conv.partner.name,
           avatar: conv.partner.primaryPhoto
-            ? { uri: conv.partner.primaryPhoto }
+            ? { uri: formatApiImageUrl(conv.partner.primaryPhoto) }
             : CHAT_MESSAGES[0].avatar,
           lastMessage: conv.lastMessage?.content || 'Started a conversation',
           timestamp: conv.lastMessage?.createdAt
@@ -236,7 +237,7 @@ export default function ChatScreen({
               onPress={() => setSelectedConversation(null)}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={22} color="#111827" />
+              <Ionicons name="chevron-back-outline" size={22} color="#111827" />
             </TouchableOpacity>
             <Image source={selectedConversation.avatar} style={styles.detailAvatar} />
             <View style={styles.detailHeaderInfo}>
@@ -359,7 +360,7 @@ export default function ChatScreen({
               onPress={() => setSelectedCall(null)}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={22} color="#111827" />
+              <Ionicons name="chevron-back-outline" size={22} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.detailHeaderTitle}>Call Details</Text>
           </View>
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop:30,
+    // paddingTop:10,
   },
   mainContainer: {
     flex: 1,

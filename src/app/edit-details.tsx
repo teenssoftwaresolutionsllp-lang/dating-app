@@ -43,6 +43,29 @@ const RELATIONSHIP_OPTIONS = [
   'Widowed',
 ];
 
+const FOOD_OPTIONS = [
+  'Vegetarian',
+  'Non-Vegetarian',
+  'Eggetarian',
+  'Vegan',
+  'Jain',
+  'Foodie / Veg',
+];
+
+const DRINK_OPTIONS = [
+  'Never',
+  'Socially',
+  'Frequently',
+  'Planning to quit',
+];
+
+const SMOKE_OPTIONS = [
+  'No',
+  'Socially',
+  'Regularly',
+  'Trying to quit',
+];
+
 export default function EditDetailsScreen() {
   const router = useRouter();
   const profile = getStoredUserProfile();
@@ -54,6 +77,9 @@ export default function EditDetailsScreen() {
   const [relationshipStatus, setRelationshipStatus] = useState(
     profile.relationshipStatus || 'Single'
   );
+  const [foodPreference, setFoodPreference] = useState(profile.foodPreference || 'Foodie / Veg');
+  const [drinking, setDrinking] = useState(profile.drinking || 'Socially');
+  const [smoking, setSmoking] = useState(profile.smoking || 'No');
   const [height, setHeight] = useState(profile.height || `5'10" (178 cm)`);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,6 +93,9 @@ export default function EditDetailsScreen() {
         religion: religion.trim(),
         profession: profession.trim(),
         relationshipStatus: relationshipStatus.trim(),
+        foodPreference: foodPreference.trim(),
+        drinking: drinking.trim(),
+        smoking: smoking.trim(),
         height: height.trim(),
       });
 
@@ -77,6 +106,9 @@ export default function EditDetailsScreen() {
         updateCurrentProfile({
           religion: religion.trim(),
           relationshipStatus: relationshipStatus.trim(),
+          foodPreference: foodPreference.trim(),
+          drinking: drinking.trim(),
+          smoking: smoking.trim(),
           heightCm,
         }),
         updateEducation({
@@ -226,6 +258,87 @@ export default function EditDetailsScreen() {
                       style={[
                         styles.choiceChipText,
                         relationshipStatus === item && styles.choiceChipTextSelected,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Food Preference */}
+            <View style={styles.formGroup}>
+              <Text style={styles.fieldLabel}>Food Preference</Text>
+              <View style={styles.chipsWrap}>
+                {FOOD_OPTIONS.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[
+                      styles.choiceChip,
+                      foodPreference === item && styles.choiceChipSelected,
+                    ]}
+                    onPress={() => setFoodPreference(item)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceChipText,
+                        foodPreference === item && styles.choiceChipTextSelected,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Drinking Habits */}
+            <View style={styles.formGroup}>
+              <Text style={styles.fieldLabel}>Drinking Habits</Text>
+              <View style={styles.chipsWrap}>
+                {DRINK_OPTIONS.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[
+                      styles.choiceChip,
+                      drinking === item && styles.choiceChipSelected,
+                    ]}
+                    onPress={() => setDrinking(item)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceChipText,
+                        drinking === item && styles.choiceChipTextSelected,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Smoking Habits */}
+            <View style={styles.formGroup}>
+              <Text style={styles.fieldLabel}>Smoking Habits</Text>
+              <View style={styles.chipsWrap}>
+                {SMOKE_OPTIONS.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[
+                      styles.choiceChip,
+                      smoking === item && styles.choiceChipSelected,
+                    ]}
+                    onPress={() => setSmoking(item)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceChipText,
+                        smoking === item && styles.choiceChipTextSelected,
                       ]}
                     >
                       {item}

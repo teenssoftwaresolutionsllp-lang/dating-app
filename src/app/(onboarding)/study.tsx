@@ -1,6 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,17 +12,20 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 
 export default function StudyScreen() {
   const { qualification } = useLocalSearchParams<{ qualification?: string }>();
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
+  const insets = useSafeAreaInsets();
 
   const studyOptionsMap: Record<string, string[]> = {
     'High School': [
@@ -71,24 +77,179 @@ export default function StudyScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [otherText, setOtherText] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [error, setError] = useState(false);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const otherInputRef = useRef<TextInput>(null);
+  const otherInputContainerRef = useRef<View>(null);
+  const scrollYRef = useRef(0);
+  const { height: windowHeight } = useWindowDimensions();
+  const initialHeightRef = useRef(Dimensions.get('window').height);
+  const keyboardHeightRef = useRef(0);
+  const keyboardTopRef = useRef<number | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (keyboardHeight === 0 && windowHeight > 0) {
+      initialHeightRef.current = windowHeight;
+    }
+  }, [keyboardHeight, windowHeight]);
 
   const isOtherSelected = selected === 'Other' || (selected ? selected.endsWith('Other') : false);
   const isFormValid = Boolean(
     selected && (!isOtherSelected || otherText.trim().length > 0)
   );
 
+  const scrollInputIntoView = (currentKeyboardHeight?: number, currentKeyboardTop?: number) => {
+    const kh = currentKeyboardHeight ?? keyboardHeightRef.current;
+    const kt = currentKeyboardTop ?? keyboardTopRef.current;
+
+    if (!otherInputContainerRef.current || !scrollViewRef.current) return;
+
+    otherInputContainerRef.current.measureInWindow((x, y, width, height) => {
+      if (y === undefined || height === undefined || isNaN(y) || isNaN(height)) return;
+
+      const screenHeight = initialHeightRef.current || Dimensions.get('window').height;
+      const keyboardTop = kt ?? (screenHeight - kh);
+      const visibleBottom = kh > 0 ? keyboardTop : screenHeight - 75 - insets.bottom;
+      const desiredMargin = 20;
+      const inputBottom = y + height;
+      const deficit = inputBottom - (visibleBottom - desiredMargin);
+
+      if (deficit > 0) {
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, scrollYRef.current + deficit),
+          animated: true,
+        });
+      }
+    });
+  };
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e.endCoordinates.height;
+      const screenY = e.endCoordinates.screenY;
+      keyboardHeightRef.current = height;
+      keyboardTopRef.current = screenY;
+      setKeyboardHeight(height);
+
+      if (selected === 'Other' || selected?.endsWith('Other')) {
+        requestAnimationFrame(() => {
+          scrollInputIntoView(height, screenY);
+        });
+        setTimeout(() => {
+          scrollInputIntoView(height, screenY);
+        }, 100);
+      }
+    });
+
+    const didShowSub = Platform.OS === 'ios'
+      ? Keyboard.addListener('keyboardDidShow', (e) => {
+          const height = e.endCoordinates.height;
+          const screenY = e.endCoordinates.screenY;
+          keyboardHeightRef.current = height;
+          keyboardTopRef.current = screenY;
+          if (selected === 'Other' || selected?.endsWith('Other')) {
+            scrollInputIntoView(height, screenY);
+          }
+        })
+      : null;
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      keyboardHeightRef.current = 0;
+      keyboardTopRef.current = null;
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      didShowSub?.remove();
+      hideSub.remove();
+    };
+  }, [selected]);
+
   const handleOptionPress = (option: string) => {
     setSelected(option);
-    if (option !== 'Other' && !option.endsWith('Other')) {
+    if (error) {
+      setError(false);
+    }
+    const isOther = option === 'Other' || option.endsWith('Other');
+    if (isOther) {
+      requestAnimationFrame(() => {
+        otherInputRef.current?.focus();
+        scrollInputIntoView();
+      });
+      setTimeout(() => {
+        otherInputRef.current?.focus();
+        scrollInputIntoView();
+      }, 50);
+    } else {
       setOtherText('');
+      Keyboard.dismiss();
     }
   };
 
-  const handleNext = () => {
-    if (!selected) return;
+  const handleNext = async () => {
+    if (!selected || (isOtherSelected && otherText.trim().length === 0)) {
+      setError(true);
+      triggerShake();
+      return;
+    }
     const finalStudy = isOtherSelected ? otherText.trim() || 'Other' : selected;
     updateStoredUserProfile({
       education: `${currentQualification} - ${finalStudy}`,
+    });
+    await updateEducation({
+      educationLevel: currentQualification,
+      qualification: finalStudy,
+    }).catch((e) => {
+      console.warn('Backend sync warning on study update:', e);
     });
     router.push({
       pathname: '/profession',
@@ -103,17 +264,41 @@ export default function StudyScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
-        <View style={styles.responsiveContainer}>
-          <OnboardingHeader progress={0.4} />
+  const fixedHeightStyle = isOtherSelected
+    ? {
+        height: initialHeightRef.current,
+        minHeight: initialHeightRef.current,
+      }
+    : null;
 
+  return (
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: theme.background },
+        fixedHeightStyle,
+      ]}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
+      <View style={[styles.responsiveContainer, fixedHeightStyle]}>
+        {/* Progress Bar */}
+        <OnboardingHeader progress={0.4} />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+          style={styles.keyboardView}
+        >
           <ScrollView
-            contentContainerStyle={styles.scrollContent}
+            ref={scrollViewRef}
+            onScroll={(e) => {
+              scrollYRef.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            contentContainerStyle={[
+              styles.scrollContent,
+              isOtherSelected && keyboardHeight > 0 && { paddingBottom: keyboardHeight + 20 },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -124,9 +309,24 @@ export default function StudyScreen() {
             </Text>
 
             {/* Section Title */}
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              What did you study?
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                What did you study?
+              </Text>
+
+              {error && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose any one option
+                </Animated.Text>
+              )}
+            </View>
 
             {/* Radio list options */}
             <View style={styles.optionsList}>
@@ -168,6 +368,13 @@ export default function StudyScreen() {
                     {/* Text input box below Other option when selected */}
                     {isSelected && isOther && (
                       <View
+                        ref={otherInputContainerRef}
+                        onLayout={() => {
+                          requestAnimationFrame(() => {
+                            otherInputRef.current?.focus();
+                            scrollInputIntoView();
+                          });
+                        }}
                         style={[
                           styles.otherInputContainer,
                           {
@@ -177,17 +384,22 @@ export default function StudyScreen() {
                         ]}
                       >
                         <TextInput
+                          ref={otherInputRef}
                           style={[
                             styles.otherTextInput,
                             { color: theme.text },
                           ]}
                           value={otherText}
                           onChangeText={setOtherText}
-                          onFocus={() => setIsInputFocused(true)}
+                          onFocus={() => {
+                            setIsInputFocused(true);
+                            setTimeout(() => {
+                              scrollInputIntoView();
+                            }, 100);
+                          }}
                           onBlur={() => setIsInputFocused(false)}
                           placeholder="Enter your field of study"
                           placeholderTextColor={theme.textSecondary || '#9CA3AF'}
-                          autoFocus
                           selectionColor={theme.primaryButton}
                           returnKeyType="done"
                           onSubmitEditing={isFormValid ? handleNext : undefined}
@@ -200,16 +412,20 @@ export default function StudyScreen() {
               })}
             </View>
           </ScrollView>
+        </KeyboardAvoidingView>
 
-          {/* Footer Navigation */}
-          <OnboardingFooter
-            showBack
-            onBack={handleBack}
-            onNext={handleNext}
-            disabled={!isFormValid}
-          />
-        </View>
-      </KeyboardAvoidingView>
+        {/* Footer Navigation */}
+        <OnboardingFooter
+          showBack
+          onBack={handleBack}
+          onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isFormValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -222,7 +438,6 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
     width: '100%',
-    alignItems: 'center',
   },
   responsiveContainer: {
     flex: 1,
@@ -250,11 +465,24 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     maxWidth: 290,
   },
+  sectionHeader: {
+    width: '100%',
+    position: 'relative',
+    marginTop: 34,
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 16,
-    marginTop: 34,
-    marginBottom: 24,
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
   optionsList: {
     width: '100%',

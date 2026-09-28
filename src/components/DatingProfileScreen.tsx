@@ -14,10 +14,11 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
-import { router } from 'expo-router';
 import { CustomTabBar } from './CustomTabBar';
+import { formatApiImageUrl } from '@/services/api';
 import {
   getDiscoveryFeed,
   swipeUser,
@@ -205,6 +206,23 @@ const ASSET_IMAGES = [
   require('../../assets/images/profile_asset3.jpg'),
 ];
 
+const MATCH_VIBE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Caring: 'heart',
+  'Fun & Funny': 'happy',
+  Peaceful: 'leaf',
+  'Deep Talks': 'chatbubbles',
+  Romantic: 'rose',
+  Adventurous: 'compass',
+  Classy: 'sparkles',
+  Chill: 'cafe',
+  Positive: 'sunny',
+  Creative: 'color-palette',
+};
+
+function getMatchVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
+  return MATCH_VIBE_ICONS[vibe] || 'sparkles';
+}
+
 // Profile data structure with multiple detailed profiles
 const PROFILES_DATA = [
   {
@@ -217,18 +235,13 @@ const PROFILES_DATA = [
     interests: ['Music', 'Movies', 'Travel'],
     education: 'B. Tech',
     profession: 'Designer',
-    attributes: {
-      food: 'Foodie / Veg',
-      politics: 'Moderate',
-      lookingFor: 'Long-term relationship',
-      zodiac: 'Libra ♎',
-      personality: 'Ambivert',
-      firstDate: 'Coffee & Walks',
-      drink: 'Socially',
-      smoke: 'No',
-      religion: 'Hindu',
-      pastTime: 'Listening to Music',
-    },
+    foodPreference: 'Foodie / Veg',
+    drinking: 'Socially',
+    smoking: 'No',
+    lookingFor: 'Long-term relationship',
+    religion: 'Hindu',
+    relationshipStatus: 'Single',
+    vibes: ['Caring', 'Deep Talks', 'Creative', 'Positive', 'Chill'],
     images: [ASSET_IMAGES[0], ASSET_IMAGES[1], ASSET_IMAGES[2]],
   },
   {
@@ -241,18 +254,13 @@ const PROFILES_DATA = [
     interests: ['Photography', 'Coffee', 'Road Trips'],
     education: 'M.B.A',
     profession: 'Product Manager',
-    attributes: {
-      food: 'Non-Veg',
-      politics: 'Open-minded',
-      lookingFor: 'Something real',
-      zodiac: 'Gemini ♊',
-      personality: 'Extrovert',
-      firstDate: 'Cozy Cafe',
-      drink: 'Occasionally',
-      smoke: 'No',
-      religion: 'Spiritual',
-      pastTime: 'Sunset Watching',
-    },
+    foodPreference: 'Non-Veg',
+    drinking: 'Socially',
+    smoking: 'No',
+    lookingFor: 'Something real',
+    religion: 'Spiritual',
+    relationshipStatus: 'Single',
+    vibes: ['Fun & Funny', 'Adventurous', 'Chill', 'Positive', 'Creative'],
     images: [ASSET_IMAGES[1], ASSET_IMAGES[2], ASSET_IMAGES[0]],
   },
   {
@@ -265,18 +273,13 @@ const PROFILES_DATA = [
     interests: ['Art & Painting', 'Indie Music', 'Dogs'],
     education: 'B.A. Fine Arts',
     profession: 'UI/UX Designer',
-    attributes: {
-      food: 'Vegetarian',
-      politics: 'Liberal',
-      lookingFor: 'Meaningful bond',
-      zodiac: 'Leo ♌',
-      personality: 'Creative & Warm',
-      firstDate: 'Art Gallery & Tea',
-      drink: 'Never',
-      smoke: 'No',
-      religion: 'Hindu',
-      pastTime: 'Sketching & Reading',
-    },
+    foodPreference: 'Vegetarian',
+    drinking: 'Never',
+    smoking: 'No',
+    lookingFor: 'Meaningful bond',
+    religion: 'Hindu',
+    relationshipStatus: 'Single',
+    vibes: ['Peaceful', 'Romantic', 'Creative', 'Caring', 'Deep Talks'],
     images: [ASSET_IMAGES[2], ASSET_IMAGES[0], ASSET_IMAGES[1]],
   },
   {
@@ -289,18 +292,13 @@ const PROFILES_DATA = [
     interests: ['Fitness', 'Tech & Code', 'Acoustic Music'],
     education: 'B. Tech CS',
     profession: 'Software Engineer',
-    attributes: {
-      food: 'Eggetarian',
-      politics: 'Centrist',
-      lookingFor: 'Date to marry',
-      zodiac: 'Aries ♈',
-      personality: 'Energetic',
-      firstDate: 'Bowling & Drinks',
-      drink: 'Socially',
-      smoke: 'No',
-      religion: 'Hindu',
-      pastTime: 'Trekking & Gaming',
-    },
+    foodPreference: 'Eggetarian',
+    drinking: 'Socially',
+    smoking: 'No',
+    lookingFor: 'Date to marry',
+    religion: 'Hindu',
+    relationshipStatus: 'Single',
+    vibes: ['Adventurous', 'Classy', 'Positive', 'Deep Talks', 'Chill'],
     images: [ASSET_IMAGES[0], ASSET_IMAGES[2], ASSET_IMAGES[1]],
   },
 ];
@@ -318,9 +316,8 @@ const YOU_LIKED_DATA = [
   { id: 'yl3', name: 'Teju, 23', image: ASSET_IMAGES[0], time: '3 days ago', match: '87%' },
 ];
 
-
-
 export default function DatingProfileScreen() {
+  const router = useRouter();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
@@ -354,20 +351,16 @@ export default function DatingProfileScreen() {
           education: card.education?.qualification || card.education?.educationLevel || 'B.Tech',
           profession: card.education?.profession || 'Designer',
           trustScore: card.trustScore || { score: 100, badge: '100%', color: 'green' },
-          attributes: {
-            food: 'Non-Veg',
-            politics: 'Open-minded',
-            lookingFor: 'Long-term connection',
-            zodiac: 'Aquarius ♒',
-            personality: 'Ambivert',
-            firstDate: 'Art Cafe & Coffee',
-            drink: 'Occasionally',
-            smoke: 'No',
-            religion: card.religion || 'Hindu',
-            pastTime: 'Travel & Photography',
-          },
+          foodPreference: card.foodPreference || 'Foodie / Veg',
+          drinking: card.drinking || 'Socially',
+          smoking: card.smoking || 'No',
+          lookingFor: (card.lookingFor && card.lookingFor.length > 0 ? card.lookingFor[0] : card.relationshipStatus) || 'Long-term relationship',
+          religion: card.religion || 'Hindu',
+          relationshipStatus: card.relationshipStatus || 'Single',
+          vibes: (card.vibes && card.vibes.length > 0) ? card.vibes : ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive'],
+          nature: (card.nature && card.nature.length > 0) ? card.nature : ((card.vibes && card.vibes.length > 0) ? card.vibes : ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive']),
           images: card.photos && card.photos.length > 0
-            ? card.photos.map((p) => ({ uri: p.url }))
+            ? card.photos.map((p) => ({ uri: formatApiImageUrl(p.url) }))
             : [ASSET_IMAGES[idx % ASSET_IMAGES.length]],
         }));
         setCards(mapped);
@@ -724,54 +717,16 @@ export default function DatingProfileScreen() {
                   </View>
                 </View>
 
-                {/* Attributes Grid */}
+                {/* Attributes Grid (Real Data: Food, Drink, Smoke, Looking For, Religion, Relationship Status) */}
                 <View style={styles.attributesGrid}>
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="restaurant-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Food Preferences</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="bulb-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Political Views</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="glasses-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Looking for</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="sparkles-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Zodiac Sign</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="happy-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Personality</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="calendar-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>First Date</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>
+                      {currentProfile.foodPreference || 'Foodie / Veg'}
+                    </Text>
                   </View>
 
                   <View style={styles.attributeBox}>
@@ -779,7 +734,9 @@ export default function DatingProfileScreen() {
                       <Ionicons name="wine-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Drink</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>
+                      {currentProfile.drinking || 'Socially'}
+                    </Text>
                   </View>
 
                   <View style={styles.attributeBox}>
@@ -787,7 +744,19 @@ export default function DatingProfileScreen() {
                       <Ionicons name="cloud-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Smoke</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>
+                      {currentProfile.smoking || 'No'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.attributeBox}>
+                    <View style={styles.attributeHeaderRow}>
+                      <Ionicons name="heart-outline" size={15} color="#0D7A74" />
+                      <Text style={styles.attributeTitle}>Looking for</Text>
+                    </View>
+                    <Text style={styles.attributeValue} numberOfLines={1}>
+                      {currentProfile.lookingFor || 'Long-term relationship'}
+                    </Text>
                   </View>
 
                   <View style={styles.attributeBox}>
@@ -795,15 +764,44 @@ export default function DatingProfileScreen() {
                       <Ionicons name="flower-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Religion</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>
+                      {currentProfile.religion || 'Hindu'}
+                    </Text>
                   </View>
 
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="game-controller-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Favourite Past time</Text>
+                      <Ionicons name="person-outline" size={15} color="#0D7A74" />
+                      <Text style={styles.attributeTitle}>Relationship Status</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>
+                      {currentProfile.relationshipStatus || 'Single'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Nature Section (Dynamically rendered from candidate's real nature traits) */}
+                <View style={styles.myVibesSection}>
+                  <Text style={styles.myVibesTitle}>Nature</Text>
+                  <View style={styles.myVibesRow}>
+                    {(
+                      (currentProfile.nature && currentProfile.nature.length > 0)
+                        ? currentProfile.nature
+                        : (currentProfile.vibes && currentProfile.vibes.length > 0)
+                        ? currentProfile.vibes
+                        : ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive']
+                    )
+                      .slice(0, 5)
+                      .map((trait: string, idx: number) => (
+                        <View key={idx} style={styles.vibeItem}>
+                          <View style={styles.vibeIconCircle}>
+                            <Ionicons name={getMatchVibeIcon(trait)} size={18} color="#0D7A74" />
+                          </View>
+                          <Text style={styles.vibeLabel} numberOfLines={1}>
+                            {trait}
+                          </Text>
+                        </View>
+                      ))}
                   </View>
                 </View>
 
@@ -1274,7 +1272,7 @@ const styles = StyleSheet.create({
   mainScrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop:20,
+    // marginTop:5,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1521,12 +1519,48 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flexShrink: 1,
   },
-  attributeDashes: {
-    fontSize: 12,
-    color: '#0D7A74',
-    fontWeight: '600',
-    letterSpacing: 2,
-    marginTop: 2,
+  attributeValue: {
+    fontSize: 13,
+    color: '#0F766E',
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  myVibesSection: {
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  myVibesTitle: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  myVibesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  vibeItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  vibeIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#D1F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  vibeLabel: {
+    fontFamily: 'DM_Sans_500Medium',
+    fontSize: 11,
+    color: '#374151',
+    fontWeight: '500',
   },
   reportButton: {
     flexDirection: 'row',
@@ -1625,6 +1659,7 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   tabLabel: {
     fontSize: 11,
@@ -1637,7 +1672,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   matchModalOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',

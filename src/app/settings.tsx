@@ -18,6 +18,8 @@ import {
   SafetyBadgeIcon,
   TrustRosetteIcon,
 } from '@/components/SettingsIcons';
+import { clearUserAuth } from '@/utils/authPersistence';
+import { logout } from '@/utils/api';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -36,13 +38,19 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutModal(false);
+    try {
+      await logout();
+    } catch {
+      await clearUserAuth();
+    }
     router.replace('/login');
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     setShowDeleteModal(false);
+    await clearUserAuth();
     Alert.alert('Account Deactivated', 'Your account has been scheduled for deletion.', [
       { text: 'OK', onPress: () => router.replace('/login') },
     ]);
@@ -150,7 +158,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => setShowTrustModal(true)}
+            onPress={() => router.push('/trust-compatibility')}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -165,7 +173,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => setShowDeleteModal(true)}
+            onPress={() => router.push('/deactivate-or-delete')}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -182,7 +190,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => setShowLogoutModal(true)}
+            onPress={() => router.push('/logout')}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>

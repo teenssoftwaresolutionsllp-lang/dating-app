@@ -1,26 +1,97 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   TextInput,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { useTheme } from '@/hooks/use-theme';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 
 export default function CompanyScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [companyName, setCompanyName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [error, setError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
-    router.push('/income');
+  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const isCompanyValid = Boolean(companyName.trim().length > 0);
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleNext = async () => {
+    if (!companyName.trim()) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const cleanCompany = companyName.trim();
+      updateStoredUserProfile({ company: cleanCompany });
+      await updateEducation({
+        companyName: cleanCompany,
+      }).catch((e) => {
+        console.warn('Backend sync warning on company update:', e);
+      });
+      router.push('/(onboarding)/income' as any);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -32,14 +103,11 @@ export default function CompanyScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
         <OnboardingHeader progress={0.5} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -57,35 +125,63 @@ export default function CompanyScreen() {
             </View>
 
             {/* Capsule Input Container */}
-            <View
-              style={[
-                styles.inputContainer,
-                isFocused && styles.inputContainerFocused,
-              ]}
-            >
-              <TextInput
-                style={styles.textInput}
-                value={companyName}
-                onChangeText={setCompanyName}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Enter Company Name"
-                placeholderTextColor="#9CA3AF"
-                selectionColor="#00F5D4"
-                autoCapitalize="words"
-                returnKeyType="done"
-                onSubmitEditing={handleNext}
-              />
+            <View style={styles.inputSection}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  isFocused && styles.inputContainerFocused,
+                  error && styles.inputContainerError,
+                ]}
+              >
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    error && styles.textInputError,
+                  ]}
+                  value={companyName}
+                  onChangeText={(text) => {
+                    setCompanyName(text);
+                    if (error && text.trim().length > 0) {
+                      setError(false);
+                    }
+                  }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  placeholder="Enter company name"
+                  placeholderTextColor={error ? '#9CA3AF' : '#9CA3AF'}
+                  selectionColor="#00E4E8"
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  onSubmitEditing={handleNext}
+                />
+              </View>
+
+              {error && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please enter your company name/organization
+                </Animated.Text>
+              )}
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Footer */}
         <OnboardingFooter
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!companyName && companyName.trim().length === 0}
+          nextButtonStyle={{
+            backgroundColor: isCompanyValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -101,7 +197,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
   keyboardView: {
     flex: 1,
@@ -134,10 +230,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
+  inputSection: {
+    width: '100%',
+    position: 'relative',
+  },
   inputContainer: {
     width: '100%',
     height: 48,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#D1D5DB',
     borderRadius: 24,
     paddingHorizontal: 20,
@@ -145,8 +245,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   inputContainerFocused: {
-    borderColor: '#00F5D4',
-    borderWidth: 1.5,
+    borderColor: '#00E4E8',
+  },
+  inputContainerError: {
+    borderColor: '#FF3B30',
   },
   textInput: {
     fontSize: 14,
@@ -156,5 +258,17 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 0,
     outlineStyle: 'none' as any,
+  },
+  textInputError: {
+    color: '#FF3B30',
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -20,
+    left: 16,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

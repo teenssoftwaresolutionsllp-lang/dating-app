@@ -16,6 +16,13 @@ export interface DiscoveryCard {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  religion?: string | null;
+  foodPreference?: string | null;
+  drinking?: string | null;
+  smoking?: string | null;
+  vibes?: string[];
+  nature?: string[];
+  lookingFor?: string[];
   distanceKm?: number;
   bio: string | null;
   relationshipStatus: string | null;
@@ -108,6 +115,45 @@ export interface LikeReceivedItem {
   };
 }
 
+export interface SentLikeItem {
+  userId: string;
+  name: string;
+  age: number | null;
+  city: string | null;
+  location: string | null;
+  profession: string | null;
+  photo: string | null;
+  action: string;
+  likedAt: string;
+  trustScore?: any;
+}
+
+export interface CategoryUser {
+  id: string;
+  userId?: string;
+  name: string;
+  age: number;
+  location: string;
+  city: string;
+  religion: string;
+  profession: string;
+  distance: string;
+  matchPercentage: number;
+  interest: string;
+  timeAgo: string;
+  isOnline: boolean;
+  image: string | null;
+}
+
+export interface PeopleCategoriesResponse {
+  active: CategoryUser[];
+  nearYou: CategoryUser[];
+  youMayLike: CategoryUser[];
+  similarInterest: CategoryUser[];
+  sameReligion: CategoryUser[];
+  recentlyActive: CategoryUser[];
+}
+
 // 1. Discovery Feed Cards
 export async function getDiscoveryFeed(page: number = 1, limit: number = 10): Promise<DiscoveryCard[]> {
   try {
@@ -121,7 +167,20 @@ export async function getDiscoveryFeed(page: number = 1, limit: number = 10): Pr
   }
 }
 
-// 2. Swipe (Like / Dislike / Superlike)
+// 2. People Categories
+export async function getPeopleCategories(): Promise<PeopleCategoriesResponse | null> {
+  try {
+    const categories = await apiRequest<PeopleCategoriesResponse>('/api/v1/matches/people-categories', {
+      method: 'GET',
+    });
+    return categories || null;
+  } catch (error) {
+    console.warn('Failed to load people categories:', error);
+    return null;
+  }
+}
+
+// 3. Swipe (Like / Dislike / Superlike)
 export async function swipeUser(targetUserId: string, direction: SwipeDirection): Promise<SwipeResponse> {
   return apiRequest<SwipeResponse>('/api/v1/matches/swipe', {
     method: 'POST',
@@ -129,7 +188,7 @@ export async function swipeUser(targetUserId: string, direction: SwipeDirection)
   });
 }
 
-// 3. Mutual Matches List
+// 4. Mutual Matches List
 export async function getMatches(): Promise<MatchItem[]> {
   try {
     const matches = await apiRequest<MatchItem[]>('/api/v1/matches', {
@@ -142,7 +201,7 @@ export async function getMatches(): Promise<MatchItem[]> {
   }
 }
 
-// 4. Likes Received (Who liked me)
+// 5. Likes Received (Who liked me)
 export async function getLikesReceived(): Promise<LikeReceivedItem[]> {
   try {
     const likes = await apiRequest<LikeReceivedItem[]>('/api/v1/matches/likes', {
@@ -155,21 +214,34 @@ export async function getLikesReceived(): Promise<LikeReceivedItem[]> {
   }
 }
 
-// 5. Start Chat with a Match
+// 6. Sent Likes (Profiles you liked)
+export async function getSentLikes(): Promise<SentLikeItem[]> {
+  try {
+    const sentLikes = await apiRequest<SentLikeItem[]>('/api/v1/matches/sent-likes', {
+      method: 'GET',
+    });
+    return sentLikes || [];
+  } catch (error) {
+    console.warn('Failed to load sent likes:', error);
+    return [];
+  }
+}
+
+// 7. Start Chat with a Match
 export async function startMatchChat(matchId: string): Promise<{ conversationId: string }> {
   return apiRequest<{ conversationId: string }>(`/api/v1/matches/${matchId}/chat`, {
     method: 'POST',
   });
 }
 
-// 6. Unmatch
+// 8. Unmatch
 export async function unmatchUser(matchId: string): Promise<void> {
   await apiRequest(`/api/v1/matches/${matchId}`, {
     method: 'DELETE',
   });
 }
 
-// 7. Block / Report Safety
+// 9. Block / Report Safety
 export async function blockUser(targetUserId: string): Promise<void> {
   await apiRequest('/api/v1/matches/block', {
     method: 'POST',

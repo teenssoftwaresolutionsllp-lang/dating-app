@@ -26,11 +26,7 @@ export default function VerifiedProfilesScreen() {
   };
 
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/' as any);
-    }
+    router.replace('/' as any);
   };
 
   return (

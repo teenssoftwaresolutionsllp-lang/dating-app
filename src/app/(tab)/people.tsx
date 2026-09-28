@@ -25,7 +25,12 @@ import {
   SameReligionUser,
   RecentlyActiveUser,
 } from '@/constants/datingData';
-import { getDiscoveryFeed, type DiscoveryCard } from '@/services/matchApi';
+import { formatApiImageUrl } from '@/services/api';
+import {
+  getPeopleCategories,
+  type PeopleCategoriesResponse,
+  type CategoryUser,
+} from '@/services/matchApi';
 
 interface PeopleScreenProps {
   showTabBar?: boolean;
@@ -33,12 +38,12 @@ interface PeopleScreenProps {
 }
 
 export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }: PeopleScreenProps = {}) {
-  const [liveFeed, setLiveFeed] = React.useState<DiscoveryCard[]>([]);
+  const [categories, setCategories] = React.useState<PeopleCategoriesResponse | null>(null);
 
   React.useEffect(() => {
-    getDiscoveryFeed(1, 20).then((cards) => {
-      if (cards && cards.length > 0) {
-        setLiveFeed(cards);
+    getPeopleCategories().then((res) => {
+      if (res) {
+        setCategories(res);
       }
     });
   }, []);
@@ -50,27 +55,68 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
     });
   };
 
-  // Convert live cards to active user avatars if available
-  const activeUsers: ActiveUser[] = liveFeed.length > 0
-    ? liveFeed.map((c, i) => ({
-        id: c.userId,
-        name: c.name,
-        age: c.age || 23,
-        image: c.photos && c.photos.length > 0 ? { uri: c.photos[0].url } : ACTIVE_USERS[i % ACTIVE_USERS.length].image,
-        isOnline: true,
+  // Convert real database categories to displayed objects with image URL resolving
+  const activeUsers = (categories?.active && categories.active.length > 0)
+    ? categories.active.map((u, i) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : ACTIVE_USERS[i % ACTIVE_USERS.length].image,
+        isOnline: u.isOnline,
       }))
     : ACTIVE_USERS;
 
-  const nearYouUsers: NearYouUser[] = liveFeed.length > 0
-    ? liveFeed.map((c, i) => ({
-        id: c.userId,
-        name: c.name,
-        age: c.age || 24,
-        location: c.city || 'Hyderabad',
-        distance: `${c.distanceKm || (3 + (i % 5) * 0.5)} Km`,
-        image: c.photos && c.photos.length > 0 ? { uri: c.photos[0].url } : NEAR_YOU_USERS[i % NEAR_YOU_USERS.length].image,
+  const nearYouUsers = (categories?.nearYou && categories.nearYou.length > 0)
+    ? categories.nearYou.map((u, i) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age,
+        location: u.city || u.location || 'Hyderabad',
+        distance: u.distance || '3.5 Km',
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : NEAR_YOU_USERS[i % NEAR_YOU_USERS.length].image,
       }))
     : NEAR_YOU_USERS;
+
+  const youMayLikeUsers = (categories?.youMayLike && categories.youMayLike.length > 0)
+    ? categories.youMayLike.map((u, i) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age,
+        profession: u.profession || 'Software Engineer',
+        matchPercentage: u.matchPercentage || 85,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : YOU_MAY_LIKE_USERS[i % YOU_MAY_LIKE_USERS.length].image,
+      }))
+    : YOU_MAY_LIKE_USERS;
+
+  const similarInterestUsers = (categories?.similarInterest && categories.similarInterest.length > 0)
+    ? categories.similarInterest.map((u, i) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age,
+        interest: u.interest || 'Music',
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : SIMILAR_INTEREST_USERS[i % SIMILAR_INTEREST_USERS.length].image,
+      }))
+    : SIMILAR_INTEREST_USERS;
+
+  const sameReligionUsers = (categories?.sameReligion && categories.sameReligion.length > 0)
+    ? categories.sameReligion.map((u, i) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age,
+        religion: u.religion || 'Hindu',
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : SAME_RELIGION_USERS[i % SAME_RELIGION_USERS.length].image,
+      }))
+    : SAME_RELIGION_USERS;
+
+  const recentlyActiveUsers = (categories?.recentlyActive && categories.recentlyActive.length > 0)
+    ? categories.recentlyActive.map((u, i) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age,
+        timeAgo: u.timeAgo || '13 min ago',
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : RECENTLY_ACTIVE_USERS[i % RECENTLY_ACTIVE_USERS.length].image,
+      }))
+    : RECENTLY_ACTIVE_USERS;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -158,7 +204,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {YOU_MAY_LIKE_USERS.map((user: YouMayLikeUser) => (
+            {youMayLikeUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.cardItem}
@@ -193,7 +239,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {SIMILAR_INTEREST_USERS.map((user: SimilarInterestUser) => (
+            {similarInterestUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.circleUserItem}
@@ -224,7 +270,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {SAME_RELIGION_USERS.map((user: SameReligionUser) => (
+            {sameReligionUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.circleUserItem}
@@ -255,7 +301,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {RECENTLY_ACTIVE_USERS.map((user: RecentlyActiveUser) => (
+            {recentlyActiveUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.circleUserItem}
