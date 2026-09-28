@@ -8,6 +8,8 @@ export default function TabLayout() {
   useEffect(() => {
     const onBackPress = () => {
       const isHome =
+        pathname === '/(tab)/matches' ||
+        pathname === '/matches' ||
         pathname === '/(tab)/home' ||
         pathname === '/(tab)' ||
         pathname === '/home' ||
@@ -19,7 +21,7 @@ export default function TabLayout() {
       }
 
       if (pathname.startsWith('/(tab)')) {
-        router.replace('/(tab)/home');
+        router.replace('/(tab)/matches');
         return true;
       }
 
@@ -35,11 +37,11 @@ export default function TabLayout() {
   }, [pathname]);
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-      <Stack.Screen name="people" />
-      <Stack.Screen name="chats" />
+    <Stack screenOptions={{ headerShown: false, animation: 'fade' }} initialRouteName="matches">
       <Stack.Screen name="matches" />
       <Stack.Screen name="likes" />
+      <Stack.Screen name="people" />
+      <Stack.Screen name="chats" />
       <Stack.Screen name="me" />
       <Stack.Screen name="home" />
       <Stack.Screen name="explore" />

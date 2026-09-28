@@ -1,26 +1,32 @@
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
-import { updateDatingPreferences } from '@/services/profileApi';
+import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
-export default function LookingForScreen() {
+const FOOD_OPTIONS = [
+  'Vegetarian',
+  'Non-Vegetarian',
+  'Vegan',
+  'Eggetarian',
+  'Pescatarian',
+  'Jain',
+  'Foodie / Anything',
+];
+
+export default function FoodPreferenceScreen() {
   const theme = useTheme();
+  const isDark = theme.text === '#ffffff';
+  const profile = getStoredUserProfile();
 
-  const options = [
-    'Something casual',
-    'A serious relationship',
-    'Long – term relationship',
-    'Marriage',
-    'Still figuring it out',
-  ];
-
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedFood, setSelectedFood] = useState<string | null>(
+    profile.foodPreference || null
+  );
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,46 +35,25 @@ export default function LookingForScreen() {
   const triggerShake = () => {
     shakeAnim.setValue(0);
     Animated.sequence([
-      Animated.timing(shakeAnim, {
-        toValue: -8,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 8,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -6,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 6,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -3,
-        duration: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 3,
-        duration: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 0,
-        duration: 40,
-        useNativeDriver: true,
-      }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -3, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 3, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
     ]).start();
   };
 
+  const handleSelect = (option: string) => {
+    setSelectedFood(option);
+    if (error) {
+      setError(false);
+    }
+  };
+
   const handleNext = async () => {
-    if (!selected) {
+    if (!selectedFood) {
       setError(true);
       triggerShake();
       return;
@@ -76,17 +61,11 @@ export default function LookingForScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ lookingFor: [selected] });
-      await updateDatingPreferences({
-        relationshipIntentions: [selected],
-      }).catch((e) => {
-        console.warn('Backend sync warning on preferences update:', e);
+      updateStoredUserProfile({ foodPreference: selectedFood });
+      await updateCurrentProfile({ foodPreference: selectedFood }).catch((e: unknown) => {
+        console.warn('Backend sync warning on food preference update:', e);
       });
-
-      router.push({
-        pathname: '/(onboarding)/ideal-match',
-        params: { lookingFor: selected },
-      });
+      router.push('/(onboarding)/lifestyle' as any);
     } finally {
       setIsSubmitting(false);
     }
@@ -96,27 +75,29 @@ export default function LookingForScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/religion');
+      router.replace('/(onboarding)/interests' as any);
     }
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
       <View style={styles.responsiveContainer}>
-        <OnboardingHeader progress={0.8} />
+        {/* Onboarding Progress Header */}
+        <OnboardingHeader progress={0.72} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
+          {/* Header Title & Subtitle */}
           <Text style={[styles.title, { color: theme.text }]}>What are you into?</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Tell us a little about yourself so we can help you find better matches.
           </Text>
 
-          {/* Section Header */}
+          {/* Section Header with Shake Error */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              What are you looking for?
-            </Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Food Preference</Text>
             {error && (
               <Animated.Text
                 style={[
@@ -133,17 +114,12 @@ export default function LookingForScreen() {
 
           {/* Radio list options */}
           <View style={styles.optionsList}>
-            {options.map((option) => {
-              const isSelected = selected === option;
+            {FOOD_OPTIONS.map((option) => {
+              const isSelected = selectedFood === option;
               return (
                 <Pressable
                   key={option}
-                  onPress={() => {
-                    setSelected(option);
-                    if (error) {
-                      setError(false);
-                    }
-                  }}
+                  onPress={() => handleSelect(option)}
                   style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: isSelected }}
@@ -152,7 +128,7 @@ export default function LookingForScreen() {
                   <View
                     style={[
                       styles.radioCircle,
-                      { borderColor: isSelected ? theme.primaryButton : theme.border },
+                      { borderColor: isSelected ? theme.primaryButton : isDark ? '#4B5563' : '#D1D5DB' },
                     ]}
                   >
                     {isSelected && (
@@ -166,7 +142,15 @@ export default function LookingForScreen() {
                   </View>
 
                   {/* Option Text */}
-                  <Text style={[styles.optionText, { color: theme.text }]}>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      {
+                        color: theme.text,
+                        fontFamily: isSelected ? 'DM_Sans_700Bold' : 'DM_Sans_500Medium',
+                      },
+                    ]}
+                  >
                     {option}
                   </Text>
                 </Pressable>
@@ -181,9 +165,7 @@ export default function LookingForScreen() {
           onBack={handleBack}
           onNext={handleNext}
           nextButtonStyle={{
-            backgroundColor: selected
-              ? theme.primaryButton
-              : '#BDFFF9',
+            backgroundColor: selectedFood ? theme.primaryButton : '#BDFFF9',
           }}
         />
       </View>
@@ -262,7 +244,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   optionText: {
-    fontFamily: 'DM_Sans_500Medium',
     fontSize: 15,
   },
 });

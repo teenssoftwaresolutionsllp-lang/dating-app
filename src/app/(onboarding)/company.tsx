@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { useTheme } from '@/hooks/use-theme';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 
 export default function CompanyScreen() {
   const router = useRouter();
@@ -22,6 +24,7 @@ export default function CompanyScreen() {
   const [companyName, setCompanyName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialHeight = useRef(Dimensions.get('window').height).current;
   const isCompanyValid = Boolean(companyName.trim().length > 0);
@@ -69,13 +72,26 @@ export default function CompanyScreen() {
     ]).start();
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!companyName.trim()) {
       setError(true);
       triggerShake();
       return;
     }
-    router.push('/(onboarding)/income' as any);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const cleanCompany = companyName.trim();
+      updateStoredUserProfile({ company: cleanCompany });
+      await updateEducation({
+        companyName: cleanCompany,
+      }).catch((e) => {
+        console.warn('Backend sync warning on company update:', e);
+      });
+      router.push('/(onboarding)/income' as any);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

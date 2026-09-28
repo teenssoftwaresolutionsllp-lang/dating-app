@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
 import {
   HyderabadIcon,
@@ -41,6 +42,7 @@ export default function LocationScreen() {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [locationError, setLocationError] = useState(false);
 
@@ -90,19 +92,31 @@ export default function LocationScreen() {
     ]).start();
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!isLocationValid) {
       setLocationError(true);
       triggerLocationShake();
       return;
     }
-    const chosenName = selectedCity
-      ? CITIES.find((c) => c.id === selectedCity)?.name || selectedCity
-      : searchQuery.trim();
-    if (chosenName) {
-      updateStoredUserProfile({ location: chosenName });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const chosenName = selectedCity
+        ? CITIES.find((c) => c.id === selectedCity)?.name || selectedCity
+        : searchQuery.trim();
+      if (chosenName) {
+        updateStoredUserProfile({ location: `${chosenName}, India` });
+        await updateCurrentProfile({
+          city: chosenName,
+          country: 'India',
+        }).catch((e) => {
+          console.warn('Backend sync warning on location update:', e);
+        });
+      }
+      router.push('/(onboarding)/relationship' as any);
+    } finally {
+      setIsSubmitting(false);
     }
-    router.push('/(onboarding)/relationship' as any);
   };
 
   const handleBack = () => {

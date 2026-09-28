@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredPartnerPreferences } from '@/constants/userProfile';
+import { updateDatingPreferences } from '@/services/profileApi';
 
 export default function IdealMatchScreen() {
   const theme = useTheme();
@@ -103,9 +105,35 @@ export default function IdealMatchScreen() {
     selectedInterests.length > 0
   );
 
-  const handleNext = () => {
-    if (!isComplete) return;
-    router.push('/(onboarding)/ready');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNext = async () => {
+    if (!isComplete || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const distanceNum = selectedDistance ? parseInt(selectedDistance.replace(/\D/g, ''), 10) || 50 : 50;
+
+      updateStoredPartnerPreferences({
+        minAge: 18,
+        maxAge: maxAge || 35,
+        maxDistanceKm: distanceNum,
+        religionPreferences: selectedReligion ? [selectedReligion] : ['Open to all'],
+        preferredInterests: selectedInterests,
+      });
+
+      await updateDatingPreferences({
+        maxAge: maxAge || 35,
+        minAge: 18,
+        maxDistanceKm: distanceNum,
+        religionPreferences: selectedReligion ? [selectedReligion] : undefined,
+      }).catch((e) => {
+        console.warn('Backend sync warning on dating preferences update:', e);
+      });
+
+      router.push('/(onboarding)/ready' as any);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

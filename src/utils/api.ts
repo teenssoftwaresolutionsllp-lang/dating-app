@@ -10,6 +10,24 @@ import {
 } from './authPersistence';
 
 export const getBaseUrl = (): string => {
+  // 1. On Web, localhost is direct and guaranteed to connect
+  if (Platform.OS === 'web') {
+    return 'http://localhost:5000';
+  }
+
+  // 2. Dynamic Expo host IP detection for physical devices (iOS / Android via Expo Go)
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
+    (Constants as any).manifest?.debuggerHost;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return `http://${ip}:5000`;
+    }
+  }
+
+  // 3. Check explicit EXPO_PUBLIC_API_URL or extra config
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
   }
@@ -17,9 +35,13 @@ export const getBaseUrl = (): string => {
   if (extraUrl && typeof extraUrl === 'string') {
     return extraUrl.replace(/\/+$/, '');
   }
+
+  // 4. Android Emulator fallback
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:5000';
   }
+
+  // 5. Default fallback
   return 'http://localhost:5000';
 };
 
@@ -54,13 +76,17 @@ export async function apiRequest<T>(
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     'x-client-platform': 'react-native',
     ...(options.headers as Record<string, string>),
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const resolvedToken = token || (await getAccessToken());
+  if (resolvedToken) {
+    headers['Authorization'] = `Bearer ${resolvedToken}`;
   }
 
   let response: Response;

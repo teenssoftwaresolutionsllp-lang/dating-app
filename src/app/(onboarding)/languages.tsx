@@ -1,34 +1,51 @@
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { getLanguagesCatalog, updateLanguages, type CatalogItem } from '@/services/profileApi';
+
+const DEFAULT_LANGUAGES = [
+  'English',
+  'Hindi',
+  'Telugu',
+  'Tamil',
+  'Kannada',
+  'Malayalam',
+  'Marathi',
+  'Bengali',
+];
 
 export default function ChooseLanguagesScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
 
-  const languages = [
-    'English',
-    'Hindi',
-    'Telugu',
-    'Tamil',
-    'Kannada',
-    'Malayalam',
-    'Marathi',
-    'Bengali',
-  ];
-
-  const [selected, setSelected] = useState<string[]>([]);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [selected, setSelected] = useState<string[]>(['English', 'Telugu']);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [languageError, setLanguageError] = useState(false);
 
   const languageShakeAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    getLanguagesCatalog().then((items) => {
+      if (items && items.length > 0) {
+        setCatalog(items);
+      }
+    });
+  }, []);
+
+  const availableLanguages = catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_LANGUAGES;
+
   const triggerLanguageShake = () => {
+    shakeAnimSequence();
+  };
+
+  const shakeAnimSequence = () => {
     languageShakeAnim.setValue(0);
     Animated.sequence([
       Animated.timing(languageShakeAnim, {
@@ -71,7 +88,9 @@ export default function ChooseLanguagesScreen() {
 
   const toggleLanguage = (lang: string) => {
     if (selected.includes(lang)) {
-      setSelected(selected.filter((item) => item !== lang));
+      if (selected.length > 1) {
+        setSelected(selected.filter((item) => item !== lang));
+      }
     } else {
       setSelected([...selected, lang]);
       if (languageError) {
@@ -80,14 +99,32 @@ export default function ChooseLanguagesScreen() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selected.length === 0) {
       setLanguageError(true);
       triggerLanguageShake();
       return;
     }
-    updateStoredUserProfile({ languages: selected.join(', ') });
-    router.push('/(onboarding)/qualification');
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ languages: selected.join(', ') });
+      const languageIds = selected
+        .map((name) => {
+          const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
+          return found ? found.id : DEFAULT_LANGUAGES.indexOf(name) + 1;
+        })
+        .filter((id) => id > 0);
+
+      if (languageIds.length > 0) {
+        await updateLanguages(languageIds).catch((e) => {
+          console.warn('Backend sync warning on languages update:', e);
+        });
+      }
+      router.push('/qualification');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -129,7 +166,7 @@ export default function ChooseLanguagesScreen() {
 
           {/* Options List */}
           <View style={styles.optionsList}>
-            {languages.map((lang) => {
+            {availableLanguages.map((lang: string) => {
               const isSelected = selected.includes(lang);
               return (
                 <Pressable

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
 const SUGGESTIONS = [
   'Passionate about photography & road trips 🚗📸',
@@ -26,10 +27,20 @@ export default function EditAboutScreen() {
   const router = useRouter();
   const profile = getStoredUserProfile();
   const [aboutText, setAboutText] = useState(profile.about || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
-    updateStoredUserProfile({ about: aboutText.trim() });
-    router.back();
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ about: aboutText.trim() });
+      await updateCurrentProfile({ bio: aboutText.trim() }).catch((e) => {
+        console.warn('Backend sync warning on bio update:', e);
+      });
+      router.back();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

@@ -18,6 +18,7 @@ import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredUserProfile } from '@/constants/userProfile';
 import { useTheme } from '@/hooks/use-theme';
+import { updateEducation } from '@/services/profileApi';
 
 const PROFESSIONS = [
   'Software Engineer',
@@ -97,7 +98,7 @@ export default function ProfessionScreen() {
     item.toLowerCase().includes(searchQuery.toLowerCase().trim())
   );
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedProfession && !searchQuery.trim()) {
       setError(true);
       triggerShake();
@@ -105,7 +106,17 @@ export default function ProfessionScreen() {
     }
     const finalProfession = selectedProfession || searchQuery.trim();
     updateStoredUserProfile({ profession: finalProfession });
-    router.push('/(onboarding)/company' as any);
+    await updateEducation({
+      profession: finalProfession,
+      occupation: finalProfession,
+    }).catch((e) => {
+      console.warn('Backend sync warning on profession update:', e);
+    });
+
+    router.push({
+      pathname: '/(onboarding)/company',
+      params: { profession: finalProfession },
+    });
   };
 
   const handleBack = () => {

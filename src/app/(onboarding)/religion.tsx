@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
 export default function ReligionScreen() {
   const theme = useTheme();
@@ -31,6 +33,7 @@ export default function ReligionScreen() {
   const [selectedReligion, setSelectedReligion] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -83,30 +86,40 @@ export default function ReligionScreen() {
     setModalVisible(false);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedReligion) {
       setError(true);
       triggerShake();
       return;
     }
-    router.push({
-      pathname: '/(onboarding)/looking-for',
-      params: { religion: selectedReligion },
-    });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ religion: selectedReligion });
+      await updateCurrentProfile({ religion: selectedReligion }).catch((e) => {
+        console.warn('Backend sync warning on religion update:', e);
+      });
+      router.push({
+        pathname: '/(onboarding)/looking-for',
+        params: { religion: selectedReligion },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/interests');
+      router.replace('/(onboarding)/nature' as any);
     }
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        <OnboardingHeader progress={0.75} />
+        <OnboardingHeader progress={0.84} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}

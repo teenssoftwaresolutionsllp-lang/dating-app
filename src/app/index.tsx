@@ -15,7 +15,7 @@ export default function WelcomeScreen() {
       try {
         const loggedIn = await isUserLoggedIn();
         if (loggedIn && active) {
-          router.replace('/(tab)/home');
+          router.replace('/(tab)/matches');
           return;
         }
       } catch {

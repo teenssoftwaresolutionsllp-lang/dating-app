@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { getInterestsCatalog, updateInterests, type CatalogItem } from '@/services/profileApi';
 
 const ALL_AVAILABLE_INTERESTS = [
   'Music',
@@ -42,11 +43,21 @@ const ALL_AVAILABLE_INTERESTS = [
 export default function EditInterestsScreen() {
   const router = useRouter();
   const profile = getStoredUserProfile();
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(
     profile.interests && profile.interests.length > 0
       ? profile.interests
       : ['Music', 'Movies', 'Travel', 'Concerts', 'Nature', 'Gaming']
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    getInterestsCatalog().then((items) => {
+      if (items && items.length > 0) {
+        setCatalog(items);
+      }
+    });
+  }, []);
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
@@ -58,9 +69,26 @@ export default function EditInterestsScreen() {
     }
   };
 
-  const handleSave = () => {
-    updateStoredUserProfile({ interests: selectedInterests });
-    router.back();
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ interests: selectedInterests });
+      const interestIds = selectedInterests.map((name) => {
+        const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
+        return found ? found.id : ALL_AVAILABLE_INTERESTS.indexOf(name) + 1;
+      }).filter((id) => id > 0);
+
+      if (interestIds.length > 0) {
+        await updateInterests(interestIds).catch((e) => {
+          console.warn('Backend sync warning on interests update:', e);
+        });
+      }
+
+      router.back();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

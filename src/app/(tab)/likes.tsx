@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,32 @@ import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
 import { LIKED_YOU_DATA, YOU_LIKED_DATA } from '@/constants/datingData';
+import { formatApiImageUrl } from '@/services/api';
+import {
+  getLikesReceived,
+  getSentLikes,
+  type LikeReceivedItem,
+  type SentLikeItem,
+} from '@/services/matchApi';
 
 export default function LikesScreen() {
   const [likesSubTab, setLikesSubTab] = useState<'likedYou' | 'youLiked'>('likedYou');
+  const [liveLikesReceived, setLiveLikesReceived] = useState<LikeReceivedItem[]>([]);
+  const [liveSentLikes, setLiveSentLikes] = useState<SentLikeItem[]>([]);
+
+  useEffect(() => {
+    getLikesReceived().then((data) => {
+      if (data && data.length > 0) {
+        setLiveLikesReceived(data);
+      }
+    });
+
+    getSentLikes().then((data) => {
+      if (data && data.length > 0) {
+        setLiveSentLikes(data);
+      }
+    });
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -70,7 +93,15 @@ export default function LikesScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.grid}>
-                {LIKED_YOU_DATA.map((item) => (
+                {(liveLikesReceived.length > 0
+                  ? liveLikesReceived.map((item, idx) => ({
+                      id: item.swipeId || item.userId || `like-${idx}`,
+                      name: item.user?.name ? `${item.user.name}, ${item.user.age || 23}` : item.name ? `${item.name}, ${item.age || 23}` : 'Admirer',
+                      image: item.user?.primaryPhoto ? { uri: formatApiImageUrl(item.user.primaryPhoto) } : item.photo ? { uri: formatApiImageUrl(item.photo) } : LIKED_YOU_DATA[idx % LIKED_YOU_DATA.length].image,
+                      userId: item.user?.userId || item.userId,
+                    }))
+                  : LIKED_YOU_DATA
+                ).map((item) => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.blurredCard}
@@ -103,7 +134,16 @@ export default function LikesScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.grid}>
-                {YOU_LIKED_DATA.map((item) => (
+                {(liveSentLikes.length > 0
+                  ? liveSentLikes.map((item, idx) => ({
+                      id: item.userId || `sent-${idx}`,
+                      name: item.name,
+                      age: item.age || 23,
+                      location: item.location || item.city || 'Lives in Hyderabad',
+                      image: item.photo ? { uri: formatApiImageUrl(item.photo) } : YOU_LIKED_DATA[idx % YOU_LIKED_DATA.length].image,
+                    }))
+                  : YOU_LIKED_DATA
+                ).map((item) => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.card}

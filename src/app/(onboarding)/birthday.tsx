@@ -19,6 +19,7 @@ import { DatePicker } from '@/components/date-picker';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function BirthdayScreen() {
@@ -30,6 +31,7 @@ export default function BirthdayScreen() {
   const [year, setYear] = useState('');
   const [heightFeet, setHeightFeet] = useState('5');
   const [heightInches, setHeightInches] = useState('6');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [pickerDate, setPickerDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -139,24 +141,39 @@ export default function BirthdayScreen() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!isDobValid) {
       setDobError(true);
       triggerDobShake();
       return;
     }
-    if (!isFeetValid || !isInchesValid || heightFeet.trim().length === 0 || heightInches.trim().length === 0) {
+    if (!isFeetValid || !isInchesValid || heightFeet.trim().length === 0 || heightInches.trim().length === 0 || isSubmitting) {
       return;
     }
-    const d = day.padStart(2, '0');
-    const m = month.padStart(2, '0');
-    const y = year;
-    const dobString = `${y}-${m}-${d}`;
-    updateStoredUserProfile({
-      dateOfBirth: dobString,
-      height: `${heightFeet}'${heightInches}" (${Math.round((parseInt(heightFeet, 10) * 12 + parseInt(heightInches, 10)) * 2.54)} cm)`,
-    });
-    router.push('/location');
+    setIsSubmitting(true);
+    try {
+      const d = day.padStart(2, '0');
+      const m = month.padStart(2, '0');
+      const y = year;
+      const dobString = `${y}-${m}-${d}`;
+      const totalCm = Math.round((parseInt(heightFeet, 10) * 12 + parseInt(heightInches, 10)) * 2.54);
+      
+      updateStoredUserProfile({
+        dateOfBirth: dobString,
+        height: `${heightFeet}'${heightInches}" (${totalCm} cm)`,
+      });
+
+      await updateCurrentProfile({
+        dateOfBirth: dobString,
+        heightCm: totalCm,
+      }).catch((e) => {
+        console.warn('Backend sync warning on birthday update:', e);
+      });
+
+      router.push('/location');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

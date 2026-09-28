@@ -94,17 +94,37 @@ const TABS: TabItem[] = [
   { id: 'me', label: 'Me', route: '/(tab)/me', renderIcon: (c) => <MeTabIcon color={c} /> },
 ];
 
+function isTabActive(tabId: string, pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const path = pathname.trim().replace(/\/+$/, '');
+
+  if (tabId === 'matches') {
+    return (
+      path === '/(tab)/matches' ||
+      path === '/(tab)/home' ||
+      path === '/(tab)' ||
+      path === '/matches' ||
+      path === '/home' ||
+      path === '/' ||
+      path === ''
+    );
+  }
+
+  return (
+    path === `/(tab)/${tabId}` ||
+    path === `/${tabId}` ||
+    path.startsWith(`/(tab)/${tabId}/`) ||
+    path.startsWith(`/${tabId}/`)
+  );
+}
+
 export const CustomTabBar: React.FC = () => {
   const pathname = usePathname();
 
   return (
     <View style={styles.container}>
       {TABS.map((tab) => {
-        const isActive =
-          pathname === tab.route ||
-          (tab.id === 'people' && (pathname === '/(tab)/home' || pathname === '/(tab)')) ||
-          pathname.includes(tab.id);
-
+        const isActive = isTabActive(tab.id, pathname);
         const color = isActive ? '#0D7A74' : '#78B0A8';
 
         return (
@@ -114,7 +134,7 @@ export const CustomTabBar: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => {
               if (!isActive) {
-                router.push(tab.route as any);
+                router.replace(tab.route as any);
               }
             }}>
             <View style={styles.iconWrapper}>

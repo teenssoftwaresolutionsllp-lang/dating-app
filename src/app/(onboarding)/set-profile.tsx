@@ -19,6 +19,7 @@ import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { Image } from 'expo-image';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function SetProfileScreen() {
@@ -27,8 +28,12 @@ export default function SetProfileScreen() {
   const [userName, setUserName] = useState('');
   const [gender, setGender] = useState<'Female' | 'Male' | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [userNameError, setUserNameError] = useState(false);
   const [genderError, setGenderError] = useState(false);
+
+  const [bio, setBio] = useState('');
+  const [isBioFocused, setIsBioFocused] = useState(false);
 
   const isComplete = Boolean(userName.trim() && gender);
 
@@ -118,7 +123,7 @@ export default function SetProfileScreen() {
     ]).start();
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!userName.trim()) {
       setUserNameError(true);
       setGenderError(false);
@@ -130,8 +135,29 @@ export default function SetProfileScreen() {
       triggerGenderShake();
       return;
     }
-    updateStoredUserProfile({ name: userName.trim() });
-    router.push('/(onboarding)/birthday' as any);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const selectedGender = gender.toLowerCase();
+      updateStoredUserProfile({
+        name: userName.trim(),
+        gender: selectedGender,
+        about: bio.trim() || undefined,
+      });
+      await updateCurrentProfile({
+        name: userName.trim(),
+        gender: selectedGender,
+        bio: bio.trim() || undefined,
+      }).catch((e: unknown) => {
+        console.warn('Backend sync warning on profile update:', e);
+      });
+      router.push({
+        pathname: '/(onboarding)/birthday',
+        params: { name: userName.trim(), gender: selectedGender },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -261,6 +287,36 @@ export default function SetProfileScreen() {
                 </Animated.Text>
               )}
             
+            </View>
+
+            {/* About Me / Bio Section (Optional) */}
+            <View style={[styles.inputSection, { marginTop: 24 }]}>
+              <View style={styles.bioTitleRow}>
+                <Text style={styles.label}>About Me (Bio)</Text>
+                <Text style={styles.optionalBadge}>Optional</Text>
+              </View>
+              <View
+                style={[
+                  styles.bioInputContainer,
+                  isBioFocused && styles.inputContainerFocused,
+                ]}
+              >
+                <TextInput
+                  style={styles.bioTextInput}
+                  value={bio}
+                  onChangeText={setBio}
+                  onFocus={() => setIsBioFocused(true)}
+                  onBlur={() => setIsBioFocused(false)}
+                  placeholder="Share a few words about yourself, hobbies, or what you're looking for..."
+                  placeholderTextColor="#9CA3AF"
+                  selectionColor="#00E4E8"
+                  multiline
+                  numberOfLines={3}
+                  maxLength={300}
+                  textAlignVertical="top"
+                />
+              </View>
+              <Text style={styles.bioCharCount}>{bio.length} / 300</Text>
             </View>
 
             {/* Warning Banner */}
@@ -430,5 +486,37 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#FF3B30',
     textAlign: 'center',
+  },
+  bioTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  optionalBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  bioInputContainer: {
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 80,
+  },
+  bioTextInput: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+    minHeight: 60,
+  },
+  bioCharCount: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'right',
+    marginTop: 4,
   },
 });

@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { getStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
 
 const INCOME_OPTIONS = [
@@ -27,6 +29,7 @@ export default function IncomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const [selectedIncome, setSelectedIncome] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -72,13 +75,33 @@ export default function IncomeScreen() {
     ]).start();
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedIncome) {
       setError(true);
       triggerShake();
       return;
     }
-    router.push('/(onboarding)/verification' as any);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const profile = getStoredUserProfile();
+      const eduParts = (profile.education || 'Bachelors').split('-');
+      const eduLevel = eduParts[0]?.trim() || 'Bachelors';
+      const qual = eduParts[1]?.trim() || eduLevel;
+
+      await updateEducation({
+        educationLevel: eduLevel,
+        qualification: qual,
+        profession: profile.profession || 'Professional',
+        incomeRange: selectedIncome,
+      }).catch((e) => {
+        console.warn('Backend sync warning on education update:', e);
+      });
+
+      router.push('/(onboarding)/verification' as any);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {

@@ -17,6 +17,10 @@ export default function OnboardingLayout() {
       <Stack.Screen name="verification" />
       <Stack.Screen name="photos" />
       <Stack.Screen name="interests" />
+      <Stack.Screen name="food-preference" />
+      <Stack.Screen name="lifestyle" />
+      <Stack.Screen name="nature" />
+      <Stack.Screen name="vibes" />
       <Stack.Screen name="religion" />
       <Stack.Screen name="looking-for" />
       <Stack.Screen name="ideal-match" />

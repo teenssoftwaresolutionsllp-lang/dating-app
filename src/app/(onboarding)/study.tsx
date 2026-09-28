@@ -19,6 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 
 export default function StudyScreen() {
   const { qualification } = useLocalSearchParams<{ qualification?: string }>();
@@ -234,7 +235,7 @@ export default function StudyScreen() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selected || (isOtherSelected && otherText.trim().length === 0)) {
       setError(true);
       triggerShake();
@@ -243,6 +244,12 @@ export default function StudyScreen() {
     const finalStudy = isOtherSelected ? otherText.trim() || 'Other' : selected;
     updateStoredUserProfile({
       education: `${currentQualification} - ${finalStudy}`,
+    });
+    await updateEducation({
+      educationLevel: currentQualification,
+      qualification: finalStudy,
+    }).catch((e) => {
+      console.warn('Backend sync warning on study update:', e);
     });
     router.push({
       pathname: '/profession',

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Animated,
+  ActivityIndicator,
   View,
   Text,
   TouchableOpacity,
@@ -8,6 +10,7 @@ import {
   Image,
   Modal,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,14 +20,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { useTheme } from '@/hooks/use-theme';
-
-// Demo sample avatars for user interaction testing
-const DEMO_PHOTOS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
-];
+import { uploadPhotos, validatePhotoApi } from '@/services/profileApi';
+import { updateStoredUserProfile } from '@/constants/userProfile';
 
 export default function AddPhotosScreen() {
   const router = useRouter();
@@ -34,47 +31,182 @@ export default function AddPhotosScreen() {
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null, null]);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [validatingSlot, setValidatingSlot] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isPhotosComplete = Boolean(photos[0] || photos.some((p) => p !== null));
+  const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  const pickImageForSlot = async (slotIndex: number) => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: false,
-        quality: 0.8,
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -3, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 3, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const verifyAndSetSlot = async (slotIndex: number, uri: string, webFile?: File) => {
+    if (slotIndex !== 0) {
+      // Remaining photos (Slots 1, 2, 3): no face/selfie requirement
+      setPhotos((prev) => {
+        const next = [...prev];
+        next[slotIndex] = uri;
+        return next;
       });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        setPhotos((prev) => {
-          const next = [...prev];
-          next[slotIndex] = uri;
-          return next;
-        });
+      return;
+    }
+
+    // Main Profile Photo (Slot 0): Enforce face presence & KYC selfie matching
+    setValidatingSlot(0);
+    setErrorMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('isPrimary', 'true');
+
+      if (Platform.OS === 'web') {
+        if (webFile) {
+          formData.append('photo', webFile);
+        } else if (uri.startsWith('blob:') || uri.startsWith('data:')) {
+          const res = await fetch(uri);
+          const blob = await res.blob();
+          formData.append('photo', blob, 'main_profile.jpg');
+        } else {
+          const res = await fetch(uri);
+          const blob = await res.blob();
+          formData.append('photo', blob, 'main_profile.jpg');
+        }
+      } else {
+        const cleanUri = uri;
+        const rawFilename = cleanUri.split('/').pop() || 'main_profile.jpg';
+        const filename = rawFilename.includes('.') ? rawFilename : 'main_profile.jpg';
+        const extMatch = filename.split('.').pop()?.toLowerCase() || 'jpg';
+        const type = `image/${extMatch === 'jpg' ? 'jpeg' : extMatch}`;
+
+        formData.append('photo', {
+          uri: cleanUri,
+          name: filename,
+          type,
+        } as any);
       }
-    } catch {
-      // Return safely to Photos screen on cancel/reject
+
+      await validatePhotoApi(formData);
+
+      // Successfully verified face & selfie match!
+      setPhotos((prev) => {
+        const next = [...prev];
+        next[0] = uri;
+        return next;
+      });
+    } catch (err: any) {
+      console.warn('Slot 0 selfie verification error:', err);
+      setPhotos((prev) => {
+        const next = [...prev];
+        next[0] = null;
+        return next;
+      });
+      setErrorMessage(
+        err?.message ||
+          'Face mismatch: Your main profile photo must match your verified selfie.'
+      );
+      triggerShake();
+    } finally {
+      setValidatingSlot(null);
+    }
+  };
+
+  const pickImageForSlot = async (slotIndex: number, useCamera = false) => {
+    setErrorMessage(null);
+    setShowUploadModal(false);
+    setActiveSlot(null);
+
+    // 1. Web Platform File Input
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/webp,image/jpg';
+      input.style.position = 'fixed';
+      input.style.top = '-9999px';
+      input.style.left = '-9999px';
+
+      if (useCamera) {
+        input.setAttribute('capture', slotIndex === 0 ? 'user' : 'environment');
+      }
+
+      document.body.appendChild(input);
+
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+          const objectUrl = URL.createObjectURL(file);
+          verifyAndSetSlot(slotIndex, objectUrl, file);
+        }
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+      };
+
+      input.click();
+      return;
+    }
+
+    // 2. Native Platform (iOS / Android)
+    try {
+      if (useCamera) {
+        const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!cameraPerm.granted) {
+          setErrorMessage('Camera permission is required to take photos');
+          triggerShake();
+          return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [4, 5],
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const uri = result.assets[0].uri;
+          verifyAndSetSlot(slotIndex, uri);
+        }
+      } else {
+        const libraryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!libraryPerm.granted) {
+          setErrorMessage('Photo library permission is required to upload images');
+          triggerShake();
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [4, 5],
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const uri = result.assets[0].uri;
+          verifyAndSetSlot(slotIndex, uri);
+        }
+      }
+    } catch (err: any) {
+      console.warn('Image picker error:', err);
     }
   };
 
   const handleSlotPress = (index: number) => {
-    pickImageForSlot(index);
+    setActiveSlot(index);
+    setShowUploadModal(true);
   };
 
-  const handleUploadPhoto = () => {
-    if (activeSlot !== null) {
-      const slot = activeSlot;
-      setShowUploadModal(false);
-      setActiveSlot(null);
-      pickImageForSlot(slot);
-    } else {
-      setShowUploadModal(false);
-    }
-  };
 
   const handleRemovePhoto = (index: number) => {
     setPhotos((prev) => {
@@ -88,8 +220,66 @@ export default function AddPhotosScreen() {
     }
   };
 
-  const handleNext = () => {
-    router.push('/interests');
+  const handleNext = async () => {
+    const selectedPhotos = photos.filter((p): p is string => Boolean(p));
+
+    if (selectedPhotos.length === 0) {
+      setErrorMessage('Please add at least 1 profile photo to continue');
+      triggerShake();
+      return;
+    }
+
+    if (isUploading) return;
+    setIsUploading(true);
+    setErrorMessage(null);
+
+    try {
+      const formData = new FormData();
+
+      for (let i = 0; i < selectedPhotos.length; i++) {
+        const photoUri = selectedPhotos[i];
+
+        if (Platform.OS === 'web') {
+          // On Web, convert blob URL to File/Blob
+          if (photoUri.startsWith('blob:') || photoUri.startsWith('data:')) {
+            const res = await fetch(photoUri);
+            const blob = await res.blob();
+            formData.append('photo', blob, `photo_${i}.jpg`);
+          } else {
+            // Already a remote URL
+            const res = await fetch(photoUri);
+            const blob = await res.blob();
+            formData.append('photo', blob, `photo_${i}.jpg`);
+          }
+        } else {
+          // On React Native (iOS & Android)
+          const cleanUri = photoUri;
+          const rawFilename = cleanUri.split('/').pop() || `photo_${i}.jpg`;
+          const filename = rawFilename.includes('.') ? rawFilename : `photo_${i}.jpg`;
+          const extMatch = filename.split('.').pop()?.toLowerCase() || 'jpg';
+          const type = `image/${extMatch === 'jpg' ? 'jpeg' : extMatch}`;
+
+          formData.append('photo', {
+            uri: cleanUri,
+            name: filename,
+            type,
+          } as any);
+        }
+      }
+
+      const res = await uploadPhotos(formData);
+      if (selectedPhotos[0]) {
+        updateStoredUserProfile({ avatarUri: selectedPhotos[0] });
+      }
+
+      router.push('/(onboarding)/interests' as any);
+    } catch (err: any) {
+      console.warn('Photo upload error:', err);
+      setErrorMessage(err?.message || 'Failed to upload photos. Please check your connection and try again.');
+      triggerShake();
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleBack = () => {
@@ -123,10 +313,17 @@ export default function AddPhotosScreen() {
                 styles.mainPhotoCard,
                 photos[0] ? styles.photoCardFilled : styles.dashedCardBorder,
               ]}
-              onPress={() => handleSlotPress(0)}
+              onPress={() => !validatingSlot && handleSlotPress(0)}
               activeOpacity={0.8}
             >
-              {photos[0] ? (
+              {validatingSlot === 0 ? (
+                <View style={styles.cardInnerContent}>
+                  <ActivityIndicator size="small" color="#00B49F" />
+                  <Text style={[styles.mainCardText, { marginTop: 8, color: '#00B49F' }]}>
+                    Verifying face with selfie...
+                  </Text>
+                </View>
+              ) : photos[0] ? (
                 <View style={styles.imageWrapper}>
                   <Image source={{ uri: photos[0] }} style={styles.photoImage} />
                   <TouchableOpacity
@@ -137,6 +334,9 @@ export default function AddPhotosScreen() {
                   >
                     <Ionicons name="close" size={14} color="#FFFFFF" />
                   </TouchableOpacity>
+                  <View style={styles.primaryBadge}>
+                    <Text style={styles.primaryBadgeText}>Main Profile (Selfie Matched)</Text>
+                  </View>
                 </View>
               ) : (
                 <View style={styles.cardInnerContent}>
@@ -144,7 +344,8 @@ export default function AddPhotosScreen() {
                     <Ionicons name="camera-outline" size={24} color="#00B49F" />
                     <Ionicons name="add" size={12} color="#00B49F" style={styles.plusOverlay} />
                   </View>
-                  <Text style={styles.mainCardText}>Add Your Profile Photo</Text>
+                  <Text style={styles.mainCardText}>Add Your Main Profile Photo</Text>
+                  <Text style={styles.cardHintText}>Must match your verified selfie</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -189,6 +390,19 @@ export default function AddPhotosScreen() {
             </View>
           </View>
 
+          {/* Error Message */}
+          {errorMessage && (
+            <Animated.View
+              style={[
+                styles.errorContainer,
+                { transform: [{ translateX: shakeAnim }] },
+              ]}
+            >
+              <Ionicons name="alert-circle" size={18} color="#EF4444" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </Animated.View>
+          )}
+
           {/* Warning Banner */}
           <View style={styles.warningRow}>
             <Ionicons name="information-circle-outline" size={18} color="#9CA3AF" style={styles.warningIcon} />
@@ -203,8 +417,9 @@ export default function AddPhotosScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          nextText={isUploading ? 'Uploading...' : 'Next'}
           nextButtonStyle={{
-            backgroundColor: isPhotosComplete
+            backgroundColor: isPhotosComplete && !isUploading
               ? theme.primaryButton
               : '#BDFFF9',
           }}
@@ -232,25 +447,41 @@ export default function AddPhotosScreen() {
               <View style={styles.modalSheetContainer}>
                 <View style={styles.grabHandle} />
                 <Text style={styles.modalTitle}>
-                  {activeSlot === 0 ? 'Profile Photo' : `Photo ${activeSlot}`}
+                  {activeSlot === 0 ? 'Main Profile Photo' : `Photo ${activeSlot}`}
                 </Text>
                 <Text style={styles.modalSubtitle}>
                   Choose an image to upload to your profile
                 </Text>
 
                 <View style={styles.modalOptionsList}>
-                  {/* Upload Option */}
+                  {/* Gallery Option */}
                   <TouchableOpacity
                     style={styles.modalOptionCard}
-                    onPress={handleUploadPhoto}
+                    onPress={() => activeSlot !== null && pickImageForSlot(activeSlot, false)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.modalOptionIconCircle}>
-                      <Ionicons name="cloud-upload-outline" size={22} color="#0F766E" />
+                      <Ionicons name="images-outline" size={22} color="#0F766E" />
                     </View>
                     <View style={styles.modalOptionTextWrap}>
-                      <Text style={styles.modalOptionTitle}>Upload</Text>
-                      <Text style={styles.modalOptionDesc}>Upload an image from your device</Text>
+                      <Text style={styles.modalOptionTitle}>Photo Library</Text>
+                      <Text style={styles.modalOptionDesc}>Choose from device photo gallery</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+
+                  {/* Camera Option */}
+                  <TouchableOpacity
+                    style={styles.modalOptionCard}
+                    onPress={() => activeSlot !== null && pickImageForSlot(activeSlot, true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.modalOptionIconCircle}>
+                      <Ionicons name="camera-outline" size={22} color="#0F766E" />
+                    </View>
+                    <View style={styles.modalOptionTextWrap}>
+                      <Text style={styles.modalOptionTitle}>Take Photo</Text>
+                      <Text style={styles.modalOptionDesc}>Use camera to snap a new photo</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
                   </TouchableOpacity>
@@ -332,11 +563,11 @@ const styles = StyleSheet.create({
   photosContainer: {
     width: '100%',
     gap: 16,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   mainPhotoCard: {
     width: '100%',
-    height: 140,
+    height: 180,
     borderRadius: 20,
     backgroundColor: '#E0FDFD',
     alignItems: 'center',
@@ -372,9 +603,9 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   cameraIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#C5FBF4',
     alignItems: 'center',
     justifyContent: 'center',
@@ -383,8 +614,8 @@ const styles = StyleSheet.create({
   },
   plusOverlay: {
     position: 'absolute',
-    right: 12,
-    top: 10,
+    right: 14,
+    top: 12,
     fontWeight: 'bold',
   },
   plusIconCircle: {
@@ -397,9 +628,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   mainCardText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#111827',
+    fontFamily: 'DM_Sans_500Medium',
+  },
+  cardHintText: {
+    fontSize: 11,
+    color: '#0D9488',
+    marginTop: 2,
+    fontWeight: '500',
     fontFamily: 'DM_Sans_500Medium',
   },
   subCardText: {
@@ -422,13 +660,47 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+  },
+  primaryBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  primaryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    fontFamily: 'DM_Sans_700Bold',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#DC2626',
+    fontWeight: '500',
+    fontFamily: 'DM_Sans_500Medium',
+    flex: 1,
   },
   warningRow: {
     flexDirection: 'row',
