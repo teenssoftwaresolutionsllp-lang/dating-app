@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Modal,
   PanResponder,
@@ -17,7 +17,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredPartnerPreferences } from '@/constants/userProfile';
-import { updateDatingPreferences } from '@/services/profileApi';
+import {
+  getInterestsCatalog,
+  updateDatingPreferences,
+  type CatalogItem,
+} from '@/services/profileApi';
 
 export default function IdealMatchScreen() {
   const theme = useTheme();
@@ -49,25 +53,14 @@ export default function IdealMatchScreen() {
   const [selectedReligion, setSelectedReligion] = useState<string>('');
   const [religionModalVisible, setReligionModalVisible] = useState(false);
 
-  // Partner Interests state
-  const interestsList = [
-    'Music',
-    'Movies',
-    'Travel',
-    'Concerts',
-    'Nature',
-    'Dance',
-    'Food',
-    'Fitness',
-    'Gaming',
-    'Books',
-    'Sports',
-    'Cooking',
-    'Photography',
-    'Art',
-    'Pets',
-  ];
+  const [interestsCatalog, setInterestsCatalog] = useState<CatalogItem[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+
+  useEffect(() => {
+    getInterestsCatalog().then(setInterestsCatalog);
+  }, []);
+
+  const interestsList = interestsCatalog.map((interest) => interest.name);
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
@@ -112,6 +105,9 @@ export default function IdealMatchScreen() {
     setIsSubmitting(true);
     try {
       const distanceNum = selectedDistance ? parseInt(selectedDistance.replace(/\D/g, ''), 10) || 50 : 50;
+      const preferredInterestIds = selectedInterests
+        .map((name) => interestsCatalog.find((interest) => interest.name.toLowerCase() === name.toLowerCase())?.id)
+        .filter((id): id is number => typeof id === 'number');
 
       updateStoredPartnerPreferences({
         minAge: 18,
@@ -126,6 +122,7 @@ export default function IdealMatchScreen() {
         minAge: 18,
         maxDistanceKm: distanceNum,
         religionPreferences: selectedReligion ? [selectedReligion] : undefined,
+        preferredInterestIds,
       }).catch((e) => {
         console.warn('Backend sync warning on dating preferences update:', e);
       });

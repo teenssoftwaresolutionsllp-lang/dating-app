@@ -136,8 +136,10 @@ export default function OtpScreen() {
     const enteredOtp = code.join('');
 
     try {
-      await verifyOtp(digits, enteredOtp, '+91');
-      router.replace('/(onboarding)/set-profile');
+      const response = await verifyOtp(digits, enteredOtp, '+91');
+      router.replace(
+        response.data.isNewUser ? '/(onboarding)/set-profile' : '/(tab)/matches',
+      );
     } catch (err: any) {
       setError(err?.message || 'Invalid OTP');
       triggerShake();

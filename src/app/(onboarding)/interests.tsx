@@ -32,7 +32,7 @@ export default function InterestsScreen() {
   const isDark = theme.text === '#ffffff';
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>(['Music', 'Movies', 'Travel']);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
@@ -112,11 +112,8 @@ export default function InterestsScreen() {
     try {
       updateStoredUserProfile({ interests: selectedInterests });
       const interestIds = selectedInterests
-        .map((name) => {
-          const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
-          return found ? found.id : DEFAULT_INTERESTS.indexOf(name) + 1;
-        })
-        .filter((id) => id > 0);
+        .map((name) => catalog.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id)
+        .filter((id): id is number => typeof id === 'number');
 
       if (interestIds.length > 0) {
         await updateInterests(interestIds).catch((e) => {

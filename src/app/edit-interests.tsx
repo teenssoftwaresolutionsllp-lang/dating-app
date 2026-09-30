@@ -45,9 +45,7 @@ export default function EditInterestsScreen() {
   const profile = getStoredUserProfile();
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(
-    profile.interests && profile.interests.length > 0
-      ? profile.interests
-      : ['Music', 'Movies', 'Travel', 'Concerts', 'Nature', 'Gaming']
+    profile.interests && profile.interests.length > 0 ? profile.interests : []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -55,9 +53,15 @@ export default function EditInterestsScreen() {
     getInterestsCatalog().then((items) => {
       if (items && items.length > 0) {
         setCatalog(items);
+        // Drop any stale locally-stored interest names that no longer exist in the catalog.
+        setSelectedInterests((prev) =>
+          prev.filter((name) => items.some((c) => c.name.toLowerCase() === name.toLowerCase())),
+        );
       }
     });
   }, []);
+
+  const availableInterests = catalog.length > 0 ? catalog.map((c) => c.name) : ALL_AVAILABLE_INTERESTS;
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
@@ -74,10 +78,9 @@ export default function EditInterestsScreen() {
     setIsSubmitting(true);
     try {
       updateStoredUserProfile({ interests: selectedInterests });
-      const interestIds = selectedInterests.map((name) => {
-        const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
-        return found ? found.id : ALL_AVAILABLE_INTERESTS.indexOf(name) + 1;
-      }).filter((id) => id > 0);
+      const interestIds = selectedInterests
+        .map((name) => catalog.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id)
+        .filter((id): id is number => typeof id === 'number');
 
       if (interestIds.length > 0) {
         await updateInterests(interestIds).catch((e) => {
@@ -117,7 +120,7 @@ export default function EditInterestsScreen() {
 
           {/* Chips Grid */}
           <View style={styles.interestsWrap}>
-            {ALL_AVAILABLE_INTERESTS.map((interest) => {
+            {availableInterests.map((interest) => {
               const isSelected = selectedInterests.includes(interest);
               return (
                 <TouchableOpacity

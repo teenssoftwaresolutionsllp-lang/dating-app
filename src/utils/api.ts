@@ -1,8 +1,8 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
+import { authStorage } from '@/services/authStorage';
 import {
-  clearUserAuth,
   getAccessToken,
   getRefreshToken,
   setUserLoggedIn,
@@ -259,7 +259,7 @@ export async function verifyOtp(
 export async function refreshToken(): Promise<string> {
   const storedRefreshToken = await getRefreshToken();
   if (!storedRefreshToken) {
-    await clearUserAuth();
+    await authStorage.clearAuth();
     router.replace('/login' as any);
     throw new Error('No refresh token available');
   }
@@ -285,7 +285,7 @@ export async function refreshToken(): Promise<string> {
 
     return tokens.accessToken;
   } catch (error: any) {
-    await clearUserAuth();
+    await authStorage.clearAuth();
     router.replace('/login' as any);
     throw error;
   }
@@ -312,6 +312,6 @@ export async function logout(): Promise<void> {
   } catch {
     // Network or server error on logout - continue to clear local auth
   } finally {
-    await clearUserAuth();
+    await authStorage.clearAuth();
   }
 }

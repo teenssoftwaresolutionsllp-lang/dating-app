@@ -81,7 +81,8 @@ export async function updateCurrentProfile(
 // 2. Catalogs (Languages & Interests)
 export async function getLanguagesCatalog(): Promise<CatalogItem[]> {
   try {
-    return await apiRequest<CatalogItem[]>('/api/v1/profile/languages');
+    const data = await apiRequest<{ languages: CatalogItem[] }>('/api/v1/profile/languages');
+    return data.languages ?? [];
   } catch {
     return [];
   }
@@ -89,7 +90,8 @@ export async function getLanguagesCatalog(): Promise<CatalogItem[]> {
 
 export async function getInterestsCatalog(): Promise<CatalogItem[]> {
   try {
-    return await apiRequest<CatalogItem[]>('/api/v1/profile/interests');
+    const data = await apiRequest<{ interests: CatalogItem[] }>('/api/v1/profile/interests');
+    return data.interests ?? [];
   } catch {
     return [];
   }

@@ -35,7 +35,10 @@ import {
   updateEducation,
   updateDatingPreferences,
   uploadPhotos,
+  getInterestsCatalog,
+  updateInterests,
   type BackendProfile,
+  type CatalogItem,
 } from '@/services/profileApi';
 import { formatApiImageUrl } from '@/services/api';
 
@@ -157,6 +160,18 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [interestsCatalog, setInterestsCatalog] = useState<CatalogItem[]>([]);
+
+  const availableInterests =
+    interestsCatalog.length > 0 ? interestsCatalog.map((c) => c.name) : ALL_INTEREST_OPTIONS;
+
+  useEffect(() => {
+    getInterestsCatalog().then((items) => {
+      if (items && items.length > 0) {
+        setInterestsCatalog(items);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const unsubProfile = subscribeUserProfile((updated) => {
@@ -298,6 +313,16 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
       }).catch((e) => {
         console.warn('Backend sync warning on dating preferences update:', e);
       });
+
+      const interestIds = updated.interests
+        .map((name) => interestsCatalog.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id)
+        .filter((id): id is number => typeof id === 'number');
+
+      if (interestIds.length > 0) {
+        await updateInterests(interestIds).catch((e) => {
+          console.warn('Backend sync warning on interests update:', e);
+        });
+      }
 
       const savedUser = updateStoredUserProfile(updated);
       const savedPartner = updateStoredPartnerPreferences(updatedPartner);
@@ -532,7 +557,7 @@ export default function MeScreen({ showTabBar = true, showHeaderBar = true }: Me
               {/* Select Interests */}
               <Text style={styles.editSectionTitle}>My Interests</Text>
               <View style={styles.interestsSelectionWrap}>
-                {ALL_INTEREST_OPTIONS.map((item) => {
+                {availableInterests.map((item) => {
                   const isSelected = editForm.interests.includes(item);
                   return (
                     <TouchableOpacity

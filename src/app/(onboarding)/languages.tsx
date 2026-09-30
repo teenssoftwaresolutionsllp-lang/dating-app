@@ -25,7 +25,7 @@ export default function ChooseLanguagesScreen() {
   const isDark = theme.text === '#ffffff';
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [selected, setSelected] = useState<string[]>(['English', 'Telugu']);
+  const [selected, setSelected] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [languageError, setLanguageError] = useState(false);
 
@@ -110,11 +110,8 @@ export default function ChooseLanguagesScreen() {
     try {
       updateStoredUserProfile({ languages: selected.join(', ') });
       const languageIds = selected
-        .map((name) => {
-          const found = catalog.find((c) => c.name.toLowerCase() === name.toLowerCase());
-          return found ? found.id : DEFAULT_LANGUAGES.indexOf(name) + 1;
-        })
-        .filter((id) => id > 0);
+        .map((name) => catalog.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id)
+        .filter((id): id is number => typeof id === 'number');
 
       if (languageIds.length > 0) {
         await updateLanguages(languageIds).catch((e) => {
