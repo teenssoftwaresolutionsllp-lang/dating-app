@@ -1,35 +1,47 @@
-import { router } from 'expo-router';
-import React, { useRef, useState, useEffect } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/hooks/use-theme';
-import { OnboardingHeader } from '@/components/onboarding-header';
-import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
-import { getInterestsCatalog, updateInterests, type CatalogItem } from '@/services/profileApi';
+import { router } from "expo-router";
+import React, { useRef, useState, useEffect } from "react";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/hooks/use-theme";
+import { OnboardingHeader } from "@/components/onboarding-header";
+import { OnboardingFooter } from "@/components/onboarding-footer";
+import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getInterestsCatalog,
+  updateInterests,
+  type CatalogItem,
+} from "@/services/profileApi";
 
 const DEFAULT_INTERESTS = [
-  'Music',
-  'Movies',
-  'Travel',
-  'Concerts',
-  'Nature',
-  'Dance',
-  'Food',
-  'Fitness',
-  'Gaming',
-  'Books',
-  'Sports',
-  'Cooking',
-  'Photography',
-  'Art',
-  'Pets',
+  "Music",
+  "Movies",
+  "Travel",
+  "Concerts",
+  "Nature",
+  "Dance",
+  "Food",
+  "Fitness",
+  "Gaming",
+  "Books",
+  "Sports",
+  "Cooking",
+  "Photography",
+  "Art",
+  "Pets",
 ];
 
 export default function InterestsScreen() {
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
+  const isDark = theme.text === "#ffffff";
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -46,7 +58,8 @@ export default function InterestsScreen() {
     });
   }, []);
 
-  const availableInterests = catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_INTERESTS;
+  const availableInterests =
+    catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_INTERESTS;
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
@@ -91,7 +104,9 @@ export default function InterestsScreen() {
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
-      setSelectedInterests(selectedInterests.filter((item) => item !== interest));
+      setSelectedInterests(
+        selectedInterests.filter((item) => item !== interest),
+      );
     } else {
       const updated = [...selectedInterests, interest];
       setSelectedInterests(updated);
@@ -112,17 +127,21 @@ export default function InterestsScreen() {
     try {
       updateStoredUserProfile({ interests: selectedInterests });
       const interestIds = selectedInterests
-        .map((name) => catalog.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id)
-        .filter((id): id is number => typeof id === 'number');
+        .map(
+          (name) =>
+            catalog.find((c) => c.name.toLowerCase() === name.toLowerCase())
+              ?.id,
+        )
+        .filter((id): id is number => typeof id === "number");
 
       if (interestIds.length > 0) {
         await updateInterests(interestIds).catch((e) => {
-          console.warn('Backend sync warning on interests update:', e);
+          console.warn("Backend sync warning on interests update:", e);
         });
       }
 
       router.push({
-        pathname: '/(onboarding)/food-preference' as any,
+        pathname: "/(onboarding)/food-preference" as any,
         params: { interests: JSON.stringify(selectedInterests) },
       });
     } finally {
@@ -134,28 +153,39 @@ export default function InterestsScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/photos');
+      router.replace("/photos");
     }
   };
 
   const isNextEnabled = selectedInterests.length >= 1;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
+      edges={["top", "bottom", "left", "right"]}
+    >
       <View style={styles.responsiveContainer}>
         {/* Progress Bar */}
         <OnboardingHeader progress={0.7} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>What are you into?</Text>
+          <Text style={[styles.title, { color: theme.text }]}>
+            What are you into?
+          </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better matches.
+            Tell us a little about yourself so we can help you find better
+            matches.
           </Text>
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Your Interests</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Your Interests
+            </Text>
             {error && (
               <Animated.Text
                 style={[
@@ -181,10 +211,18 @@ export default function InterestsScreen() {
                   style={[
                     styles.chip,
                     {
-                      backgroundColor: isSelected ? theme.primaryButton : isDark ? theme.backgroundElement : '#FFFFFF',
-                      borderColor: isSelected ? theme.primaryButton : isDark ? '#333333' : '#B9B9B9',
+                      backgroundColor: isSelected
+                        ? theme.primaryButton
+                        : isDark
+                          ? theme.backgroundElement
+                          : "#FFFFFF",
+                      borderColor: isSelected
+                        ? theme.primaryButton
+                        : isDark
+                          ? "#333333"
+                          : "#B9B9B9",
                     },
-                    Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                    Platform.OS === "web" && ({ cursor: "pointer" } as any),
                   ]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
@@ -193,17 +231,19 @@ export default function InterestsScreen() {
                     style={[
                       styles.chipText,
                       {
-                        color: isSelected ? '#000000' : theme.text,
-                        fontFamily: isSelected ? 'DM_Sans_700Bold' : 'DM_Sans_500Medium',
+                        color: isSelected ? "#000000" : theme.text,
+                        fontFamily: isSelected
+                          ? "DM_Sans_700Bold"
+                          : "DM_Sans_500Medium",
                       },
                     ]}
                   >
                     {interest}
                   </Text>
                   <Ionicons
-                    name={isSelected ? 'checkmark' : 'add'}
+                    name={isSelected ? "checkmark" : "add"}
                     size={16}
-                    color={isSelected ? '#000000' : theme.textSecondary}
+                    color={isSelected ? "#000000" : theme.textSecondary}
                     style={styles.chipIcon}
                   />
                 </Pressable>
@@ -218,9 +258,7 @@ export default function InterestsScreen() {
           onBack={handleBack}
           onNext={handleNext}
           nextButtonStyle={{
-            backgroundColor: isNextEnabled
-              ? theme.primaryButton
-              : '#BDFFF9',
+            backgroundColor: isNextEnabled ? theme.primaryButton : "#BDFFF9",
           }}
         />
       </View>
@@ -231,55 +269,55 @@ export default function InterestsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   responsiveContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 24,
   },
   title: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 24,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 10,
   },
   subtitle: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
-    alignSelf: 'center',
+    alignSelf: "center",
     maxWidth: 290,
   },
   sectionHeader: {
-    position: 'relative',
+    position: "relative",
     marginTop: 32,
     marginBottom: 18,
   },
   sectionTitle: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 16,
   },
   sectionSubtitle: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 13,
     marginTop: 4,
   },
   chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     height: 40,
     borderRadius: 20,
@@ -292,8 +330,8 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
     paddingHorizontal: 24,
     paddingTop: 16,
@@ -302,28 +340,28 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   nextButton: {
     flex: 1,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 16,
-    color: '#000000',
+    color: "#000000",
   },
   errorMessage: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -18,
     left: 0,
     fontSize: 12,
-    fontWeight: '500',
-    color: '#FF3B30',
-    fontFamily: 'DM_Sans_500Medium',
+    fontWeight: "500",
+    color: "#FF3B30",
+    fontFamily: "DM_Sans_500Medium",
   },
 });

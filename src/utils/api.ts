@@ -1,18 +1,18 @@
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-import { router } from 'expo-router';
-import { authStorage } from '@/services/authStorage';
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+import { router } from "expo-router";
+import { authStorage } from "@/services/authStorage";
 import {
   getAccessToken,
   getRefreshToken,
   setUserLoggedIn,
   updateAuthTokens,
-} from './authPersistence';
+} from "./authPersistence";
 
 export const getBaseUrl = (): string => {
   // 1. On Web, localhost is direct and guaranteed to connect
-  if (Platform.OS === 'web') {
-    return 'http://localhost:5000';
+  if (Platform.OS === "web") {
+    return "http://localhost:5000";
   }
 
   // 2. Dynamic Expo host IP detection for physical devices (iOS / Android via Expo Go)
@@ -21,28 +21,28 @@ export const getBaseUrl = (): string => {
     (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
     (Constants as any).manifest?.debuggerHost;
   if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+    const ip = hostUri.split(":")[0];
+    if (ip && ip !== "localhost" && ip !== "127.0.0.1") {
       return `http://${ip}:5000`;
     }
   }
 
   // 3. Check explicit EXPO_PUBLIC_API_URL or extra config
   if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, "");
   }
   const extraUrl = Constants.expoConfig?.extra?.apiUrl;
-  if (extraUrl && typeof extraUrl === 'string') {
-    return extraUrl.replace(/\/+$/, '');
+  if (extraUrl && typeof extraUrl === "string") {
+    return extraUrl.replace(/\/+$/, "");
   }
 
   // 4. Android Emulator fallback
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:5000';
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:5000";
   }
 
   // 5. Default fallback
-  return 'http://localhost:5000';
+  return "http://localhost:5000";
 };
 
 function extractErrorMessage(errData: any, fallbackMessage: string): string {
@@ -51,16 +51,26 @@ function extractErrorMessage(errData: any, fallbackMessage: string): string {
   if (errData.errors?.fieldErrors) {
     const fieldErrors = errData.errors.fieldErrors;
     const firstKey = Object.keys(fieldErrors)[0];
-    if (firstKey && Array.isArray(fieldErrors[firstKey]) && fieldErrors[firstKey].length > 0) {
+    if (
+      firstKey &&
+      Array.isArray(fieldErrors[firstKey]) &&
+      fieldErrors[firstKey].length > 0
+    ) {
       return fieldErrors[firstKey][0];
     }
   }
 
-  if (Array.isArray(errData.errors?.formErrors) && errData.errors.formErrors.length > 0) {
+  if (
+    Array.isArray(errData.errors?.formErrors) &&
+    errData.errors.formErrors.length > 0
+  ) {
     return errData.errors.formErrors[0];
   }
 
-  if (typeof errData.message === 'string' && errData.message.trim().length > 0) {
+  if (
+    typeof errData.message === "string" &&
+    errData.message.trim().length > 0
+  ) {
     return errData.message;
   }
 
@@ -70,23 +80,23 @@ function extractErrorMessage(errData: any, fallbackMessage: string): string {
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
-  token?: string
+  token?: string,
 ): Promise<T> {
   const baseUrl = getBaseUrl();
-  const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   const headers: Record<string, string> = {
-    'x-client-platform': 'react-native',
+    "x-client-platform": "react-native",
     ...(options.headers as Record<string, string>),
   };
 
   if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
+    headers["Content-Type"] = "application/json";
   }
 
   const resolvedToken = token || (await getAccessToken());
   if (resolvedToken) {
-    headers['Authorization'] = `Bearer ${resolvedToken}`;
+    headers["Authorization"] = `Bearer ${resolvedToken}`;
   }
 
   let response: Response;
@@ -96,7 +106,9 @@ export async function apiRequest<T>(
       headers,
     });
   } catch {
-    throw new Error('Unable to connect to the server. Please check your network connection.');
+    throw new Error(
+      "Unable to connect to the server. Please check your network connection.",
+    );
   }
 
   let json: any;
@@ -112,7 +124,7 @@ export async function apiRequest<T>(
   if (!response.ok || json.success === false) {
     const errorMessage = extractErrorMessage(
       json,
-      `Request failed with status ${response.status}`
+      `Request failed with status ${response.status}`,
     );
     const error: any = new Error(errorMessage);
     error.status = response.status;
@@ -192,11 +204,11 @@ export interface LogoutResponse {
  */
 export async function sendOtp(
   phone: string,
-  countryCode: string = '+91'
+  countryCode: string = "+91",
 ): Promise<SendOtpResponse> {
-  const cleanedPhone = phone.replace(/\D/g, '');
-  return apiRequest<SendOtpResponse>('/api/v1/auth/send-otp', {
-    method: 'POST',
+  const cleanedPhone = phone.replace(/\D/g, "");
+  return apiRequest<SendOtpResponse>("/api/v1/auth/send-otp", {
+    method: "POST",
     body: JSON.stringify({ phone: cleanedPhone, countryCode }),
   });
 }
@@ -206,11 +218,11 @@ export async function sendOtp(
  */
 export async function resendOtp(
   phone: string,
-  countryCode: string = '+91'
+  countryCode: string = "+91",
 ): Promise<ResendOtpResponse> {
-  const cleanedPhone = phone.replace(/\D/g, '');
-  return apiRequest<ResendOtpResponse>('/api/v1/auth/resend-otp', {
-    method: 'POST',
+  const cleanedPhone = phone.replace(/\D/g, "");
+  return apiRequest<ResendOtpResponse>("/api/v1/auth/resend-otp", {
+    method: "POST",
     body: JSON.stringify({ phone: cleanedPhone, countryCode }),
   });
 }
@@ -221,23 +233,26 @@ export async function resendOtp(
 export async function verifyOtp(
   phone: string,
   otp: string,
-  countryCode: string = '+91'
+  countryCode: string = "+91",
 ): Promise<VerifyOtpResponse> {
-  const cleanedPhone = phone.replace(/\D/g, '');
+  const cleanedPhone = phone.replace(/\D/g, "");
   const cleanedOtp = otp.trim();
 
-  const response = await apiRequest<VerifyOtpResponse>('/api/v1/auth/verify-otp', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'x-client-platform': 'react-native',
+  const response = await apiRequest<VerifyOtpResponse>(
+    "/api/v1/auth/verify-otp",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-platform": "react-native",
       },
-    body: JSON.stringify({
-      phone: cleanedPhone,
-      countryCode,
-      otp: cleanedOtp,
-    }),
-  });
+      body: JSON.stringify({
+        phone: cleanedPhone,
+        countryCode,
+        otp: cleanedOtp,
+      }),
+    },
+  );
 
   const tokens = response.data?.tokens;
   if (tokens?.accessToken) {
@@ -260,22 +275,22 @@ export async function refreshToken(): Promise<string> {
   const storedRefreshToken = await getRefreshToken();
   if (!storedRefreshToken) {
     await authStorage.clearAuth();
-    router.replace('/login' as any);
-    throw new Error('No refresh token available');
+    router.replace("/login" as any);
+    throw new Error("No refresh token available");
   }
 
   try {
     const response = await apiRequest<RefreshTokenResponse>(
-      '/api/v1/auth/refresh-token',
+      "/api/v1/auth/refresh-token",
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({ refreshToken: storedRefreshToken }),
-      }
+      },
     );
 
     const tokens = response.data?.tokens;
     if (!tokens?.accessToken) {
-      throw new Error('Invalid token refresh response');
+      throw new Error("Invalid token refresh response");
     }
 
     await updateAuthTokens({
@@ -286,7 +301,7 @@ export async function refreshToken(): Promise<string> {
     return tokens.accessToken;
   } catch (error: any) {
     await authStorage.clearAuth();
-    router.replace('/login' as any);
+    router.replace("/login" as any);
     throw error;
   }
 }
@@ -300,14 +315,14 @@ export async function logout(): Promise<void> {
 
   try {
     await apiRequest<LogoutResponse>(
-      '/api/v1/auth/logout',
+      "/api/v1/auth/logout",
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
-          refreshToken: storedRefreshToken || '',
+          refreshToken: storedRefreshToken || "",
         }),
       },
-      storedAccessToken
+      storedAccessToken,
     );
   } catch {
     // Network or server error on logout - continue to clear local auth
