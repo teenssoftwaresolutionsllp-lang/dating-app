@@ -587,6 +587,20 @@ export default function DatingProfileScreen() {
             </View>
           )}
 
+          {/* Top Header Bar with Profile Viewers Eye Icon (Matching Reference Image 1) */}
+          <View style={styles.topHeaderNav}>
+            <View style={styles.topHeaderSpacer} />
+            <TouchableOpacity
+              style={styles.viewersIconButton}
+              onPress={() => router.push('/profile-viewers' as any)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="View Profile Viewers"
+            >
+              <Ionicons name="eye-outline" size={20} color="#0D7A74" />
+            </TouchableOpacity>
+          </View>
+
             {/* Main Scrollable Content with Animated Slide */}
             <ScrollView
               style={styles.mainScrollView}
@@ -1225,14 +1239,27 @@ const styles = StyleSheet.create({
   },
   // MATCHES / PROFILE SCREEN STYLES
   topHeaderNav: {
-    height: 50,
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E7EB',
+  },
+  topHeaderSpacer: {
+    width: 34,
+  },
+  viewersIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backButton: {
     width: 36,
