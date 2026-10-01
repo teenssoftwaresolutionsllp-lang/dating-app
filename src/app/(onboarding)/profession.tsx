@@ -38,6 +38,8 @@ const PROFESSIONS = [
   'Product Manager',
   'Researcher',
   'Student',
+  'Freelancing',
+
 ];
 
 export default function ProfessionScreen() {
