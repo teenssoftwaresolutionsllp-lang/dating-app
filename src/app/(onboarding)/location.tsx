@@ -83,9 +83,7 @@ export default function LocationScreen() {
         Icon: city.Icon,
       }));
 
-  const isLocationValid = Boolean(
-    selectedLocationId || selectedPlaceId,
-  );
+  const isLocationValid = Boolean(selectedLocationId || selectedPlaceId);
 
   const triggerLocationShake = () => {
     locationShakeAnim.setValue(0);
