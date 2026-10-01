@@ -31,14 +31,15 @@ import {
 import {
   getMyProfile,
   getCurrentProfile,
+  getSelectedLocation,
   updateCurrentProfile,
   updateEducation,
   updateDatingPreferences,
   uploadPhotos,
   getInterestsCatalog,
   updateInterests,
-  type BackendProfile,
   type CatalogItem,
+  type SelectedLocation,
 } from "@/services/profileApi";
 import { formatApiImageUrl } from "@/services/api";
 
@@ -88,6 +89,7 @@ function parseHeightToCm(height: string): number | null {
 function normalizeCompleteProfile(
   data: any,
   current: UserProfile,
+  selectedLocation: SelectedLocation | null,
 ): { user: UserProfile; partner: Partial<PartnerPreferences> } {
   if (!data) return { user: current, partner: {} };
   const p = data.profile || {};
@@ -111,7 +113,11 @@ function normalizeCompleteProfile(
           .filter(Boolean)
       : current.interests;
 
-  const locationParts = [p.city, p.state, p.country].filter(Boolean);
+  const locationParts = [
+    selectedLocation?.city,
+    selectedLocation?.state,
+    selectedLocation?.country,
+  ].filter(Boolean);
   const locationStr =
     locationParts.length > 0 ? locationParts.join(", ") : current.location;
 
@@ -217,11 +223,15 @@ export default function MeScreen({
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const fullData = await getMyProfile().catch(() => null);
+        const [fullData, selectedLocation] = await Promise.all([
+          getMyProfile().catch(() => null),
+          getSelectedLocation(),
+        ]);
         if (fullData) {
           const { user, partner } = normalizeCompleteProfile(
             fullData,
             getStoredUserProfile(),
+            selectedLocation,
           );
           updateStoredUserProfile(user);
           setProfile(user);
@@ -235,9 +245,9 @@ export default function MeScreen({
           const backendProfile = await getCurrentProfile().catch(() => null);
           if (backendProfile) {
             const locParts = [
-              backendProfile.city,
-              backendProfile.state,
-              backendProfile.country,
+              selectedLocation?.city,
+              selectedLocation?.state,
+              selectedLocation?.country,
             ].filter(Boolean);
             const mapped = updateStoredUserProfile({
               name: backendProfile.name || profile.name,

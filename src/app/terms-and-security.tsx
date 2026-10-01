@@ -57,13 +57,6 @@ const SECURITY_ITEMS: SecurityItem[] = [
     details:
       'If you experience technical issues, fake profiles, harassment, or inappropriate behavior, you can report them directly to our 24/7 moderation team.',
   },
-  {
-    id: 'dataDownload',
-    title: 'Data Download',
-    subtitle: 'Request a copy of your data',
-    details:
-      'Under data protection guidelines, you can request an archive containing all your profile info, chat logs, and preferences. An export link will be sent to your registered email.',
-  },
 ];
 
 export default function TermsAndSecurityScreen() {

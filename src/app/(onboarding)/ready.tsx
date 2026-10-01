@@ -18,7 +18,14 @@ import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
-import { completeOnboarding, getMyProfile, getCurrentProfile, updateCurrentProfile } from '@/services/profileApi';
+import {
+  completeOnboarding,
+  getMyProfile,
+  getCurrentProfile,
+  getSelectedLocation,
+  updateCurrentProfile,
+  type SelectedLocation,
+} from '@/services/profileApi';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { setUserLoggedIn } from '@/utils/authPersistence';
 import {
@@ -151,7 +158,11 @@ function generateCelebrationBlast(screenWidth: number, screenHeight: number): Ce
   });
 }
 
-function mergeBackendProfileIntoStored(data: any, current: UserProfile): UserProfile {
+function mergeBackendProfileIntoStored(
+  data: any,
+  current: UserProfile,
+  selectedLocation: SelectedLocation | null,
+): UserProfile {
   if (!data) return current;
   const p = data.profile || {};
   const edu = data.education || {};
@@ -171,7 +182,11 @@ function mergeBackendProfileIntoStored(data: any, current: UserProfile): UserPro
       ? data.interests.map((i: any) => (typeof i === 'string' ? i : i.name)).filter(Boolean)
       : current.interests;
 
-  const locationParts = [p.city, p.state, p.country].filter(Boolean);
+  const locationParts = [
+    selectedLocation?.city,
+    selectedLocation?.state,
+    selectedLocation?.country,
+  ].filter(Boolean);
   const locationStr = locationParts.length > 0 ? locationParts.join(', ') : current.location;
 
   const educationStr =
@@ -244,15 +259,26 @@ export default function ProfileReadyScreen() {
 
     const loadBackendData = async () => {
       try {
-        const fullData = await getMyProfile().catch(() => null);
+        const [fullData, selectedLocation] = await Promise.all([
+          getMyProfile().catch(() => null),
+          getSelectedLocation(),
+        ]);
         if (fullData) {
-          const merged = mergeBackendProfileIntoStored(fullData, getStoredUserProfile());
+          const merged = mergeBackendProfileIntoStored(
+            fullData,
+            getStoredUserProfile(),
+            selectedLocation,
+          );
           updateStoredUserProfile(merged);
           setProfile(merged);
         } else {
           const basic = await getCurrentProfile().catch(() => null);
           if (basic) {
-            const locParts = [basic.city, basic.state, basic.country].filter(Boolean);
+            const locParts = [
+              selectedLocation?.city,
+              selectedLocation?.state,
+              selectedLocation?.country,
+            ].filter(Boolean);
             const merged = updateStoredUserProfile({
               name: basic.name || profile.name,
               dateOfBirth: basic.dateOfBirth || profile.dateOfBirth,

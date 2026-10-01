@@ -22,7 +22,6 @@ import {
   getPopularLocations,
   saveGoogleLocation,
   savePopularLocation,
-  updateCurrentProfile,
   type LocationSuggestion,
 } from "@/services/profileApi";
 import { useTheme } from "@/hooks/use-theme";
@@ -85,7 +84,7 @@ export default function LocationScreen() {
       }));
 
   const isLocationValid = Boolean(
-    selectedCity || selectedLocationId || selectedPlaceId,
+    selectedLocationId || selectedPlaceId,
   );
 
   const triggerLocationShake = () => {
@@ -190,26 +189,17 @@ export default function LocationScreen() {
     try {
       const chosenName = selectedCity || searchQuery.trim();
       if (chosenName) {
-        updateStoredUserProfile({ location: `${chosenName}, India` });
-
         if (selectedLocationId) {
-          await savePopularLocation(selectedLocationId).catch((e) => {
-            console.warn("Backend location sync warning:", e);
-          });
+          await savePopularLocation(selectedLocationId);
         } else if (selectedPlaceId) {
-          await saveGoogleLocation(selectedPlaceId).catch((e) => {
-            console.warn("Backend location sync warning:", e);
-          });
+          await saveGoogleLocation(selectedPlaceId);
         }
-
-        await updateCurrentProfile({
-          city: chosenName,
-          country: "India",
-        }).catch((e) => {
-          console.warn("Backend sync warning on location update:", e);
-        });
+        updateStoredUserProfile({ location: `${chosenName}, India` });
       }
       router.push("/(onboarding)/relationship" as any);
+    } catch (error) {
+      console.warn("Location selection could not be saved:", error);
+      setLocationError(true);
     } finally {
       setIsSubmitting(false);
     }

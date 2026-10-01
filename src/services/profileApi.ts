@@ -15,13 +15,19 @@ export interface BackendProfile {
   smoking?: string | null;
   vibes?: string[] | null;
   nature?: string[] | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface SelectedLocation {
+  locationId: string;
+  googlePlaceId: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface EducationData {
@@ -103,6 +109,16 @@ export async function saveGoogleLocation(placeId: string) {
   });
 }
 
+export async function getSelectedLocation(): Promise<SelectedLocation | null> {
+  try {
+    return await apiRequest<SelectedLocation>("/api/v1/users/me/location", {
+      method: "GET",
+    });
+  } catch {
+    return null;
+  }
+}
+
 // 1. Core Profile
 export async function getCurrentProfile(): Promise<BackendProfile | null> {
   const payload = await apiRequest<{ profile: BackendProfile | null }>(
@@ -122,7 +138,7 @@ export async function getMyProfile(): Promise<any> {
 }
 
 export async function updateCurrentProfile(
-  payload: Partial<BackendProfile> & { location?: string },
+  payload: Partial<BackendProfile>,
 ): Promise<BackendProfile | null> {
   const response = await apiRequest<{ profile: BackendProfile | null }>(
     "/api/v1/profile/update-profile",
