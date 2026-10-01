@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Animated,
   Easing,
@@ -12,56 +12,66 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '@/hooks/use-theme';
-import { OnboardingHeader } from '@/components/onboarding-header';
-import { completeOnboarding, getMyProfile, getCurrentProfile, updateCurrentProfile } from '@/services/profileApi';
-import { OnboardingFooter } from '@/components/onboarding-footer';
-import { setUserLoggedIn } from '@/utils/authPersistence';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTheme } from "@/hooks/use-theme";
+import { OnboardingHeader } from "@/components/onboarding-header";
+import {
+  completeOnboarding,
+  getMyProfile,
+  getCurrentProfile,
+  getSelectedLocation,
+  updateCurrentProfile,
+  type SelectedLocation,
+} from "@/services/profileApi";
+import { OnboardingFooter } from "@/components/onboarding-footer";
+import { setUserLoggedIn } from "@/utils/authPersistence";
 import {
   UserProfile,
   calculateAge,
   getStoredUserProfile,
   updateStoredUserProfile,
   subscribeUserProfile,
-} from '@/constants/userProfile';
-import { ASSET_IMAGES } from '@/constants/datingData';
+} from "@/constants/userProfile";
+import { ASSET_IMAGES } from "@/constants/datingData";
 
 const NATURE_ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Caring: 'heart',
-  'Fun & Funny': 'happy',
-  Peaceful: 'leaf',
-  'Deep Talks': 'chatbubbles',
-  Romantic: 'rose',
-  Adventurous: 'compass',
-  Classy: 'sparkles',
-  Chill: 'cafe',
-  Positive: 'sunny',
-  Creative: 'color-palette',
+  Caring: "heart",
+  "Fun & Funny": "happy",
+  Peaceful: "leaf",
+  "Deep Talks": "chatbubbles",
+  Romantic: "rose",
+  Adventurous: "compass",
+  Classy: "sparkles",
+  Chill: "cafe",
+  Positive: "sunny",
+  Creative: "color-palette",
 };
 
 // Vibrant celebratory color palette for ribbons, stars, hearts, and balls
 const CELEBRATION_COLORS = [
-  '#FF2D55', // Vibrant Rose Pink
-  '#FF385C', // Match Coral
-  '#FF4757', // Radiant Watermelon
-  '#FFD700', // Metallic Gold
-  '#FFA502', // Sunny Amber
-  '#FFD32A', // Golden Spark
-  '#00D2D3', // Bright Turquoise
-  '#00E5FF', // Electric Cyan
-  '#54A0FF', // Sky Blue
-  '#9B51E0', // Deep Orchid Purple
-  '#AF52DE', // Electric Violet
-  '#2ED573', // Emerald Mint
-  '#FF6B81', // Blush Pink
-  '#FFFFFF', // Pure White Sparkle
+  "#FF2D55", // Vibrant Rose Pink
+  "#FF385C", // Match Coral
+  "#FF4757", // Radiant Watermelon
+  "#FFD700", // Metallic Gold
+  "#FFA502", // Sunny Amber
+  "#FFD32A", // Golden Spark
+  "#00D2D3", // Bright Turquoise
+  "#00E5FF", // Electric Cyan
+  "#54A0FF", // Sky Blue
+  "#9B51E0", // Deep Orchid Purple
+  "#AF52DE", // Electric Violet
+  "#2ED573", // Emerald Mint
+  "#FF6B81", // Blush Pink
+  "#FFFFFF", // Pure White Sparkle
 ];
 
-type ParticleType = 'ribbon' | 'star' | 'love' | 'ball';
+type ParticleType = "ribbon" | "star" | "love" | "ball";
 
 interface CelebrationParticle {
   id: number;
@@ -77,24 +87,27 @@ interface CelebrationParticle {
   rotation: number;
   spinAmount: number;
   iconName: string;
-  iconSet: 'Ionicons' | 'MaterialCommunityIcons';
+  iconSet: "Ionicons" | "MaterialCommunityIcons";
 }
 
 // Generate 120 explosion particles: ribbons, stars, love hearts, and ball confetti
-function generateCelebrationBlast(screenWidth: number, screenHeight: number): CelebrationParticle[] {
+function generateCelebrationBlast(
+  screenWidth: number,
+  screenHeight: number,
+): CelebrationParticle[] {
   const count = 120;
-  const types: ParticleType[] = ['ribbon', 'star', 'love', 'ball'];
+  const types: ParticleType[] = ["ribbon", "star", "love", "ball"];
 
   const starIcons = [
-    { set: 'Ionicons' as const, name: 'star' },
-    { set: 'Ionicons' as const, name: 'sparkles' },
-    { set: 'MaterialCommunityIcons' as const, name: 'star-four-points' },
+    { set: "Ionicons" as const, name: "star" },
+    { set: "Ionicons" as const, name: "sparkles" },
+    { set: "MaterialCommunityIcons" as const, name: "star-four-points" },
   ];
 
   const loveIcons = [
-    { set: 'Ionicons' as const, name: 'heart' },
-    { set: 'Ionicons' as const, name: 'heart-sharp' },
-    { set: 'MaterialCommunityIcons' as const, name: 'cards-heart' },
+    { set: "Ionicons" as const, name: "heart" },
+    { set: "Ionicons" as const, name: "heart-sharp" },
+    { set: "MaterialCommunityIcons" as const, name: "cards-heart" },
   ];
 
   return Array.from({ length: count }, (_, i) => {
@@ -110,7 +123,8 @@ function generateCelebrationBlast(screenWidth: number, screenHeight: number): Ce
     const driftX = (Math.random() - 0.5) * 70;
     const driftY = 40 + Math.random() * 130;
 
-    const color = CELEBRATION_COLORS[Math.floor(Math.random() * CELEBRATION_COLORS.length)];
+    const color =
+      CELEBRATION_COLORS[Math.floor(Math.random() * CELEBRATION_COLORS.length)];
     const size = 14 + Math.random() * 12;
 
     const ribbonWidth = 5 + Math.random() * 4;
@@ -119,18 +133,19 @@ function generateCelebrationBlast(screenWidth: number, screenHeight: number): Ce
     const starChoice = starIcons[Math.floor(Math.random() * starIcons.length)];
     const loveChoice = loveIcons[Math.floor(Math.random() * loveIcons.length)];
 
-    let iconName = '';
-    let iconSet: 'Ionicons' | 'MaterialCommunityIcons' = 'Ionicons';
-    if (type === 'star') {
+    let iconName = "";
+    let iconSet: "Ionicons" | "MaterialCommunityIcons" = "Ionicons";
+    if (type === "star") {
       iconName = starChoice.name;
       iconSet = starChoice.set;
-    } else if (type === 'love') {
+    } else if (type === "love") {
       iconName = loveChoice.name;
       iconSet = loveChoice.set;
     }
 
     const initialRotation = Math.floor(Math.random() * 360);
-    const spinAmount = (Math.random() > 0.5 ? 1 : -1) * (420 + Math.floor(Math.random() * 720));
+    const spinAmount =
+      (Math.random() > 0.5 ? 1 : -1) * (420 + Math.floor(Math.random() * 720));
 
     return {
       id: i,
@@ -151,7 +166,11 @@ function generateCelebrationBlast(screenWidth: number, screenHeight: number): Ce
   });
 }
 
-function mergeBackendProfileIntoStored(data: any, current: UserProfile): UserProfile {
+function mergeBackendProfileIntoStored(
+  data: any,
+  current: UserProfile,
+  selectedLocation: SelectedLocation | null,
+): UserProfile {
   if (!data) return current;
   const p = data.profile || {};
   const edu = data.education || {};
@@ -161,27 +180,34 @@ function mergeBackendProfileIntoStored(data: any, current: UserProfile): UserPro
   const langs =
     Array.isArray(data.languages) && data.languages.length > 0
       ? data.languages
-          .map((l: any) => (typeof l === 'string' ? l : l.name))
+          .map((l: any) => (typeof l === "string" ? l : l.name))
           .filter(Boolean)
-          .join(', ')
+          .join(", ")
       : current.languages;
 
   const ints =
     Array.isArray(data.interests) && data.interests.length > 0
-      ? data.interests.map((i: any) => (typeof i === 'string' ? i : i.name)).filter(Boolean)
+      ? data.interests
+          .map((i: any) => (typeof i === "string" ? i : i.name))
+          .filter(Boolean)
       : current.interests;
 
-  const locationParts = [p.city, p.state, p.country].filter(Boolean);
-  const locationStr = locationParts.length > 0 ? locationParts.join(', ') : current.location;
+  const locationParts = [
+    selectedLocation?.city,
+    selectedLocation?.state,
+    selectedLocation?.country,
+  ].filter(Boolean);
+  const locationStr =
+    locationParts.length > 0 ? locationParts.join(", ") : current.location;
 
   const educationStr =
     edu.educationLevel || edu.qualification
-      ? [edu.educationLevel, edu.qualification].filter(Boolean).join(' - ')
+      ? [edu.educationLevel, edu.qualification].filter(Boolean).join(" - ")
       : current.education;
 
   return {
     ...current,
-    name: p.name || current.name || 'User',
+    name: p.name || current.name || "User",
     dateOfBirth: p.dateOfBirth || current.dateOfBirth,
     gender: p.gender || current.gender,
     religion: p.religion || current.religion,
@@ -190,8 +216,14 @@ function mergeBackendProfileIntoStored(data: any, current: UserProfile): UserPro
     foodPreference: p.foodPreference || current.foodPreference,
     drinking: p.drinking || current.drinking,
     smoking: p.smoking || current.smoking,
-    vibes: Array.isArray(p.vibes) && p.vibes.length > 0 ? p.vibes : current.vibes,
-    nature: Array.isArray(p.nature) && p.nature.length > 0 ? p.nature : (Array.isArray(p.vibes) ? p.vibes : current.nature),
+    vibes:
+      Array.isArray(p.vibes) && p.vibes.length > 0 ? p.vibes : current.vibes,
+    nature:
+      Array.isArray(p.nature) && p.nature.length > 0
+        ? p.nature
+        : Array.isArray(p.vibes)
+          ? p.vibes
+          : current.nature,
     location: locationStr || current.location,
     profession: edu.profession || edu.occupation || current.profession,
     company: edu.companyName || current.company,
@@ -204,15 +236,17 @@ function mergeBackendProfileIntoStored(data: any, current: UserProfile): UserPro
 
 export default function ProfileReadyScreen() {
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
+  const isDark = theme.text === "#ffffff";
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   // Load user profile details entered during onboarding
-  const [profile, setProfile] = useState<UserProfile>(() => getStoredUserProfile());
+  const [profile, setProfile] = useState<UserProfile>(() =>
+    getStoredUserProfile(),
+  );
 
   const [particles] = useState<CelebrationParticle[]>(() =>
-    generateCelebrationBlast(windowWidth || 400, windowHeight || 800)
+    generateCelebrationBlast(windowWidth || 400, windowHeight || 800),
   );
 
   // 1. Top Progress Bar Fill Animation (0.65 -> 1.0)
@@ -244,28 +278,40 @@ export default function ProfileReadyScreen() {
 
     const loadBackendData = async () => {
       try {
-        const fullData = await getMyProfile().catch(() => null);
+        const [fullData, selectedLocation] = await Promise.all([
+          getMyProfile().catch(() => null),
+          getSelectedLocation(),
+        ]);
         if (fullData) {
-          const merged = mergeBackendProfileIntoStored(fullData, getStoredUserProfile());
+          const merged = mergeBackendProfileIntoStored(
+            fullData,
+            getStoredUserProfile(),
+            selectedLocation,
+          );
           updateStoredUserProfile(merged);
           setProfile(merged);
         } else {
           const basic = await getCurrentProfile().catch(() => null);
           if (basic) {
-            const locParts = [basic.city, basic.state, basic.country].filter(Boolean);
+            const locParts = [
+              selectedLocation?.city,
+              selectedLocation?.state,
+              selectedLocation?.country,
+            ].filter(Boolean);
             const merged = updateStoredUserProfile({
               name: basic.name || profile.name,
               dateOfBirth: basic.dateOfBirth || profile.dateOfBirth,
               gender: basic.gender || profile.gender,
               religion: basic.religion || profile.religion,
               about: basic.bio || profile.about,
-              location: locParts.length > 0 ? locParts.join(', ') : profile.location,
+              location:
+                locParts.length > 0 ? locParts.join(", ") : profile.location,
             });
             setProfile(merged);
           }
         }
       } catch (err) {
-        console.warn('Profile fetch warning on ready screen:', err);
+        console.warn("Profile fetch warning on ready screen:", err);
       }
     };
 
@@ -381,7 +427,7 @@ export default function ProfileReadyScreen() {
   ]);
 
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioDraft, setBioDraft] = useState(profile.about || '');
+  const [bioDraft, setBioDraft] = useState(profile.about || "");
   const [isSavingBio, setIsSavingBio] = useState(false);
 
   const handleSaveBio = async () => {
@@ -389,9 +435,11 @@ export default function ProfileReadyScreen() {
     try {
       const updated = updateStoredUserProfile({ about: bioDraft.trim() });
       setProfile(updated);
-      await updateCurrentProfile({ bio: bioDraft.trim() }).catch((e: unknown) => {
-        console.warn('Backend sync warning on bio save:', e);
-      });
+      await updateCurrentProfile({ bio: bioDraft.trim() }).catch(
+        (e: unknown) => {
+          console.warn("Backend sync warning on bio save:", e);
+        },
+      );
       setIsEditingBio(false);
     } finally {
       setIsSavingBio(false);
@@ -401,36 +449,36 @@ export default function ProfileReadyScreen() {
   const handleLetsDate = async () => {
     try {
       await completeOnboarding().catch((e: unknown) => {
-        console.warn('Backend sync warning on complete onboarding:', e);
+        console.warn("Backend sync warning on complete onboarding:", e);
       });
       await setUserLoggedIn(true, { isOnboardingCompleted: true });
     } catch (err) {
-      console.warn('Error completing onboarding:', err);
+      console.warn("Error completing onboarding:", err);
     } finally {
-      router.replace('/(tab)/matches' as any);
+      router.replace("/(tab)/matches" as any);
     }
   };
 
   const handleEditProfile = () => {
-    router.push('/(onboarding)/set-profile' as any);
+    router.push("/(onboarding)/set-profile" as any);
   };
 
   const userAge = calculateAge(profile.dateOfBirth);
-  const displayName = profile.name?.trim() || 'User';
-  const displayLocation = profile.location?.trim() || 'Location not set';
-  const displayProfession = profile.profession?.trim() || 'Profession';
+  const displayName = profile.name?.trim() || "User";
+  const displayLocation = profile.location?.trim() || "Location not set";
+  const displayProfession = profile.profession?.trim() || "Profession";
   const displayCompany = profile.company?.trim();
   const displayProfessionText = displayCompany
     ? `${displayProfession} at ${displayCompany}`
     : displayProfession;
 
-  const displayReligion = profile.religion?.trim() || 'Religion';
-  const displayLanguages = profile.languages?.trim() || 'Language';
-  const displayEducation = profile.education?.trim() || 'Education';
+  const displayReligion = profile.religion?.trim() || "Religion";
+  const displayLanguages = profile.languages?.trim() || "Language";
+  const displayEducation = profile.education?.trim() || "Education";
   const displayInterests =
     Array.isArray(profile.interests) && profile.interests.length > 0
       ? profile.interests
-      : ['Music', 'Movies', 'Travel'];
+      : ["Music", "Movies", "Travel"];
 
   const displayAbout =
     profile.about?.trim() ||
@@ -438,10 +486,13 @@ export default function ProfileReadyScreen() {
 
   const imageSource = profile.avatarUri
     ? { uri: profile.avatarUri }
-    : ASSET_IMAGES.userProfile || require('@/assets/images/user-profile.jpg');
+    : ASSET_IMAGES.userProfile || require("@/assets/images/user-profile.jpg");
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
+      edges={["top", "bottom", "left", "right"]}
+    >
       <View style={styles.responsiveContainer}>
         {/* Top Animated Progress Bar */}
         <OnboardingHeader progress={1.0} />
@@ -469,7 +520,10 @@ export default function ProfileReadyScreen() {
 
             const rotate = blastExpansion.interpolate({
               inputRange: [0, 1],
-              outputRange: [`${p.rotation}deg`, `${p.rotation + p.spinAmount}deg`],
+              outputRange: [
+                `${p.rotation}deg`,
+                `${p.rotation + p.spinAmount}deg`,
+              ],
             });
 
             const opacity = blastExpansion.interpolate({
@@ -488,48 +542,69 @@ export default function ProfileReadyScreen() {
                 style={[
                   styles.particleWrapper,
                   {
-                    transform: [{ translateX }, { translateY }, { rotate }, { scale }],
+                    transform: [
+                      { translateX },
+                      { translateY },
+                      { rotate },
+                      { scale },
+                    ],
                     opacity,
                   },
                 ]}
               >
                 {/* 1. RIBBONS */}
-                {p.type === 'ribbon' && (
+                {p.type === "ribbon" && (
                   <View
                     style={{
                       width: p.width,
                       height: p.height,
                       borderRadius: 3,
                       backgroundColor: p.color,
-                      transform: [{ skewX: '18deg' }],
+                      transform: [{ skewX: "18deg" }],
                     }}
                   />
                 )}
 
                 {/* 2. STARS */}
-                {p.type === 'star' && (
+                {p.type === "star" && (
                   <>
-                    {p.iconSet === 'Ionicons' ? (
-                      <Ionicons name={p.iconName as any} size={p.size} color={p.color} />
+                    {p.iconSet === "Ionicons" ? (
+                      <Ionicons
+                        name={p.iconName as any}
+                        size={p.size}
+                        color={p.color}
+                      />
                     ) : (
-                      <MaterialCommunityIcons name={p.iconName as any} size={p.size} color={p.color} />
+                      <MaterialCommunityIcons
+                        name={p.iconName as any}
+                        size={p.size}
+                        color={p.color}
+                      />
                     )}
                   </>
                 )}
 
                 {/* 3. LOVE / HEARTS */}
-                {p.type === 'love' && (
+                {p.type === "love" && (
                   <>
-                    {p.iconSet === 'Ionicons' ? (
-                      <Ionicons name={p.iconName as any} size={p.size} color={p.color} />
+                    {p.iconSet === "Ionicons" ? (
+                      <Ionicons
+                        name={p.iconName as any}
+                        size={p.size}
+                        color={p.color}
+                      />
                     ) : (
-                      <MaterialCommunityIcons name={p.iconName as any} size={p.size} color={p.color} />
+                      <MaterialCommunityIcons
+                        name={p.iconName as any}
+                        size={p.size}
+                        color={p.color}
+                      />
                     )}
                   </>
                 )}
 
                 {/* 4. BALL SHAPES */}
-                {p.type === 'ball' && (
+                {p.type === "ball" && (
                   <View
                     style={{
                       width: p.size * 0.75,
@@ -550,7 +625,10 @@ export default function ProfileReadyScreen() {
         </Animated.View>
 
         {/* Main Content Area */}
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Title */}
           <Animated.Text
             style={[
@@ -576,7 +654,8 @@ export default function ProfileReadyScreen() {
               },
             ]}
           >
-            You’re all set. Your profile is ready to help you meet people who match your vibe.
+            You’re all set. Your profile is ready to help you meet people who
+            match your vibe.
           </Animated.Text>
 
           {/* User Profile Card Preview */}
@@ -584,10 +663,13 @@ export default function ProfileReadyScreen() {
             style={[
               styles.card,
               {
-                backgroundColor: isDark ? '#1C1E22' : '#FFFFFF',
-                borderColor: isDark ? '#2E3137' : '#E8EAED',
+                backgroundColor: isDark ? "#1C1E22" : "#FFFFFF",
+                borderColor: isDark ? "#2E3137" : "#E8EAED",
                 opacity: cardOpacity,
-                transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
+                transform: [
+                  { translateY: cardTranslateY },
+                  { scale: cardScale },
+                ],
               },
             ]}
           >
@@ -603,22 +685,44 @@ export default function ProfileReadyScreen() {
 
               <View style={styles.infoColumn}>
                 <View style={styles.nameRow}>
-                  <Text style={[styles.nameText, { color: theme.text }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.nameText, { color: theme.text }]}
+                    numberOfLines={1}
+                  >
                     {displayName}, {userAge}
                   </Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#2E86DE" style={styles.verifiedIcon} />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color="#2E86DE"
+                    style={styles.verifiedIcon}
+                  />
                 </View>
 
                 <View style={styles.detailRow}>
-                  <Ionicons name="location-sharp" size={15} color={theme.textSecondary} />
-                  <Text style={[styles.detailText, { color: theme.textSecondary }]} numberOfLines={1}>
+                  <Ionicons
+                    name="location-sharp"
+                    size={15}
+                    color={theme.textSecondary}
+                  />
+                  <Text
+                    style={[styles.detailText, { color: theme.textSecondary }]}
+                    numberOfLines={1}
+                  >
                     {displayLocation}
                   </Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                  <Ionicons name="briefcase-outline" size={14} color={theme.textSecondary} />
-                  <Text style={[styles.detailText, { color: theme.textSecondary }]} numberOfLines={1}>
+                  <Ionicons
+                    name="briefcase-outline"
+                    size={14}
+                    color={theme.textSecondary}
+                  />
+                  <Text
+                    style={[styles.detailText, { color: theme.textSecondary }]}
+                    numberOfLines={1}
+                  >
                     {displayProfessionText}
                   </Text>
                 </View>
@@ -630,28 +734,49 @@ export default function ProfileReadyScreen() {
               style={[
                 styles.aboutContainer,
                 {
-                  backgroundColor: isDark ? '#25282F' : '#F7F8FA',
-                  borderColor: isDark ? '#363A42' : '#EDF0F2',
+                  backgroundColor: isDark ? "#25282F" : "#F7F8FA",
+                  borderColor: isDark ? "#363A42" : "#EDF0F2",
                 },
               ]}
             >
               <View style={styles.aboutHeaderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="sparkles" size={14} color={theme.primaryButton} />
-                  <Text style={[styles.aboutHeaderTitle, { color: theme.textSecondary }]}>About Me</Text>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  <Ionicons
+                    name="sparkles"
+                    size={14}
+                    color={theme.primaryButton}
+                  />
+                  <Text
+                    style={[
+                      styles.aboutHeaderTitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    About Me
+                  </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => {
-                    setBioDraft(profile.about || '');
+                    setBioDraft(profile.about || "");
                     setIsEditingBio(!isEditingBio);
                   }}
                   activeOpacity={0.7}
                   hitSlop={8}
                   style={styles.editBioBtn}
                 >
-                  <Ionicons name={isEditingBio ? 'close' : 'create-outline'} size={15} color="#0D7A74" />
+                  <Ionicons
+                    name={isEditingBio ? "close" : "create-outline"}
+                    size={15}
+                    color="#0D7A74"
+                  />
                   <Text style={styles.editBioBtnText}>
-                    {isEditingBio ? 'Cancel' : (profile.about?.trim() ? 'Edit' : 'Add Bio')}
+                    {isEditingBio
+                      ? "Cancel"
+                      : profile.about?.trim()
+                        ? "Edit"
+                        : "Add Bio"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -663,8 +788,8 @@ export default function ProfileReadyScreen() {
                       styles.bioEditInput,
                       {
                         color: theme.text,
-                        backgroundColor: isDark ? '#1C1E22' : '#FFFFFF',
-                        borderColor: isDark ? '#363A42' : '#E5E7EB',
+                        backgroundColor: isDark ? "#1C1E22" : "#FFFFFF",
+                        borderColor: isDark ? "#363A42" : "#E5E7EB",
                       },
                     ]}
                     value={bioDraft}
@@ -677,22 +802,36 @@ export default function ProfileReadyScreen() {
                     textAlignVertical="top"
                   />
                   <View style={styles.bioEditActionRow}>
-                    <Text style={[styles.bioEditCharCount, { color: theme.textSecondary }]}>
+                    <Text
+                      style={[
+                        styles.bioEditCharCount,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
                       {bioDraft.length} / 300
                     </Text>
                     <TouchableOpacity
-                      style={[styles.bioSaveBtn, { backgroundColor: theme.primaryButton }]}
+                      style={[
+                        styles.bioSaveBtn,
+                        { backgroundColor: theme.primaryButton },
+                      ]}
                       onPress={handleSaveBio}
                       disabled={isSavingBio}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.bioSaveBtnText}>{isSavingBio ? 'Saving...' : 'Save'}</Text>
+                      <Text style={styles.bioSaveBtnText}>
+                        {isSavingBio ? "Saving..." : "Save"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               ) : (
-                <Text style={[styles.aboutText, { color: theme.text }]} numberOfLines={4}>
-                  {profile.about?.trim() || "Add your bio to introduce yourself, share what you love, and attract the right matches."}
+                <Text
+                  style={[styles.aboutText, { color: theme.text }]}
+                  numberOfLines={4}
+                >
+                  {profile.about?.trim() ||
+                    "Add your bio to introduce yourself, share what you love, and attract the right matches."}
                 </Text>
               )}
             </View>
@@ -700,10 +839,17 @@ export default function ProfileReadyScreen() {
             {/* My Nature Section */}
             {Boolean(
               (profile.nature && profile.nature.length > 0) ||
-              (profile.vibes && profile.vibes.length > 0)
+              (profile.vibes && profile.vibes.length > 0),
             ) && (
               <View style={styles.interestsContainer}>
-                <Text style={[styles.interestsSectionLabel, { color: theme.textSecondary }]}>My Nature</Text>
+                <Text
+                  style={[
+                    styles.interestsSectionLabel,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  My Nature
+                </Text>
                 <View style={styles.interestsRow}>
                   {(profile.nature || profile.vibes || []).map((trait) => (
                     <View
@@ -711,18 +857,26 @@ export default function ProfileReadyScreen() {
                       style={[
                         styles.interestPill,
                         {
-                          backgroundColor: isDark ? '#1E3A37' : '#F0FDFA',
-                          borderColor: isDark ? '#0D7A74' : '#CCFBF1',
+                          backgroundColor: isDark ? "#1E3A37" : "#F0FDFA",
+                          borderColor: isDark ? "#0D7A74" : "#CCFBF1",
                         },
                       ]}
                     >
                       <Ionicons
-                        name={NATURE_ICON_MAP[trait] || 'sparkles'}
+                        name={NATURE_ICON_MAP[trait] || "sparkles"}
                         size={14}
                         color="#0D7A74"
                         style={{ marginRight: 5 }}
                       />
-                      <Text style={[styles.interestText, { color: isDark ? '#99F6E4' : '#0F766E', fontWeight: '600' }]}>
+                      <Text
+                        style={[
+                          styles.interestText,
+                          {
+                            color: isDark ? "#99F6E4" : "#0F766E",
+                            fontWeight: "600",
+                          },
+                        ]}
+                      >
                         {trait}
                       </Text>
                     </View>
@@ -734,23 +888,44 @@ export default function ProfileReadyScreen() {
             {/* Lifestyle Attributes (Food Preference, Drink, Smoke) */}
             <View style={styles.badgesRow}>
               <View style={styles.badgeItem}>
-                <Ionicons name="restaurant-outline" size={15} color={theme.textSecondary} />
-                <Text style={[styles.badgeText, { color: theme.text }]} numberOfLines={1}>
-                  {profile.foodPreference || 'Foodie / Veg'}
+                <Ionicons
+                  name="restaurant-outline"
+                  size={15}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[styles.badgeText, { color: theme.text }]}
+                  numberOfLines={1}
+                >
+                  {profile.foodPreference || "Foodie / Veg"}
                 </Text>
               </View>
 
               <View style={styles.badgeItem}>
-                <Ionicons name="wine-outline" size={15} color={theme.textSecondary} />
-                <Text style={[styles.badgeText, { color: theme.text }]} numberOfLines={1}>
-                  {profile.drinking || 'Socially'}
+                <Ionicons
+                  name="wine-outline"
+                  size={15}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[styles.badgeText, { color: theme.text }]}
+                  numberOfLines={1}
+                >
+                  {profile.drinking || "Socially"}
                 </Text>
               </View>
 
               <View style={styles.badgeItem}>
-                <Ionicons name="cloud-outline" size={15} color={theme.textSecondary} />
-                <Text style={[styles.badgeText, { color: theme.text }]} numberOfLines={1}>
-                  {profile.smoking || 'No'}
+                <Ionicons
+                  name="cloud-outline"
+                  size={15}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[styles.badgeText, { color: theme.text }]}
+                  numberOfLines={1}
+                >
+                  {profile.smoking || "No"}
                 </Text>
               </View>
             </View>
@@ -758,22 +933,43 @@ export default function ProfileReadyScreen() {
             {/* Attributes Row (User's Religion, Languages, Education) */}
             <View style={styles.badgesRow}>
               <View style={styles.badgeItem}>
-                <MaterialCommunityIcons name="hands-pray" size={16} color={theme.textSecondary} />
-                <Text style={[styles.badgeText, { color: theme.text }]} numberOfLines={1}>
+                <MaterialCommunityIcons
+                  name="hands-pray"
+                  size={16}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[styles.badgeText, { color: theme.text }]}
+                  numberOfLines={1}
+                >
                   {displayReligion}
                 </Text>
               </View>
 
               <View style={styles.badgeItem}>
-                <Ionicons name="chatbubbles-outline" size={16} color={theme.textSecondary} />
-                <Text style={[styles.badgeText, { color: theme.text }]} numberOfLines={1}>
+                <Ionicons
+                  name="chatbubbles-outline"
+                  size={16}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[styles.badgeText, { color: theme.text }]}
+                  numberOfLines={1}
+                >
                   {displayLanguages}
                 </Text>
               </View>
 
               <View style={styles.badgeItem}>
-                <Ionicons name="school-outline" size={16} color={theme.textSecondary} />
-                <Text style={[styles.badgeText, { color: theme.text }]} numberOfLines={1}>
+                <Ionicons
+                  name="school-outline"
+                  size={16}
+                  color={theme.textSecondary}
+                />
+                <Text
+                  style={[styles.badgeText, { color: theme.text }]}
+                  numberOfLines={1}
+                >
                   {displayEducation}
                 </Text>
               </View>
@@ -781,7 +977,14 @@ export default function ProfileReadyScreen() {
 
             {/* User's Selected Interests Pills */}
             <View style={styles.interestsContainer}>
-              <Text style={[styles.interestsSectionLabel, { color: theme.textSecondary }]}>Interests</Text>
+              <Text
+                style={[
+                  styles.interestsSectionLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Interests
+              </Text>
               <View style={styles.interestsRow}>
                 {displayInterests.map((interest) => (
                   <View
@@ -789,13 +992,19 @@ export default function ProfileReadyScreen() {
                     style={[
                       styles.interestPill,
                       {
-                        backgroundColor: isDark ? '#2B2E35' : '#F3F4F6',
-                        borderColor: isDark ? '#3D414A' : '#E5E7EB',
+                        backgroundColor: isDark ? "#2B2E35" : "#F3F4F6",
+                        borderColor: isDark ? "#3D414A" : "#E5E7EB",
                       },
                     ]}
                   >
-                    <Text style={[styles.interestText, { color: theme.text }]}>{interest}</Text>
-                    <Ionicons name="checkmark-circle" size={15} color={theme.primaryButton} />
+                    <Text style={[styles.interestText, { color: theme.text }]}>
+                      {interest}
+                    </Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={15}
+                      color={theme.primaryButton}
+                    />
                   </View>
                 ))}
               </View>
@@ -804,7 +1013,9 @@ export default function ProfileReadyScreen() {
             {/* Identity Verified Badge */}
             <View style={styles.verifiedRow}>
               <Ionicons name="shield-checkmark" size={18} color="#00D5D9" />
-              <Text style={[styles.identityText, { color: theme.text }]}>Identity Verified</Text>
+              <Text style={[styles.identityText, { color: theme.text }]}>
+                Identity Verified
+              </Text>
             </View>
           </Animated.View>
         </ScrollView>
@@ -812,7 +1023,7 @@ export default function ProfileReadyScreen() {
         {/* Footer Navigation */}
         <Animated.View
           style={{
-            width: '100%',
+            width: "100%",
             opacity: footerOpacity,
             transform: [{ translateY: footerTranslateY }],
           }}
@@ -832,25 +1043,25 @@ export default function ProfileReadyScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   responsiveContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   screenCenterBlastContainer: {
     ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 50,
   },
   particleWrapper: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.18,
     shadowRadius: 3,
@@ -860,58 +1071,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 14,
     paddingBottom: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 24,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
   },
   subtitle: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
     maxWidth: 320,
   },
   card: {
-    width: '100%',
+    width: "100%",
     borderRadius: 24,
     borderWidth: 1,
     padding: 20,
     marginTop: 20,
-    shadowColor: '#000000',
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 4,
   },
   profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   avatarWrapper: {
-    position: 'relative',
+    position: "relative",
   },
   avatarImage: {
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#33373E',
+    backgroundColor: "#33373E",
   },
   editBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
     width: 26,
     height: 26,
     borderRadius: 13,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
@@ -922,12 +1133,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   nameText: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 19,
     flexShrink: 1,
   },
@@ -935,13 +1146,13 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginTop: 2,
   },
   detailText: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 13,
     flexShrink: 1,
   },
@@ -953,33 +1164,33 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   aboutHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
   aboutHeaderTitle: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 12,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   editBioBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    backgroundColor: '#E6FFFA',
+    backgroundColor: "#E6FFFA",
   },
   editBioBtnText: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 12,
-    color: '#0D7A74',
+    color: "#0D7A74",
   },
   bioEditContainer: {
-    width: '100%',
+    width: "100%",
     gap: 8,
     marginTop: 4,
   },
@@ -988,55 +1199,55 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 13,
     lineHeight: 18,
     minHeight: 64,
   },
   bioEditActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   bioEditCharCount: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 11,
   },
   bioSaveBtn: {
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   bioSaveBtnText: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 12,
-    color: '#000000',
+    color: "#000000",
   },
   aboutText: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 13,
     lineHeight: 19,
   },
   badgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 16,
     paddingTop: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(150, 150, 150, 0.25)',
+    borderTopColor: "rgba(150, 150, 150, 0.25)",
     gap: 8,
   },
   badgeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     flexShrink: 1,
   },
   badgeText: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 12,
     flexShrink: 1,
   },
@@ -1045,39 +1256,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   interestsSectionLabel: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 12,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   interestsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
   },
   interestPill: {
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingHorizontal: 12,
   },
   interestText: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 12,
   },
   verifiedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginTop: 16,
   },
   identityText: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 13,
   },
 });

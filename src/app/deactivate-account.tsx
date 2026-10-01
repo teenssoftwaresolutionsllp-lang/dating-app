@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,43 +7,48 @@ import {
   ScrollView,
   StatusBar,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { DeactivatePauseGraphic } from '@/components/SettingsIcons';
-import { clearUserAuth } from '@/utils/authPersistence';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { DeactivatePauseGraphic } from "@/components/SettingsIcons";
+import { authStorage } from "@/services/authStorage";
+import { deactivateAccount } from "@/services/accountApi";
 
 const BENEFITS = [
-  'Your matches and chats will be saved',
-  'You can reactivate your account anytime',
-  'No one will be notified',
-  'Your personal data will remain safe',
+  "Your matches and chats will be saved",
+  "You can reactivate your account anytime",
+  "No one will be notified",
+  "Your personal data will remain safe",
 ];
 
 export default function DeactivateAccountScreen() {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/deactivate-or-delete');
+      router.replace("/deactivate-or-delete");
     }
   };
 
   const handleDeactivate = async () => {
-    await clearUserAuth();
-    Alert.alert(
-      'Account Deactivated',
-      'Your profile has been hidden. You can log back in at any time to reactivate your account.',
-      [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/login'),
-        },
-      ]
-    );
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await deactivateAccount();
+      await authStorage.clearAuth();
+      router.replace("/login");
+    } catch (error) {
+      Alert.alert(
+        "Could not deactivate account",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -76,7 +81,8 @@ export default function DeactivateAccountScreen() {
             </View>
             <Text style={styles.mainHeading}>Take a Break, Anytime</Text>
             <Text style={styles.subHeading}>
-              Your profile will be hidden and won't appear in search or recommendations while your account is deactivated.
+              Your profile will be hidden and won't appear in search or
+              recommendations while your account is deactivated.
             </Text>
           </View>
 
@@ -99,8 +105,11 @@ export default function DeactivateAccountScreen() {
             style={styles.deactivateBtn}
             activeOpacity={0.8}
             onPress={handleDeactivate}
+            disabled={isSubmitting}
           >
-            <Text style={styles.deactivateBtnText}>Deactivate Account</Text>
+            <Text style={styles.deactivateBtnText}>
+              {isSubmitting ? "Deactivating..." : "Deactivate Account"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -111,24 +120,24 @@ export default function DeactivateAccountScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingTop: 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     maxWidth: 500,
-    width: '100%',
-    alignSelf: 'center',
-    justifyContent: 'space-between',
+    width: "100%",
+    alignSelf: "center",
+    justifyContent: "space-between",
   },
   header: {
     height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
     padding: 6,
@@ -136,10 +145,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
-    textAlign: 'center',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
+    textAlign: "center",
   },
   headerRightSpacer: {
     width: 32,
@@ -150,27 +159,27 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   topGraphicWrapper: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 36,
   },
   iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
   },
   mainHeading: {
     fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
-    textAlign: 'center',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
+    textAlign: "center",
     marginBottom: 8,
   },
   subHeading: {
     fontSize: 12.5,
-    fontFamily: 'DM_Sans_400Regular',
-    color: '#64748B',
-    textAlign: 'center',
+    fontFamily: "DM_Sans_400Regular",
+    color: "#64748B",
+    textAlign: "center",
     lineHeight: 18,
     paddingHorizontal: 12,
   },
@@ -179,37 +188,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   checkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
   },
   checkCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#A7F3D0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#A7F3D0",
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkText: {
     fontSize: 13.5,
-    fontFamily: 'DM_Sans_500Medium',
-    color: '#1F2937',
+    fontFamily: "DM_Sans_500Medium",
+    color: "#1F2937",
     flex: 1,
   },
   bottomBar: {
     paddingHorizontal: 24,
     paddingBottom: 24,
     paddingTop: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   deactivateBtn: {
-    backgroundColor: '#00F5D4',
+    backgroundColor: "#00F5D4",
     height: 50,
     borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#00F5D4',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#00F5D4",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -217,8 +226,8 @@ const styles = StyleSheet.create({
   },
   deactivateBtnText: {
     fontSize: 16,
-    fontFamily: 'DM_Sans_700Bold',
-    fontWeight: '700',
-    color: '#000000',
+    fontFamily: "DM_Sans_700Bold",
+    fontWeight: "700",
+    color: "#000000",
   },
 });

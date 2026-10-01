@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -13,65 +13,108 @@ import {
   TextInput,
   TextInputKeyPressEventData,
   View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
-import { useTheme } from '@/hooks/use-theme';
-import { resendOtp, verifyOtp } from '@/utils/api';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  LegalFooter,
+  PrimaryButton,
+  RelationshipArtwork,
+} from "@/components/onboarding";
+import { useTheme } from "@/hooks/use-theme";
+import { resendOtp, verifyOtp } from "@/utils/api";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
 
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone?: string }>();
-  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const isDark = theme.text.toLowerCase() === '#ffffff';
+  const isDark = theme.text.toLowerCase() === "#ffffff";
   const complete = code.every(Boolean);
-  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const initialHeight = useRef(Dimensions.get("window").height).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -3, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
 
   useEffect(() => {
     if (seconds <= 0) return;
-    const timer = setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
+    const timer = setInterval(
+      () => setSeconds((value) => Math.max(0, value - 1)),
+      1000,
+    );
     return () => clearInterval(timer);
   }, [seconds]);
 
   const updateCode = (value: string, index: number) => {
-    const digits = value.replace(/\D/g, '');
-    if (error) setError('');
+    const digits = value.replace(/\D/g, "");
+    if (error) setError("");
 
     if (!digits) {
-      setCode((current) => current.map((digit, position) => (position === index ? '' : digit)));
+      setCode((current) =>
+        current.map((digit, position) => (position === index ? "" : digit)),
+      );
       return;
     }
 
     const next = [...code];
-    digits.slice(0, OTP_LENGTH - index).split('').forEach((digit, offset) => {
-      if (index + offset < OTP_LENGTH) {
-        next[index + offset] = digit;
-      }
-    });
+    digits
+      .slice(0, OTP_LENGTH - index)
+      .split("")
+      .forEach((digit, offset) => {
+        if (index + offset < OTP_LENGTH) {
+          next[index + offset] = digit;
+        }
+      });
     setCode(next);
 
     if (next.every(Boolean)) {
@@ -84,62 +127,70 @@ export default function OtpScreen() {
 
   const handleKeyPress = (
     event: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number
+    index: number,
   ) => {
-    if (event.nativeEvent.key !== 'Backspace') return;
+    if (event.nativeEvent.key !== "Backspace") return;
     if (code[index]) {
-      setCode((current) => current.map((digit, position) => (position === index ? '' : digit)));
+      setCode((current) =>
+        current.map((digit, position) => (position === index ? "" : digit)),
+      );
     } else if (index > 0) {
-      setCode((current) => current.map((digit, position) => (position === index - 1 ? '' : digit)));
+      setCode((current) =>
+        current.map((digit, position) => (position === index - 1 ? "" : digit)),
+      );
       inputs.current[index - 1]?.focus();
     }
   };
 
   const resend = async () => {
     if (seconds > 0) return;
-    setCode(Array(OTP_LENGTH).fill(''));
+    setCode(Array(OTP_LENGTH).fill(""));
     setSeconds(RESEND_SECONDS);
-    setError('');
+    setError("");
     requestAnimationFrame(() => inputs.current[0]?.focus());
 
-    const digits = phone ? phone.replace(/\D/g, '') : '';
+    const digits = phone ? phone.replace(/\D/g, "") : "";
     if (!digits) {
-      setError('Phone number is missing');
+      setError("Phone number is missing");
       triggerShake();
       return;
     }
 
     try {
-      await resendOtp(digits, '+91');
+      await resendOtp(digits, "+91");
     } catch (err: any) {
-      setError(err?.message || 'Failed to resend OTP. Please try again.');
+      setError(err?.message || "Failed to resend OTP. Please try again.");
       triggerShake();
     }
   };
 
   const handleBack = () => {
     if (router.canGoBack()) router.back();
-    else router.replace('/login');
+    else router.replace("/login");
   };
 
   const handleVerify = async () => {
     if (isVerifying) return;
     if (!complete) {
-      setError('Invalid OTP');
+      setError("Invalid OTP");
       triggerShake();
       return;
     }
-    setError('');
+    setError("");
     setIsVerifying(true);
 
-    const digits = phone ? phone.replace(/\D/g, '') : '';
-    const enteredOtp = code.join('');
+    const digits = phone ? phone.replace(/\D/g, "") : "";
+    const enteredOtp = code.join("");
 
     try {
-      await verifyOtp(digits, enteredOtp, '+91');
-      router.replace('/(onboarding)/set-profile');
+      const response = await verifyOtp(digits, enteredOtp, "+91");
+      router.replace(
+        response.data.isNewUser
+          ? "/(onboarding)/set-profile"
+          : "/(tab)/matches",
+      );
     } catch (err: any) {
-      setError(err?.message || 'Invalid OTP');
+      setError(err?.message || "Invalid OTP");
       triggerShake();
     } finally {
       setIsVerifying(false);
@@ -153,7 +204,10 @@ export default function OtpScreen() {
         accessibilityRole="button"
         accessibilityLabel="Go back"
         hitSlop={8}
-        style={[styles.backButton, { top: Math.max(insets.top, 16) + 4, left: 16 }]}
+        style={[
+          styles.backButton,
+          { top: Math.max(insets.top, 16) + 4, left: 16 },
+        ]}
       >
         <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
       </Pressable>
@@ -168,11 +222,16 @@ export default function OtpScreen() {
         <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
           <RelationshipArtwork variant="otp" />
 
-          <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
+          <SafeAreaView
+            style={styles.contentSafeArea}
+            edges={["bottom", "left", "right"]}
+          >
             <View style={styles.content}>
               <View style={styles.formTopSection}>
                 <View style={styles.headingRow}>
-                  <Text style={[styles.heading, { color: theme.text }]}>Enter OTP to Verify</Text>
+                  <Text style={[styles.heading, { color: theme.text }]}>
+                    Enter OTP to Verify
+                  </Text>
                   <Pressable
                     onPress={resend}
                     disabled={seconds > 0}
@@ -183,11 +242,13 @@ export default function OtpScreen() {
                     <Text
                       style={[
                         styles.resend,
-                        { color: isDark ? '#538DFF' : '#1769FF' },
+                        { color: isDark ? "#538DFF" : "#1769FF" },
                         seconds > 0 && styles.disabled,
                       ]}
                     >
-                      {seconds > 0 ? `Resend in 00:${String(seconds).padStart(2, '0')}` : 'Resend OTP'}
+                      {seconds > 0
+                        ? `Resend in 00:${String(seconds).padStart(2, "0")}`
+                        : "Resend OTP"}
                     </Text>
                   </Pressable>
                 </View>
@@ -217,13 +278,16 @@ export default function OtpScreen() {
                         {
                           color: theme.text,
                           borderColor: error
-                            ? '#FF3B30'
+                            ? "#FF3B30"
                             : focusedIndex === index
-                            ? '#00E4E8'
-                            : theme.border,
-                          backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
+                              ? "#00E4E8"
+                              : theme.border,
+                          backgroundColor: isDark
+                            ? theme.backgroundElement
+                            : "#FFFFFF",
                         },
-                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+                        Platform.OS === "web" &&
+                          ({ outlineStyle: "none" } as any),
                       ]}
                       textAlign="center"
                       accessibilityLabel={`OTP digit ${index + 1}`}
@@ -234,21 +298,33 @@ export default function OtpScreen() {
                 <View style={styles.sentContainer}>
                   <View style={styles.sentRow}>
                     <Text style={[styles.sent, { color: theme.textSecondary }]}>
-                      We have sent OTP to {phone || '00000 00000'}
+                      We have sent OTP to {phone || "00000 00000"}
                     </Text>
                     <Pressable
                       onPress={handleBack}
                       accessibilityRole="button"
                       accessibilityLabel="Edit phone number"
                       hitSlop={8}
-                      style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                      style={[
+                        styles.editButton,
+                        Platform.OS === "web" && ({ cursor: "pointer" } as any),
+                      ]}
                     >
-                      <Ionicons name="pencil" size={14} color={theme.textSecondary} />
+                      <Ionicons
+                        name="pencil"
+                        size={14}
+                        color={theme.textSecondary}
+                      />
                     </Pressable>
                   </View>
 
                   {!!error && (
-                    <Animated.View style={[styles.errorWrapper, { transform: [{ translateX: shakeAnim }] }]}>
+                    <Animated.View
+                      style={[
+                        styles.errorWrapper,
+                        { transform: [{ translateX: shakeAnim }] },
+                      ]}
+                    >
                       <Text style={styles.errorText}>{error}</Text>
                     </Animated.View>
                   )}
@@ -263,7 +339,7 @@ export default function OtpScreen() {
                     {
                       backgroundColor: complete
                         ? theme.primaryButton
-                        : '#BDFFF9',
+                        : "#BDFFF9",
                     },
                   ]}
                 >
@@ -280,19 +356,28 @@ export default function OtpScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, width: '100%' },
-  scrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start' },
-  responsiveWrapper: { width: '100%', maxWidth: 480, flex: 1, justifyContent: 'space-between' },
+  root: { flex: 1, width: "100%" },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  responsiveWrapper: {
+    width: "100%",
+    maxWidth: 480,
+    flex: 1,
+    justifyContent: "space-between",
+  },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     zIndex: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...(Platform.OS === "web" ? ({ cursor: "pointer" } as any) : {}),
   },
   contentSafeArea: {
     flex: 1,
@@ -302,56 +387,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 16,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   formTopSection: {
-    width: '100%',
+    width: "100%",
   },
   headingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   heading: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 14,
   },
   resend: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 12,
   },
   disabled: {
     opacity: 0.65,
   },
   otpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 26,
   },
-  webPointer: Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined,
+  webPointer:
+    Platform.OS === "web" ? ({ cursor: "pointer" } as any) : undefined,
   otpInput: {
     width: 58,
     height: 58,
     borderRadius: 14,
     borderWidth: 1,
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 20,
-    textAlign: 'center',
+    textAlign: "center",
     padding: 0,
   },
   sentContainer: {
-    width: '100%',
+    width: "100%",
     marginTop: 16,
-    position: 'relative',
+    position: "relative",
   },
   sentRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 6,
   },
   sent: {
     flex: 1,
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 12,
   },
   editButton: {
@@ -359,20 +445,20 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   errorWrapper: {
-    position: 'absolute',
-    top: '100%',
+    position: "absolute",
+    top: "100%",
     left: 0,
     right: 0,
   },
   errorText: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 12,
-    color: '#FF3B30',
+    color: "#FF3B30",
     marginTop: 6,
     marginLeft: 2,
   },
   bottomButtonSection: {
-    width: '100%',
+    width: "100%",
     paddingBottom: 8,
   },
   verifyButton: {

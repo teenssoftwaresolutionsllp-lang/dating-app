@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,16 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { DeleteTrashGraphic } from '@/components/SettingsIcons';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { DeleteTrashGraphic } from "@/components/SettingsIcons";
 
 const WARNINGS = [
-  'Your profile will be deleted',
-  'All chats and matches will be lost',
-  'Your data will be permanently removed',
+  "Your profile will be deleted",
+  "All chats and matches will be lost",
+  "Your data will be permanently removed",
   "You won't be able to recover your account",
 ];
 
@@ -26,12 +26,12 @@ export default function DeleteAccountScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/deactivate-or-delete');
+      router.replace("/deactivate-or-delete");
     }
   };
 
   const handleDeletePress = () => {
-    router.push('/confirm-delete');
+    router.push("/confirm-delete");
   };
 
   return (
@@ -62,9 +62,12 @@ export default function DeleteAccountScreen() {
             <View style={styles.iconWrapper}>
               <DeleteTrashGraphic size={72} color="#FF0000" />
             </View>
-            <Text style={styles.mainHeading}>Delete your account permanently</Text>
+            <Text style={styles.mainHeading}>
+              Delete your account permanently
+            </Text>
             <Text style={styles.subHeading}>
-              This action cannot be undone. All your data will be permanently deleted.
+              This action cannot be undone. All your data will be permanently
+              deleted.
             </Text>
           </View>
 
@@ -88,7 +91,7 @@ export default function DeleteAccountScreen() {
             activeOpacity={0.85}
             onPress={handleDeletePress}
           >
-            <Text style={styles.deleteBtnText}>Delete Account</Text>
+            <Text style={styles.deleteBtnText}>Send Deletion Code</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -99,24 +102,24 @@ export default function DeleteAccountScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingTop: 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     maxWidth: 500,
-    width: '100%',
-    alignSelf: 'center',
-    justifyContent: 'space-between',
+    width: "100%",
+    alignSelf: "center",
+    justifyContent: "space-between",
   },
   header: {
     height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
     padding: 6,
@@ -124,10 +127,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
-    textAlign: 'center',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
+    textAlign: "center",
   },
   headerRightSpacer: {
     width: 32,
@@ -138,27 +141,27 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   topGraphicWrapper: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 36,
   },
   iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
   },
   mainHeading: {
     fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
-    textAlign: 'center',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
+    textAlign: "center",
     marginBottom: 8,
   },
   subHeading: {
     fontSize: 12.5,
-    fontFamily: 'DM_Sans_400Regular',
-    color: '#64748B',
-    textAlign: 'center',
+    fontFamily: "DM_Sans_400Regular",
+    color: "#64748B",
+    textAlign: "center",
     lineHeight: 18,
     paddingHorizontal: 16,
   },
@@ -167,37 +170,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   checkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
   },
   crossCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkText: {
     fontSize: 13.5,
-    fontFamily: 'DM_Sans_500Medium',
-    color: '#1F2937',
+    fontFamily: "DM_Sans_500Medium",
+    color: "#1F2937",
     flex: 1,
   },
   bottomBar: {
     paddingHorizontal: 24,
     paddingBottom: 24,
     paddingTop: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   deleteBtn: {
-    backgroundColor: '#FF0000',
+    backgroundColor: "#FF0000",
     height: 50,
     borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FF0000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#FF0000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -205,8 +208,8 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     fontSize: 16,
-    fontFamily: 'DM_Sans_700Bold',
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: "DM_Sans_700Bold",
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

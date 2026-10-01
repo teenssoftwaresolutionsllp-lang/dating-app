@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,18 +8,18 @@ import {
   Alert,
   Modal,
   StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import {
   SubscriptionIcon,
   TermsDocIcon,
   SafetyBadgeIcon,
   TrustRosetteIcon,
-} from '@/components/SettingsIcons';
-import { clearUserAuth } from '@/utils/authPersistence';
-import { logout } from '@/utils/api';
+} from "@/components/SettingsIcons";
+import { clearUserAuth } from "@/utils/authPersistence";
+import { logout } from "@/utils/api";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function SettingsScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(tab)/me');
+      router.replace("/(tab)/me");
     }
   };
 
@@ -45,15 +45,12 @@ export default function SettingsScreen() {
     } catch {
       await clearUserAuth();
     }
-    router.replace('/login');
+    router.replace("/login");
   };
 
   const handleDeleteAccount = async () => {
     setShowDeleteModal(false);
-    await clearUserAuth();
-    Alert.alert('Account Deactivated', 'Your account has been scheduled for deletion.', [
-      { text: 'OK', onPress: () => router.replace('/login') },
-    ]);
+    router.push("/deactivate-or-delete");
   };
 
   return (
@@ -98,11 +95,15 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/notification')}
+            onPress={() => router.push("/notification")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
-                <Ionicons name="notifications-outline" size={24} color="#0D7A74" />
+                <Ionicons
+                  name="notifications-outline"
+                  size={24}
+                  color="#0D7A74"
+                />
               </View>
               <Text style={styles.cardText}>Notifications</Text>
             </View>
@@ -113,7 +114,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/terms-of-use')}
+            onPress={() => router.push("/terms-of-use")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -128,7 +129,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/terms-and-security')}
+            onPress={() => router.push("/terms-and-security")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -143,7 +144,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/safety-guidelines')}
+            onPress={() => router.push("/safety-guidelines")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -158,7 +159,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/trust-compatibility')}
+            onPress={() => router.push("/trust-compatibility")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -173,7 +174,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/deactivate-or-delete')}
+            onPress={() => router.push("/deactivate-or-delete")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -190,7 +191,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
-            onPress={() => router.push('/logout')}
+            onPress={() => router.push("/logout")}
           >
             <View style={styles.cardLeft}>
               <View style={styles.iconContainer}>
@@ -211,21 +212,26 @@ export default function SettingsScreen() {
         >
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <View style={[styles.modalIconCircle, { backgroundColor: '#E6FFFA' }]}>
+              <View
+                style={[styles.modalIconCircle, { backgroundColor: "#E6FFFA" }]}
+              >
                 <SubscriptionIcon size={32} color="#0D7A74" />
               </View>
               <Text style={styles.modalTitle}>Premium Subscription</Text>
               <Text style={styles.modalDesc}>
-                Unlock unlimited likes, see who viewed your profile, advanced compatibility filters, and boost your profile!
+                Unlock unlimited likes, see who viewed your profile, advanced
+                compatibility filters, and boost your profile!
               </Text>
               <View style={styles.planBadge}>
-                <Text style={styles.planBadgeText}>Active Plan: Free Member</Text>
+                <Text style={styles.planBadgeText}>
+                  Active Plan: Free Member
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.modalPrimaryBtn}
                 onPress={() => {
                   setShowSubscriptionModal(false);
-                  Alert.alert('Subscription', 'Upgrade flow opened!');
+                  Alert.alert("Subscription", "Upgrade flow opened!");
                 }}
               >
                 <Text style={styles.modalPrimaryBtnText}>Upgrade to Gold</Text>
@@ -249,12 +255,16 @@ export default function SettingsScreen() {
         >
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <View style={[styles.modalIconCircle, { backgroundColor: '#E0F2FE' }]}>
+              <View
+                style={[styles.modalIconCircle, { backgroundColor: "#E0F2FE" }]}
+              >
                 <TrustRosetteIcon size={32} color="#0284C7" />
               </View>
               <Text style={styles.modalTitle}>Trust & Compatibility</Text>
               <Text style={styles.modalDesc}>
-                Our smart matchmaking algorithm analyzes your shared interests, values, and lifestyle preferences to calculate authentic compatibility scores.
+                Our smart matchmaking algorithm analyzes your shared interests,
+                values, and lifestyle preferences to calculate authentic
+                compatibility scores.
               </Text>
               <TouchableOpacity
                 style={styles.modalPrimaryBtn}
@@ -275,15 +285,20 @@ export default function SettingsScreen() {
         >
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <View style={[styles.modalIconCircle, { backgroundColor: '#FEE2E2' }]}>
+              <View
+                style={[styles.modalIconCircle, { backgroundColor: "#FEE2E2" }]}
+              >
                 <Ionicons name="trash" size={30} color="#EF4444" />
               </View>
-              <Text style={[styles.modalTitle, { color: '#EF4444' }]}>Delete Account?</Text>
+              <Text style={[styles.modalTitle, { color: "#EF4444" }]}>
+                Delete Account?
+              </Text>
               <Text style={styles.modalDesc}>
-                Are you sure you want to deactivate or permanently delete your account? All your matches and messages will be removed.
+                Choose whether to deactivate your account for up to 30 days or
+                permanently delete it after phone verification.
               </Text>
               <TouchableOpacity
-                style={[styles.modalPrimaryBtn, { backgroundColor: '#EF4444' }]}
+                style={[styles.modalPrimaryBtn, { backgroundColor: "#EF4444" }]}
                 onPress={handleDeleteAccount}
               >
                 <Text style={styles.modalPrimaryBtnText}>Delete Account</Text>
@@ -307,7 +322,9 @@ export default function SettingsScreen() {
         >
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <View style={[styles.modalIconCircle, { backgroundColor: '#E6FFFA' }]}>
+              <View
+                style={[styles.modalIconCircle, { backgroundColor: "#E6FFFA" }]}
+              >
                 <Ionicons name="log-out-outline" size={30} color="#0D7A74" />
               </View>
               <Text style={styles.modalTitle}>Log Out</Text>
@@ -337,23 +354,23 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingTop: 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FAFCFC',
+    backgroundColor: "#FAFCFC",
     maxWidth: 500,
-    width: '100%',
-    alignSelf: 'center',
+    width: "100%",
+    alignSelf: "center",
   },
   header: {
     height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
     padding: 6,
@@ -361,10 +378,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
-    textAlign: 'center',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
+    textAlign: "center",
   },
   headerRightSpacer: {
     width: 32,
@@ -376,24 +393,24 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   cardItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
     borderRadius: 22,
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: '#EFF2F5',
-    shadowColor: '#64748B',
+    borderColor: "#EFF2F5",
+    shadowColor: "#64748B",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   cardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     minWidth: 0,
 
@@ -401,8 +418,8 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 34,
     height: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
   },
   cardText: {
@@ -414,24 +431,24 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   deleteCardText: {
-    color: '#EF4444',
+    color: "#EF4444",
   },
   /* Modals */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   modalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 360,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000000',
+    alignItems: "center",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -441,28 +458,28 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalDesc: {
     fontSize: 13.5,
-    fontFamily: 'DM_Sans_400Regular',
-    color: '#64748B',
-    textAlign: 'center',
+    fontFamily: "DM_Sans_400Regular",
+    color: "#64748B",
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 18,
   },
   planBadge: {
-    backgroundColor: '#E6FFFA',
+    backgroundColor: "#E6FFFA",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
@@ -470,33 +487,33 @@ const styles = StyleSheet.create({
   },
   planBadgeText: {
     fontSize: 13,
-    fontWeight: '600',
-    fontFamily: 'DM_Sans_500Medium',
-    color: '#0D7A74',
+    fontWeight: "600",
+    fontFamily: "DM_Sans_500Medium",
+    color: "#0D7A74",
   },
   modalPrimaryBtn: {
-    width: '100%',
-    backgroundColor: '#0D7A74',
+    width: "100%",
+    backgroundColor: "#0D7A74",
     paddingVertical: 13,
     borderRadius: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 10,
   },
   modalPrimaryBtnText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
   },
   modalSecondaryBtn: {
-    width: '100%',
+    width: "100%",
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalSecondaryBtnText: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'DM_Sans_500Medium',
+    fontWeight: "600",
+    fontFamily: "DM_Sans_500Medium",
   },
 });
