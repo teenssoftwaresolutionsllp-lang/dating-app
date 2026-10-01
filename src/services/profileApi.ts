@@ -51,6 +51,58 @@ export interface CatalogItem {
   category?: string;
 }
 
+export interface PopularLocationRecord {
+  locationId: string;
+  name: string;
+}
+
+export interface LocationSuggestion {
+  placeId: string;
+  text: string;
+  mainText: string;
+  secondaryText: string;
+}
+
+export async function getPopularLocations(): Promise<PopularLocationRecord[]> {
+  try {
+    return await apiRequest<PopularLocationRecord[]>(
+      "/api/v1/locations/popular",
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function autocompleteLocation(
+  input: string,
+): Promise<LocationSuggestion[]> {
+  try {
+    return await apiRequest<LocationSuggestion[]>(
+      "/api/v1/locations/autocomplete",
+      {
+        method: "POST",
+        body: JSON.stringify({ input }),
+      },
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function savePopularLocation(locationId: string) {
+  return apiRequest("/api/v1/users/me/location/selection", {
+    method: "POST",
+    body: JSON.stringify({ locationId }),
+  });
+}
+
+export async function saveGoogleLocation(placeId: string) {
+  return apiRequest("/api/v1/users/me/location", {
+    method: "POST",
+    body: JSON.stringify({ placeId }),
+  });
+}
+
 // 1. Core Profile
 export async function getCurrentProfile(): Promise<BackendProfile | null> {
   const payload = await apiRequest<{ profile: BackendProfile | null }>(
@@ -65,6 +117,7 @@ export async function getCurrentProfile(): Promise<BackendProfile | null> {
 export async function getMyProfile(): Promise<any> {
   return apiRequest("/api/v1/profile/my-profile", {
     method: "GET",
+    cache: "no-store",
   });
 }
 
