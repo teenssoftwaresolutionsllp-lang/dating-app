@@ -81,7 +81,7 @@ export interface MatchItem {
     name: string;
     age: number | null;
     heightFt?: string | null;
-    formattedHeight?: string | null;
+    location: string | null;
     city: string | null;
     profession?: string | null;
     primaryPhoto: string | null;

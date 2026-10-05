@@ -42,7 +42,7 @@ export const getBaseUrl = (): string => {
   }
 
   // 5. Default fallback
-  return "http://localhost:5000";
+  return "http://192.168.1.30:5000";
 };
 
 function extractErrorMessage(errData: any, fallbackMessage: string): string {

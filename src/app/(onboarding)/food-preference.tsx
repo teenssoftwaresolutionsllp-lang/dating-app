@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { updateStoredUserProfile } from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 
 const FOOD_OPTIONS = [
@@ -22,11 +22,7 @@ const FOOD_OPTIONS = [
 export default function FoodPreferenceScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const profile = getStoredUserProfile();
-
-  const [selectedFood, setSelectedFood] = useState<string | null>(
-    profile.foodPreference || null
-  );
+  const [selectedFood, setSelectedFood] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

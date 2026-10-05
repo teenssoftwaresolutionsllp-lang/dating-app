@@ -11,25 +11,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
-import {
-  ACTIVE_USERS,
-  NEAR_YOU_USERS,
-  YOU_MAY_LIKE_USERS,
-  SIMILAR_INTEREST_USERS,
-  SAME_RELIGION_USERS,
-  RECENTLY_ACTIVE_USERS,
-  ActiveUser,
-  NearYouUser,
-  YouMayLikeUser,
-  SimilarInterestUser,
-  SameReligionUser,
-  RecentlyActiveUser,
-} from '@/constants/datingData';
 import { formatApiImageUrl } from '@/services/api';
 import {
   getPeopleCategories,
   type PeopleCategoriesResponse,
-  type CategoryUser,
 } from '@/services/matchApi';
 
 interface PeopleScreenProps {
@@ -39,13 +24,12 @@ interface PeopleScreenProps {
 
 export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }: PeopleScreenProps = {}) {
   const [categories, setCategories] = React.useState<PeopleCategoriesResponse | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     getPeopleCategories().then((res) => {
-      if (res) {
-        setCategories(res);
-      }
-    });
+      setCategories(res);
+    }).finally(() => setIsLoading(false));
   }, []);
 
   const navigateToViewAll = (sectionId: string, title: string) => {
@@ -55,68 +39,63 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
     });
   };
 
-  // Convert real database categories to displayed objects with image URL resolving
-  const activeUsers = (categories?.active && categories.active.length > 0)
-    ? categories.active.map((u, i) => ({
+  const emptyMessage = isLoading
+    ? 'Loading people...'
+    : categories
+      ? 'No matching people right now'
+      : 'People could not be loaded';
+  const renderEmptyMessage = (users: unknown[]) =>
+    users.length === 0 ? <Text style={styles.emptyListText}>{emptyMessage}</Text> : null;
+
+  const activeUsers = (categories?.active ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         age: u.age,
-        image: u.image ? { uri: formatApiImageUrl(u.image) } : ACTIVE_USERS[i % ACTIVE_USERS.length].image,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : undefined,
         isOnline: u.isOnline,
-      }))
-    : ACTIVE_USERS;
+      }));
 
-  const nearYouUsers = (categories?.nearYou && categories.nearYou.length > 0)
-    ? categories.nearYou.map((u, i) => ({
+  const nearYouUsers = (categories?.nearYou ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         age: u.age,
-        location: u.city || u.location || 'Hyderabad',
-        distance: u.distance || '3.5 Km',
-        image: u.image ? { uri: formatApiImageUrl(u.image) } : NEAR_YOU_USERS[i % NEAR_YOU_USERS.length].image,
-      }))
-    : NEAR_YOU_USERS;
+        location: u.city || u.location,
+        distance: u.distance,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : undefined,
+      }));
 
-  const youMayLikeUsers = (categories?.youMayLike && categories.youMayLike.length > 0)
-    ? categories.youMayLike.map((u, i) => ({
+  const youMayLikeUsers = (categories?.youMayLike ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         age: u.age,
-        profession: u.profession || 'Software Engineer',
-        matchPercentage: u.matchPercentage || 85,
-        image: u.image ? { uri: formatApiImageUrl(u.image) } : YOU_MAY_LIKE_USERS[i % YOU_MAY_LIKE_USERS.length].image,
-      }))
-    : YOU_MAY_LIKE_USERS;
+        profession: u.profession,
+        matchPercentage: u.matchPercentage,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : undefined,
+      }));
 
-  const similarInterestUsers = (categories?.similarInterest && categories.similarInterest.length > 0)
-    ? categories.similarInterest.map((u, i) => ({
+  const similarInterestUsers = (categories?.similarInterest ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         age: u.age,
-        interest: u.interest || 'Music',
-        image: u.image ? { uri: formatApiImageUrl(u.image) } : SIMILAR_INTEREST_USERS[i % SIMILAR_INTEREST_USERS.length].image,
-      }))
-    : SIMILAR_INTEREST_USERS;
+        interest: u.interest,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : undefined,
+      }));
 
-  const sameReligionUsers = (categories?.sameReligion && categories.sameReligion.length > 0)
-    ? categories.sameReligion.map((u, i) => ({
+  const sameReligionUsers = (categories?.sameReligion ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         age: u.age,
-        religion: u.religion || 'Hindu',
-        image: u.image ? { uri: formatApiImageUrl(u.image) } : SAME_RELIGION_USERS[i % SAME_RELIGION_USERS.length].image,
-      }))
-    : SAME_RELIGION_USERS;
+        religion: u.religion,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : undefined,
+      }));
 
-  const recentlyActiveUsers = (categories?.recentlyActive && categories.recentlyActive.length > 0)
-    ? categories.recentlyActive.map((u, i) => ({
+  const recentlyActiveUsers = (categories?.recentlyActive ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         age: u.age,
-        timeAgo: u.timeAgo || '13 min ago',
-        image: u.image ? { uri: formatApiImageUrl(u.image) } : RECENTLY_ACTIVE_USERS[i % RECENTLY_ACTIVE_USERS.length].image,
-      }))
-    : RECENTLY_ACTIVE_USERS;
+        timeAgo: u.timeAgo,
+        image: u.image ? { uri: formatApiImageUrl(u.image) } : undefined,
+      }));
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -140,7 +119,8 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {activeUsers.map((user: ActiveUser) => (
+            {renderEmptyMessage(activeUsers)}
+            {activeUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.activeUserItem}
@@ -170,7 +150,8 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
-            {nearYouUsers.map((user: NearYouUser) => (
+            {renderEmptyMessage(nearYouUsers)}
+            {nearYouUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 style={styles.cardItem}
@@ -185,7 +166,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
                 <Text style={styles.cardNameText}>
                   {user.name}, {user.age}
                 </Text>
-                <Text style={styles.cardSubtitleText}>{user.location}</Text>
+                {user.location ? <Text style={styles.cardSubtitleText}>{user.location}</Text> : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -204,6 +185,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
+            {renderEmptyMessage(youMayLikeUsers)}
             {youMayLikeUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
@@ -220,7 +202,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
                 <Text style={styles.cardNameText}>
                   {user.name}, {user.age}
                 </Text>
-                <Text style={styles.cardSubtitleText}>{user.profession}</Text>
+                {user.profession ? <Text style={styles.cardSubtitleText}>{user.profession}</Text> : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -239,6 +221,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
+            {renderEmptyMessage(similarInterestUsers)}
             {similarInterestUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
@@ -251,7 +234,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
                 <Text style={styles.userNameText}>
                   {user.name}, {user.age}
                 </Text>
-                <Text style={styles.circleSubtitleText}>{user.interest}</Text>
+                {user.interest ? <Text style={styles.circleSubtitleText}>{user.interest}</Text> : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -270,6 +253,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
+            {renderEmptyMessage(sameReligionUsers)}
             {sameReligionUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
@@ -282,7 +266,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
                 <Text style={styles.userNameText}>
                   {user.name}, {user.age}
                 </Text>
-                <Text style={styles.circleSubtitleText}>{user.religion}</Text>
+                {user.religion ? <Text style={styles.circleSubtitleText}>{user.religion}</Text> : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -301,6 +285,7 @@ export default function PeopleScreen({ showTabBar = true, showHeaderBar = true }
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}>
+            {renderEmptyMessage(recentlyActiveUsers)}
             {recentlyActiveUsers.map((user) => (
               <TouchableOpacity
                 key={user.id}
@@ -360,6 +345,13 @@ const styles = StyleSheet.create({
   horizontalList: {
     paddingHorizontal: 16,
     paddingBottom: 6,
+  },
+  emptyListText: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 13,
+    color: '#8E8E93',
+    paddingHorizontal: 4,
+    paddingVertical: 12,
   },
   /* Active Users Section Styles */
   activeUserItem: {

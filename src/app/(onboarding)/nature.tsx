@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { updateStoredUserProfile } from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 
 interface NatureOption {
@@ -31,16 +31,7 @@ export const NATURE_OPTIONS: NatureOption[] = [
 export default function NatureScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const profile = getStoredUserProfile();
-
-  const initialSelected =
-    profile.nature && profile.nature.length > 0
-      ? profile.nature
-      : profile.vibes && profile.vibes.length > 0
-      ? profile.vibes
-      : ['Caring', 'Fun & Funny', 'Peaceful'];
-
-  const [selectedTraits, setSelectedTraits] = useState<string[]>(initialSelected);
+  const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 

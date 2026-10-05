@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
+import { updateStoredUserProfile } from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 
 const DRINKING_OPTIONS = [
@@ -27,14 +27,8 @@ const SMOKING_OPTIONS = [
 export default function LifestyleHabitsScreen() {
   const theme = useTheme();
   const isDark = theme.text === '#ffffff';
-  const profile = getStoredUserProfile();
-
-  const [selectedDrinking, setSelectedDrinking] = useState<string | null>(
-    profile.drinking || 'Socially'
-  );
-  const [selectedSmoking, setSelectedSmoking] = useState<string | null>(
-    profile.smoking || 'No'
-  );
+  const [selectedDrinking, setSelectedDrinking] = useState<string | null>(null);
+  const [selectedSmoking, setSelectedSmoking] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

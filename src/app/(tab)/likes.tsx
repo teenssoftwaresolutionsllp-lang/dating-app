@@ -11,7 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
-import { LIKED_YOU_DATA, YOU_LIKED_DATA } from '@/constants/datingData';
 import { formatApiImageUrl } from '@/services/api';
 import {
   getLikesReceived,
@@ -24,19 +23,24 @@ export default function LikesScreen() {
   const [likesSubTab, setLikesSubTab] = useState<'likedYou' | 'youLiked'>('likedYou');
   const [liveLikesReceived, setLiveLikesReceived] = useState<LikeReceivedItem[]>([]);
   const [liveSentLikes, setLiveSentLikes] = useState<SentLikeItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getLikesReceived().then((data) => {
-      if (data && data.length > 0) {
-        setLiveLikesReceived(data);
-      }
-    });
+    let isMounted = true;
+    Promise.all([getLikesReceived(), getSentLikes()])
+      .then(([received, sent]) => {
+        if (isMounted) {
+          setLiveLikesReceived(received);
+          setLiveSentLikes(sent);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
-    getSentLikes().then((data) => {
-      if (data && data.length > 0) {
-        setLiveSentLikes(data);
-      }
-    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -92,35 +96,46 @@ export default function LikesScreen() {
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.grid}>
-                {(liveLikesReceived.length > 0
-                  ? liveLikesReceived.map((item, idx) => ({
-                      id: item.swipeId || item.userId || `like-${idx}`,
-                      name: item.user?.name ? `${item.user.name}, ${item.user.age || 23}` : item.name ? `${item.name}, ${item.age || 23}` : 'Admirer',
-                      image: item.user?.primaryPhoto ? { uri: formatApiImageUrl(item.user.primaryPhoto) } : item.photo ? { uri: formatApiImageUrl(item.photo) } : LIKED_YOU_DATA[idx % LIKED_YOU_DATA.length].image,
-                      userId: item.user?.userId || item.userId,
-                    }))
-                  : LIKED_YOU_DATA
-                ).map((item) => (
+              {isLoading ? (
+                <Text style={styles.emptyText}>Loading likes...</Text>
+              ) : liveLikesReceived.length === 0 ? (
+                <Text style={styles.emptyText}>No likes yet</Text>
+              ) : (
+                <View style={styles.grid}>
+                  {liveLikesReceived.map((item, idx) => {
+                    const name = item.user?.name || item.name || 'Someone';
+                    const age = item.user?.age ?? item.age;
+                    const photo = item.user?.primaryPhoto || item.photo;
+                    return (
                   <TouchableOpacity
-                    key={item.id}
+                    key={item.swipeId || item.userId || `like-${idx}`}
                     style={styles.blurredCard}
                     activeOpacity={0.85}
                   >
-                    <Image
-                      source={item.image}
-                      style={styles.blurredCardImage}
-                      blurRadius={10}
-                      resizeMode="cover"
-                    />
+                    {photo ? (
+                      <Image
+                        source={{ uri: formatApiImageUrl(photo) }}
+                        style={styles.blurredCardImage}
+                        blurRadius={10}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.blurredCardImage, styles.imagePlaceholder]}>
+                        <Ionicons name="person-outline" size={42} color="#94A3B8" />
+                      </View>
+                    )}
                     <View style={styles.blurredCardOverlay} />
                     <View style={styles.lockIconBadge}>
                       <Ionicons name="lock-closed-outline" size={14} color="#FFFFFF" />
                     </View>
-                    <Text style={styles.cardNameText}>{item.name}</Text>
+                    <Text style={styles.cardNameText}>
+                      {name}{age !== null && age !== undefined ? `, ${age}` : ''}
+                    </Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+                    );
+                  })}
+                </View>
+              )}
             </ScrollView>
           </View>
         ) : (
@@ -133,30 +148,40 @@ export default function LikesScreen() {
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.grid}>
-                {(liveSentLikes.length > 0
-                  ? liveSentLikes.map((item, idx) => ({
-                      id: item.userId || `sent-${idx}`,
-                      name: item.name,
-                      age: item.age || 23,
-                      location: item.location || item.city || 'Lives in Hyderabad',
-                      image: item.photo ? { uri: formatApiImageUrl(item.photo) } : YOU_LIKED_DATA[idx % YOU_LIKED_DATA.length].image,
-                    }))
-                  : YOU_LIKED_DATA
-                ).map((item) => (
+              {isLoading ? (
+                <Text style={styles.emptyText}>Loading likes...</Text>
+              ) : liveSentLikes.length === 0 ? (
+                <Text style={styles.emptyText}>You haven&apos;t liked anyone yet</Text>
+              ) : (
+                <View style={styles.grid}>
+                  {liveSentLikes.map((item, idx) => (
                   <TouchableOpacity
-                    key={item.id}
+                    key={item.userId || `sent-${idx}`}
                     style={styles.card}
                     activeOpacity={0.85}
                   >
-                    <Image source={item.image} style={styles.cardImg} />
+                    {item.photo ? (
+                      <Image
+                        source={{ uri: formatApiImageUrl(item.photo) }}
+                        style={styles.cardImg}
+                      />
+                    ) : (
+                      <View style={[styles.cardImg, styles.imagePlaceholder]}>
+                        <Ionicons name="person-outline" size={42} color="#94A3B8" />
+                      </View>
+                    )}
                     <View style={styles.infoBox}>
-                      <Text style={styles.name}>{item.name}, {item.age}</Text>
-                      <Text style={styles.sub}>{item.location}</Text>
+                      <Text style={styles.name}>
+                        {item.name}{item.age !== null ? `, ${item.age}` : ''}
+                      </Text>
+                      {item.location || item.city ? (
+                        <Text style={styles.sub}>{item.location || item.city}</Text>
+                      ) : null}
                     </View>
                   </TouchableOpacity>
-                ))}
-              </View>
+                  ))}
+                </View>
+              )}
             </ScrollView>
           </View>
         )}
@@ -214,6 +239,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  emptyText: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    color: '#6B7280',
+    fontSize: 14,
+    fontFamily: 'DM_Sans_400Regular',
+    textAlign: 'center',
+  },
   blurredCard: {
     width: '48%',
     height: 160,
@@ -225,6 +258,11 @@ const styles = StyleSheet.create({
   blurredCardImage: {
     width: '100%',
     height: '100%',
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E2E8F0',
   },
   blurredCardOverlay: {
     ...StyleSheet.absoluteFill,

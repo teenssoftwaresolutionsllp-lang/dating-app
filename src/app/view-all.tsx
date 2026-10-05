@@ -8,28 +8,24 @@ import {
   Image,
   Modal,
   Dimensions,
-  ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-// import { HeaderStatusBar } from '@/components/HeaderStatusBar';
+import { formatApiImageUrl } from '@/services/api';
 import {
-  ACTIVE_USERS,
-  NEAR_YOU_USERS,
-  YOU_MAY_LIKE_USERS,
-  SIMILAR_INTEREST_USERS,
-  SAME_RELIGION_USERS,
-  RECENTLY_ACTIVE_USERS,
-} from '@/constants/datingData';
+  getPeopleCategories,
+  type CategoryUser,
+  type PeopleCategoriesResponse,
+} from '@/services/matchApi';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface SectionImageItem {
   id: string;
   name: string;
-  age: number;
-  image: ImageSourcePropType;
+  age: number | null;
+  image: string | null;
   subtitle?: string;
   badgeText?: string;
   badgeType?: 'active' | 'distance' | 'match' | 'interest';
@@ -41,82 +37,72 @@ export default function ViewAllScreen() {
   const title = params.title || 'All Images';
 
   const [selectedImage, setSelectedImage] = useState<SectionImageItem | null>(null);
+  const [items, setItems] = useState<SectionImageItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Retrieve section items based on sectionId
-  const getSectionItems = (): SectionImageItem[] => {
-    switch (sectionId) {
-      case 'active':
-        return ACTIVE_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: 'Active Now',
-          badgeType: 'active',
-        }));
-      case 'near_you':
-        return NEAR_YOU_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: user.location,
-          badgeText: user.distance,
-          badgeType: 'distance',
-        }));
-      case 'you_may_like':
-        return YOU_MAY_LIKE_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: user.profession,
-          badgeText: `${user.matchPercentage}% Match`,
-          badgeType: 'match',
-        }));
-      case 'similar_interest':
-        return SIMILAR_INTEREST_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: user.interest,
-          badgeText: user.interest,
-          badgeType: 'interest',
-        }));
-      case 'same_religion':
-        return SAME_RELIGION_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: user.religion,
-          badgeText: user.religion,
-          badgeType: 'interest',
-        }));
-      case 'recently_active':
-        return RECENTLY_ACTIVE_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: user.timeAgo,
-          badgeText: user.timeAgo,
-          badgeType: 'active',
-        }));
-      default:
-        return ACTIVE_USERS.map((user) => ({
-          id: user.id,
-          name: user.name,
-          age: user.age,
-          image: user.image,
-          subtitle: 'Active',
-          badgeType: 'active',
-        }));
-    }
-  };
+  React.useEffect(() => {
+    let isMounted = true;
+    const sectionKeys: Record<string, keyof PeopleCategoriesResponse> = {
+      active: 'active',
+      near_you: 'nearYou',
+      you_may_like: 'youMayLike',
+      similar_interest: 'similarInterest',
+      same_religion: 'sameReligion',
+      recently_active: 'recentlyActive',
+    };
 
-  const items = getSectionItems();
+    void getPeopleCategories()
+      .then((categories) => {
+        if (!isMounted) return;
+        const categoryKey = sectionKeys[sectionId] ?? 'active';
+        const users = categories?.[categoryKey] ?? [];
+        setItems(users.map((user: CategoryUser) => {
+          let subtitle: string | undefined;
+          let badgeText: string | undefined;
+          let badgeType: SectionImageItem['badgeType'];
+
+          if (categoryKey === 'active') {
+            subtitle = 'Active now';
+            badgeType = 'active';
+          } else if (categoryKey === 'nearYou') {
+            subtitle = user.city || user.location || undefined;
+            badgeText = user.distance || undefined;
+            badgeType = 'distance';
+          } else if (categoryKey === 'youMayLike') {
+            subtitle = user.profession || undefined;
+            badgeText = `${user.matchPercentage}% Match`;
+            badgeType = 'match';
+          } else if (categoryKey === 'similarInterest') {
+            subtitle = user.interest || undefined;
+            badgeText = subtitle;
+            badgeType = 'interest';
+          } else if (categoryKey === 'sameReligion') {
+            subtitle = user.religion || undefined;
+            badgeText = subtitle;
+            badgeType = 'interest';
+          } else {
+            subtitle = user.timeAgo || undefined;
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            age: user.age,
+            image: user.image,
+            subtitle,
+            badgeText,
+            badgeType,
+          };
+        }));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sectionId]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -134,7 +120,9 @@ export default function ViewAllScreen() {
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>{title}</Text>
-            <Text style={styles.headerCount}>{items.length} Images</Text>
+            <Text style={styles.headerCount}>
+              {isLoading ? 'Loading...' : `${items.length} people`}
+            </Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -144,7 +132,11 @@ export default function ViewAllScreen() {
           contentContainerStyle={styles.gridContainer}
           showsVerticalScrollIndicator={false}>
           <Text style={styles.gridDesc}>
-            Showing all photos and profiles in <Text style={styles.boldText}>{title}</Text>
+            {isLoading
+              ? 'Loading people...'
+              : items.length > 0
+                ? <>People matching your preferences in <Text style={styles.boldText}>{title}</Text></>
+                : 'No matching people right now'}
           </Text>
 
           <View style={styles.grid}>
@@ -155,7 +147,16 @@ export default function ViewAllScreen() {
                 activeOpacity={0.88}
                 onPress={() => setSelectedImage(item)}>
                 <View style={styles.imageWrapper}>
-                  <Image source={item.image} style={styles.cardImage} />
+                  {item.image ? (
+                    <Image
+                      source={{ uri: formatApiImageUrl(item.image) }}
+                      style={styles.cardImage}
+                    />
+                  ) : (
+                    <View style={[styles.cardImage, styles.imagePlaceholder]}>
+                      <Ionicons name="person-outline" size={40} color="#94A3B8" />
+                    </View>
+                  )}
 
                   {/* Render Badge based on type */}
                   {item.badgeType === 'active' && (
@@ -180,7 +181,7 @@ export default function ViewAllScreen() {
 
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>
-                    {item.name}, {item.age}
+                    {item.name}{item.age !== null ? `, ${item.age}` : ''}
                   </Text>
                   {item.subtitle && <Text style={styles.cardSubtitle}>{item.subtitle}</Text>}
                 </View>
@@ -205,10 +206,19 @@ export default function ViewAllScreen() {
               </TouchableOpacity>
 
               <View style={styles.modalContent}>
-                <Image source={selectedImage.image} style={styles.fullImage} />
+                {selectedImage.image ? (
+                  <Image
+                    source={{ uri: formatApiImageUrl(selectedImage.image) }}
+                    style={styles.fullImage}
+                  />
+                ) : (
+                  <View style={[styles.fullImage, styles.imagePlaceholder]}>
+                    <Ionicons name="person-outline" size={64} color="#94A3B8" />
+                  </View>
+                )}
                 <View style={styles.modalFooter}>
                   <Text style={styles.modalName}>
-                    {selectedImage.name}, {selectedImage.age}
+                    {selectedImage.name}{selectedImage.age !== null ? `, ${selectedImage.age}` : ''}
                   </Text>
                   {selectedImage.subtitle && (
                     <Text style={styles.modalSub}>{selectedImage.subtitle}</Text>
@@ -303,6 +313,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E2E8F0',
   },
   activePill: {
     position: 'absolute',

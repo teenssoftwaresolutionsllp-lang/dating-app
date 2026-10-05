@@ -40,7 +40,7 @@ export default function EditNatureScreen() {
       ? profile.nature
       : profile.vibes && profile.vibes.length > 0
       ? profile.vibes
-      : ['Caring', 'Fun & Funny', 'Peaceful'];
+      : [];
 
   const [selectedTraits, setSelectedTraits] = useState<string[]>(initialSelected);
   const [isSubmitting, setIsSubmitting] = useState(false);

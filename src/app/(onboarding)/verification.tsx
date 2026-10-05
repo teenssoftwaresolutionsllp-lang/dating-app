@@ -560,10 +560,21 @@ export default function VerificationScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
+          nextText={
+            isSubmitting
+              ? 'Submitting...'
+              : isVerifyingGovId || isVerifyingSelfie
+                ? 'Verifying...'
+                : 'Next'
+          }
+          disabled={isSubmitting || isVerifyingGovId || isVerifyingSelfie}
           nextButtonStyle={{
             backgroundColor: isVerificationComplete
-              ? theme.primaryButton
-              : '#BDFFF9',
+              && !isSubmitting
+              && !isVerifyingGovId
+              && !isVerifyingSelfie
+                ? theme.primaryButton
+                : '#BDFFF9',
           }}
         />
       </View>

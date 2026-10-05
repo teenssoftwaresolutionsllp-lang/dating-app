@@ -110,13 +110,13 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   religion: 'Hindu',
   relationshipStatus: 'Single',
   height: `5'10" (178 cm)`,
-  foodPreference: 'Foodie / Veg',
-  drinking: 'Socially',
-  smoking: 'No',
+  foodPreference: '',
+  drinking: '',
+  smoking: '',
   interests: ['Music', 'Movies', 'Travel', 'Concerts', 'Nature', 'Gaming'],
   lookingFor: ['Serious Relationship', 'Meaningful Connection'],
-  vibes: ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive'],
-  nature: ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive'],
+  vibes: [],
+  nature: [],
 };
 
 export const INITIAL_PARTNER_PREFERENCES: PartnerPreferences = {

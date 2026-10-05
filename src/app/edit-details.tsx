@@ -77,9 +77,9 @@ export default function EditDetailsScreen() {
   const [relationshipStatus, setRelationshipStatus] = useState(
     profile.relationshipStatus || 'Single'
   );
-  const [foodPreference, setFoodPreference] = useState(profile.foodPreference || 'Foodie / Veg');
-  const [drinking, setDrinking] = useState(profile.drinking || 'Socially');
-  const [smoking, setSmoking] = useState(profile.smoking || 'No');
+  const [foodPreference, setFoodPreference] = useState(profile.foodPreference || '');
+  const [drinking, setDrinking] = useState(profile.drinking || '');
+  const [smoking, setSmoking] = useState(profile.smoking || '');
   const [height, setHeight] = useState(profile.height || `5'10" (178 cm)`);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
