@@ -181,7 +181,7 @@ export default function SettingsScreen() {
                 <Ionicons name="trash-outline" size={24} color="#EF4444" />
               </View>
               <Text style={[styles.cardText, styles.deleteCardText]}>
-                Deactivate and Delete Account
+                Deactivate & Delete Account
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
@@ -412,6 +412,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    minWidth: 0,
+
   },
   iconContainer: {
     width: 34,
@@ -422,9 +424,11 @@ const styles = StyleSheet.create({
   },
   cardText: {
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "DM_Sans_500Medium",
-    color: "#0F172A",
+    fontWeight: '600',
+    fontFamily: 'DM_Sans_500Medium',
+    color: '#0F172A',
+    flex: 1,
+    flexShrink: 1,
   },
   deleteCardText: {
     color: "#EF4444",
