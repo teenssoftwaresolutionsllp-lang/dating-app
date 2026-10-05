@@ -1,6 +1,6 @@
-import { apiRequest } from './api';
+import { apiRequest } from "./api";
 
-export type SwipeDirection = 'like' | 'dislike' | 'superlike';
+export type SwipeDirection = "like" | "dislike" | "superlike";
 
 export interface DiscoveryCard {
   userId: string;
@@ -81,7 +81,7 @@ export interface MatchItem {
     name: string;
     age: number | null;
     heightFt?: string | null;
-    formattedHeight?: string | null;
+    location: string | null;
     city: string | null;
     profession?: string | null;
     primaryPhoto: string | null;
@@ -155,14 +155,20 @@ export interface PeopleCategoriesResponse {
 }
 
 // 1. Discovery Feed Cards
-export async function getDiscoveryFeed(page: number = 1, limit: number = 10): Promise<DiscoveryCard[]> {
+export async function getDiscoveryFeed(
+  page: number = 1,
+  limit: number = 10,
+): Promise<DiscoveryCard[]> {
   try {
-    const cards = await apiRequest<DiscoveryCard[]>(`/api/v1/matches/feed?page=${page}&limit=${limit}`, {
-      method: 'GET',
-    });
+    const cards = await apiRequest<DiscoveryCard[]>(
+      `/api/v1/matches/feed?page=${page}&limit=${limit}`,
+      {
+        method: "GET",
+      },
+    );
     return cards || [];
   } catch (error) {
-    console.warn('Failed to load discovery feed:', error);
+    console.warn("Failed to load discovery feed:", error);
     return [];
   }
 }
@@ -170,20 +176,26 @@ export async function getDiscoveryFeed(page: number = 1, limit: number = 10): Pr
 // 2. People Categories
 export async function getPeopleCategories(): Promise<PeopleCategoriesResponse | null> {
   try {
-    const categories = await apiRequest<PeopleCategoriesResponse>('/api/v1/matches/people-categories', {
-      method: 'GET',
-    });
+    const categories = await apiRequest<PeopleCategoriesResponse>(
+      "/api/v1/matches/people-categories",
+      {
+        method: "GET",
+      },
+    );
     return categories || null;
   } catch (error) {
-    console.warn('Failed to load people categories:', error);
+    console.warn("Failed to load people categories:", error);
     return null;
   }
 }
 
 // 3. Swipe (Like / Dislike / Superlike)
-export async function swipeUser(targetUserId: string, direction: SwipeDirection): Promise<SwipeResponse> {
-  return apiRequest<SwipeResponse>('/api/v1/matches/swipe', {
-    method: 'POST',
+export async function swipeUser(
+  targetUserId: string,
+  direction: SwipeDirection,
+): Promise<SwipeResponse> {
+  return apiRequest<SwipeResponse>("/api/v1/matches/swipe", {
+    method: "POST",
     body: JSON.stringify({ targetUserId, direction }),
   });
 }
@@ -191,12 +203,12 @@ export async function swipeUser(targetUserId: string, direction: SwipeDirection)
 // 4. Mutual Matches List
 export async function getMatches(): Promise<MatchItem[]> {
   try {
-    const matches = await apiRequest<MatchItem[]>('/api/v1/matches', {
-      method: 'GET',
+    const matches = await apiRequest<MatchItem[]>("/api/v1/matches", {
+      method: "GET",
     });
     return matches || [];
   } catch (error) {
-    console.warn('Failed to load matches:', error);
+    console.warn("Failed to load matches:", error);
     return [];
   }
 }
@@ -204,12 +216,15 @@ export async function getMatches(): Promise<MatchItem[]> {
 // 5. Likes Received (Who liked me)
 export async function getLikesReceived(): Promise<LikeReceivedItem[]> {
   try {
-    const likes = await apiRequest<LikeReceivedItem[]>('/api/v1/matches/likes', {
-      method: 'GET',
-    });
+    const likes = await apiRequest<LikeReceivedItem[]>(
+      "/api/v1/matches/likes",
+      {
+        method: "GET",
+      },
+    );
     return likes || [];
   } catch (error) {
-    console.warn('Failed to load received likes:', error);
+    console.warn("Failed to load received likes:", error);
     return [];
   }
 }
@@ -217,41 +232,53 @@ export async function getLikesReceived(): Promise<LikeReceivedItem[]> {
 // 6. Sent Likes (Profiles you liked)
 export async function getSentLikes(): Promise<SentLikeItem[]> {
   try {
-    const sentLikes = await apiRequest<SentLikeItem[]>('/api/v1/matches/sent-likes', {
-      method: 'GET',
-    });
+    const sentLikes = await apiRequest<SentLikeItem[]>(
+      "/api/v1/matches/sent-likes",
+      {
+        method: "GET",
+      },
+    );
     return sentLikes || [];
   } catch (error) {
-    console.warn('Failed to load sent likes:', error);
+    console.warn("Failed to load sent likes:", error);
     return [];
   }
 }
 
 // 7. Start Chat with a Match
-export async function startMatchChat(matchId: string): Promise<{ conversationId: string }> {
-  return apiRequest<{ conversationId: string }>(`/api/v1/matches/${matchId}/chat`, {
-    method: 'POST',
-  });
+export async function startMatchChat(
+  matchId: string,
+): Promise<{ conversationId: string }> {
+  return apiRequest<{ conversationId: string }>(
+    `/api/v1/matches/${matchId}/chat`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 // 8. Unmatch
 export async function unmatchUser(matchId: string): Promise<void> {
   await apiRequest(`/api/v1/matches/${matchId}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
 // 9. Block / Report Safety
 export async function blockUser(targetUserId: string): Promise<void> {
-  await apiRequest('/api/v1/matches/block', {
-    method: 'POST',
+  await apiRequest("/api/v1/matches/block", {
+    method: "POST",
     body: JSON.stringify({ targetUserId }),
   });
 }
 
-export async function reportUser(targetUserId: string, reason: string, details?: string): Promise<void> {
-  await apiRequest('/api/v1/matches/report', {
-    method: 'POST',
+export async function reportUser(
+  targetUserId: string,
+  reason: string,
+  details?: string,
+): Promise<void> {
+  await apiRequest("/api/v1/matches/report", {
+    method: "POST",
     body: JSON.stringify({ targetUserId, reason, details }),
   });
 }

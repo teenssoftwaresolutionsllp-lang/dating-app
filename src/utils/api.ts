@@ -40,7 +40,10 @@ export const getBaseUrl = (): string => {
   if (Platform.OS === "android") {
     return "http://10.0.2.2:5000";
   }
-return 'http://192.168.1.30:5000';};
+
+  // 5. Default fallback
+  return "http://192.168.1.30:5000";
+};
 
 function extractErrorMessage(errData: any, fallbackMessage: string): string {
   if (!errData) return fallbackMessage;
