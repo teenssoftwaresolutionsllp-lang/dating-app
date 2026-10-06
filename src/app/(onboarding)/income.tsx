@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
   View,
@@ -32,7 +32,7 @@ export default function IncomeScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);

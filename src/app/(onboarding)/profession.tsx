@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
   View,
@@ -50,10 +50,10 @@ export default function ProfessionScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
 
-  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const [initialHeight] = useState(() => Dimensions.get('window').height);
   const isProfessionValid = Boolean(selectedProfession || searchQuery.trim().length > 0);
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);

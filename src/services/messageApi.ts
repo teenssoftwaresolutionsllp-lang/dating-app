@@ -21,66 +21,75 @@ export interface ChatConversationItem {
   } | null;
   unreadCount: number;
   lastActivityAt: string;
+  isMatched: boolean;
+  messagesRemaining: number | null;
 }
 
 export interface SingleChatMessage {
   id: string;
   conversationId: string;
   senderId: string;
+  receiverId: string;
   content: string | null;
   messageType: 'text' | 'image' | 'audio' | 'system';
   mediaUrl?: string | null;
   createdAt: string;
   isOwn: boolean;
+  isRead: boolean;
 }
 
-// 1. Get Inbox Conversations List
+export interface ConversationHistory {
+  items: SingleChatMessage[];
+  isMatched: boolean;
+  messagesRemaining: number | null;
+}
+
 export async function getConversations(): Promise<ChatConversationItem[]> {
-  try {
-    const payload = await apiRequest<{ conversations: ChatConversationItem[] }>('/api/v1/messages', {
-      method: 'GET',
-    });
-    return payload?.conversations || [];
-  } catch (error) {
-    console.warn('Failed to load conversations:', error);
-    return [];
-  }
+  const payload = await apiRequest<{ conversations: ChatConversationItem[] }>('/api/v1/messages', {
+    method: 'GET',
+  });
+  return payload.conversations;
 }
 
-// 2. Get Messages with a Specific User
 export async function getConversation(
   partnerUserId: string,
   page: number = 1,
   limit: number = 50,
-): Promise<SingleChatMessage[]> {
-  try {
-    const messages = await apiRequest<SingleChatMessage[]>(
-      `/api/v1/messages/${partnerUserId}?page=${page}&limit=${limit}`,
-      {
-        method: 'GET',
-      },
-    );
-    return messages || [];
-  } catch (error) {
-    console.warn('Failed to load conversation history:', error);
-    return [];
-  }
+): Promise<ConversationHistory> {
+  return apiRequest<ConversationHistory>(
+    `/api/v1/messages/${partnerUserId}?page=${page}&limit=${limit}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
-// 3. Send Message
 export async function sendMessage(payload: {
   receiverId: string;
   content: string;
   messageType?: 'text' | 'image' | 'audio';
-}): Promise<SingleChatMessage> {
-  const result = await apiRequest<{ message: SingleChatMessage }>('/api/v1/messages', {
+}): Promise<{
+  message: SingleChatMessage;
+  isMatched: boolean;
+  messagesRemaining: number | null;
+}> {
+  return apiRequest<{
+    message: SingleChatMessage;
+    isMatched: boolean;
+    messagesRemaining: number | null;
+  }>('/api/v1/messages', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  return result.message;
 }
 
-// 4. Delete Message
+export async function likeConversation(partnerUserId: string): Promise<void> {
+  await apiRequest<{ isMatched: boolean }>(
+    `/api/v1/messages/${partnerUserId}/like`,
+    { method: 'POST' },
+  );
+}
+
 export async function deleteMessage(messageId: string): Promise<void> {
   await apiRequest(`/api/v1/messages/${messageId}`, {
     method: 'DELETE',

@@ -108,7 +108,6 @@ export async function uploadFormData<T>(
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
   const token = await authStorage.getToken();
-  const userId = await authStorage.getUserId();
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -116,9 +115,6 @@ export async function uploadFormData<T>(
 
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    }
-    if (userId) {
-      xhr.setRequestHeader('x-user-id', userId);
     }
     xhr.setRequestHeader('x-client-platform', 'react-native');
 
@@ -209,12 +205,6 @@ export async function apiRequest<T>(
   const token = await authStorage.getToken();
   if (token) {
     requestHeaders['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Attach dev user ID fallback if available
-  const userId = await authStorage.getUserId();
-  if (userId) {
-    requestHeaders['x-user-id'] = userId;
   }
 
   const baseUrl = getBaseUrl();

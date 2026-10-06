@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -37,9 +37,9 @@ export default function SetProfileScreen() {
 
   const isComplete = Boolean(userName.trim() && gender);
 
-  const userNameShakeAnim = useRef(new Animated.Value(0)).current;
-  const genderShakeAnim = useRef(new Animated.Value(0)).current;
-  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const [userNameShakeAnim] = useState(() => new Animated.Value(0));
+  const [genderShakeAnim] = useState(() => new Animated.Value(0));
+  const [initialHeight] = useState(() => Dimensions.get('window').height);
 
   const triggerUserNameShake = () => {
     userNameShakeAnim.setValue(0);
