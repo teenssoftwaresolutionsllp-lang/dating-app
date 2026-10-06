@@ -4,7 +4,7 @@ export type SwipeDirection = "like" | "dislike" | "superlike";
 
 export interface DiscoveryCard {
   userId: string;
-  name: string;
+  name: string | null;
   age: number | null;
   dateOfBirth?: string | null;
   gender?: string | null;
@@ -159,18 +159,12 @@ export async function getDiscoveryFeed(
   page: number = 1,
   limit: number = 10,
 ): Promise<DiscoveryCard[]> {
-  try {
-    const cards = await apiRequest<DiscoveryCard[]>(
-      `/api/v1/matches/feed?page=${page}&limit=${limit}`,
-      {
-        method: "GET",
-      },
-    );
-    return cards || [];
-  } catch (error) {
-    console.warn("Failed to load discovery feed:", error);
-    return [];
-  }
+  return apiRequest<DiscoveryCard[]>(
+    `/api/v1/matches/feed?page=${page}&limit=${limit}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 // 2. People Categories
