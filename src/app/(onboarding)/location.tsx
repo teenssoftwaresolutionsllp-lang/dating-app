@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -67,8 +67,8 @@ export default function LocationScreen() {
   );
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
-  const initialHeight = useRef(Dimensions.get("window").height).current;
-  const locationShakeAnim = useRef(new Animated.Value(0)).current;
+  const [initialHeight] = useState(() => Dimensions.get("window").height);
+  const [locationShakeAnim] = useState(() => new Animated.Value(0));
 
   const cityOptions = popularLocations.length
     ? popularLocations.map((location, index) => ({
@@ -154,14 +154,12 @@ export default function LocationScreen() {
       selectedLocationId ||
       selectedPlaceId
     ) {
-      setAutocompleteResults([]);
-      setAutocompleteLoading(false);
       return;
     }
 
     let isCurrentRequest = true;
-    setAutocompleteLoading(true);
     const timeout = setTimeout(async () => {
+      setAutocompleteLoading(true);
       try {
         const results = await autocompleteLocation(trimmed);
         if (isCurrentRequest) setAutocompleteResults(results);
@@ -272,6 +270,7 @@ export default function LocationScreen() {
                     setSelectedLocationId(null);
                     setSelectedPlaceId(null);
                     setAutocompleteResults([]);
+                    setAutocompleteLoading(false);
                     if (locationError && text.trim().length > 0) {
                       setLocationError(false);
                     }

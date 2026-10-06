@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Animated,
   Platform,
@@ -48,7 +48,7 @@ export default function InterestsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     getInterestsCatalog().then((items) => {

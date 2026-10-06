@@ -54,7 +54,7 @@ export default function VerificationScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isVerificationComplete = Boolean(govIdUploaded && selfieVerified);
-  const shakeAnim = React.useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = React.useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);

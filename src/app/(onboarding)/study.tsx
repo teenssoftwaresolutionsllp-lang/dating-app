@@ -12,7 +12,6 @@ import {
   Text,
   TextInput,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
@@ -71,15 +70,17 @@ export default function StudyScreen() {
     ],
   };
 
-  const currentQualification = qualification || 'Bachelors';
-  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Bachelors'];
+  const currentQualification = qualification;
+  const options = currentQualification
+    ? studyOptionsMap[currentQualification]
+    : undefined;
 
   const [selected, setSelected] = useState<string | null>(null);
   const [otherText, setOtherText] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [error, setError] = useState(false);
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
@@ -126,17 +127,21 @@ export default function StudyScreen() {
   const otherInputRef = useRef<TextInput>(null);
   const otherInputContainerRef = useRef<View>(null);
   const scrollYRef = useRef(0);
-  const { height: windowHeight } = useWindowDimensions();
-  const initialHeightRef = useRef(Dimensions.get('window').height);
   const keyboardHeightRef = useRef(0);
   const keyboardTopRef = useRef<number | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [initialHeight, setInitialHeight] = useState(
+    () => Dimensions.get('window').height,
+  );
 
   useEffect(() => {
-    if (keyboardHeight === 0 && windowHeight > 0) {
-      initialHeightRef.current = windowHeight;
-    }
-  }, [keyboardHeight, windowHeight]);
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      if (keyboardHeightRef.current === 0) {
+        setInitialHeight(window.height);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const isOtherSelected = selected === 'Other' || (selected ? selected.endsWith('Other') : false);
   const isFormValid = Boolean(
@@ -152,7 +157,7 @@ export default function StudyScreen() {
     otherInputContainerRef.current.measureInWindow((x, y, width, height) => {
       if (y === undefined || height === undefined || isNaN(y) || isNaN(height)) return;
 
-      const screenHeight = initialHeightRef.current || Dimensions.get('window').height;
+      const screenHeight = initialHeight || Dimensions.get('window').height;
       const keyboardTop = kt ?? (screenHeight - kh);
       const visibleBottom = kh > 0 ? keyboardTop : screenHeight - 75 - insets.bottom;
       const desiredMargin = 20;
@@ -204,6 +209,7 @@ export default function StudyScreen() {
     const hideSub = Keyboard.addListener(hideEvent, () => {
       keyboardHeightRef.current = 0;
       keyboardTopRef.current = null;
+      setInitialHeight(Dimensions.get('window').height);
       setKeyboardHeight(0);
     });
 
@@ -236,12 +242,16 @@ export default function StudyScreen() {
   };
 
   const handleNext = async () => {
+    if (!currentQualification || !options) {
+      setError(true);
+      return;
+    }
     if (!selected || (isOtherSelected && otherText.trim().length === 0)) {
       setError(true);
       triggerShake();
       return;
     }
-    const finalStudy = isOtherSelected ? otherText.trim() || 'Other' : selected;
+    const finalStudy = isOtherSelected ? otherText.trim() : selected;
     updateStoredUserProfile({
       education: `${currentQualification} - ${finalStudy}`,
     });
@@ -266,8 +276,8 @@ export default function StudyScreen() {
 
   const fixedHeightStyle = isOtherSelected
     ? {
-        height: initialHeightRef.current,
-        minHeight: initialHeightRef.current,
+        height: initialHeight,
+        minHeight: initialHeight,
       }
     : null;
 
@@ -323,14 +333,16 @@ export default function StudyScreen() {
                     },
                   ]}
                 >
-                  Please choose any one option
+                  {!currentQualification || !options
+                    ? 'Qualification data is unavailable. Please select it again.'
+                    : 'Please choose any one option'}
                 </Animated.Text>
               )}
             </View>
 
             {/* Radio list options */}
             <View style={styles.optionsList}>
-              {options.map((option) => {
+              {options ? options.map((option) => {
                 const isSelected = selected === option;
                 const isOther = option === 'Other' || option.endsWith('Other');
 
@@ -409,7 +421,22 @@ export default function StudyScreen() {
                     )}
                   </View>
                 );
-              })}
+              }) : (
+                <View>
+                  <Text style={[styles.unavailableMessage, { color: theme.textSecondary }]}>
+                    No study options are available without a valid qualification.
+                  </Text>
+                  <Pressable
+                    onPress={() => router.replace('/qualification')}
+                    style={styles.backToQualification}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.optionText, { color: theme.primaryButton }]}>
+                      Select qualification
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -483,6 +510,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#FF3B30',
     fontFamily: 'DM_Sans_500Medium',
+  },
+  unavailableMessage: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  backToQualification: {
+    alignSelf: 'flex-start',
+    marginTop: 16,
   },
   optionsList: {
     width: '100%',

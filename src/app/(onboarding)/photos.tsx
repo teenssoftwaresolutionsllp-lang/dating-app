@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
   ActivityIndicator,
@@ -36,7 +36,7 @@ export default function AddPhotosScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isPhotosComplete = Boolean(photos[0] || photos.some((p) => p !== null));
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);

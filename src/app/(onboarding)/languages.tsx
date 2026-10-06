@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Animated,
   Platform,
@@ -41,7 +41,7 @@ export default function ChooseLanguagesScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [languageError, setLanguageError] = useState(false);
 
-  const languageShakeAnim = useRef(new Animated.Value(0)).current;
+  const [languageShakeAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     getLanguagesCatalog().then((items) => {

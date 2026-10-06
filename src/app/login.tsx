@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -25,8 +25,8 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const initialHeight = useRef(Dimensions.get('window').height).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [initialHeight] = useState(() => Dimensions.get('window').height);
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);

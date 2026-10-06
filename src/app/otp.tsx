@@ -42,8 +42,8 @@ export default function OtpScreen() {
   const insets = useSafeAreaInsets();
   const isDark = theme.text.toLowerCase() === "#ffffff";
   const complete = code.every(Boolean);
-  const initialHeight = useRef(Dimensions.get("window").height).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [initialHeight] = useState(() => Dimensions.get("window").height);
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);

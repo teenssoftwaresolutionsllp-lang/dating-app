@@ -202,15 +202,9 @@ export async function swipeUser(
 
 // 4. Mutual Matches List
 export async function getMatches(): Promise<MatchItem[]> {
-  try {
-    const matches = await apiRequest<MatchItem[]>("/api/v1/matches", {
-      method: "GET",
-    });
-    return matches || [];
-  } catch (error) {
-    console.warn("Failed to load matches:", error);
-    return [];
-  }
+  return apiRequest<MatchItem[]>("/api/v1/matches", {
+    method: "GET",
+  });
 }
 
 // 5. Likes Received (Who liked me)

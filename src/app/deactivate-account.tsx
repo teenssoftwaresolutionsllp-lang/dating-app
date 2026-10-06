@@ -81,7 +81,7 @@ export default function DeactivateAccountScreen() {
             </View>
             <Text style={styles.mainHeading}>Take a Break, Anytime</Text>
             <Text style={styles.subHeading}>
-              Your profile will be hidden and won't appear in search or
+              Your profile will be hidden and won&apos;t appear in search or
               recommendations while your account is deactivated.
             </Text>
           </View>

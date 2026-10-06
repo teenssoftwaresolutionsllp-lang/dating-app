@@ -9,6 +9,7 @@ import {
   Dimensions,
   StatusBar,
   Animated,
+  Alert,
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
@@ -548,21 +549,56 @@ export default function DatingProfileScreen() {
     }
   };
 
-  // Chat (💬): open the individual chat screen for the selected person
+  // Open a direct chat; the backend enforces the two-message pre-match limit.
   const handleOpenChat = () => {
-    router.push('/(tab)/chats' as any);
+    const partnerId = currentProfile.userId || currentProfile.id;
+    const photoSource = currentProfile.images[0];
+    const partnerPhoto =
+      typeof photoSource === 'object' &&
+      photoSource !== null &&
+      'uri' in photoSource &&
+      typeof photoSource.uri === 'string'
+        ? photoSource.uri
+        : '';
+    router.push({
+      pathname: '/(tab)/chats',
+      params: {
+        partnerId,
+        partnerName: currentProfile.name,
+        partnerPhoto,
+      },
+    } as any);
   };
 
   const handleStartChatWithMatch = async () => {
-    if (matchModalData?.matchId) {
-      try {
-        await startMatchChat(matchModalData.matchId);
-      } catch (e) {
-        console.warn('Failed to start chat with match:', e);
-      }
+    if (!matchModalData?.matchId) return;
+
+    try {
+      await startMatchChat(matchModalData.matchId);
+      const partnerId = matchModalData.userId;
+      const partnerPhoto =
+        typeof matchModalData.photo === 'object' &&
+        matchModalData.photo !== null &&
+        'uri' in matchModalData.photo &&
+        typeof matchModalData.photo.uri === 'string'
+          ? matchModalData.photo.uri
+          : '';
+      setMatchModalData(null);
+      router.push({
+        pathname: '/(tab)/chats',
+        params: {
+          partnerId,
+          partnerName: matchModalData.name,
+          partnerPhoto,
+        },
+      } as any);
+    } catch (error) {
+      console.warn('Failed to start chat with match:', error);
+      Alert.alert(
+        'Unable to start chat',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
     }
-    setMatchModalData(null);
-    router.push('/(tab)/chats' as any);
   };
 
   const onCardLayout = (e: LayoutChangeEvent) => {
