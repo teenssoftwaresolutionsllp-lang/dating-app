@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { HeaderStatusBar } from "@/components/HeaderStatusBar";
 import { CustomTabBar } from "@/components/CustomTabBar";
 import { formatApiImageUrl } from "@/services/api";
@@ -29,23 +30,27 @@ export default function LikesScreen() {
   const [liveSentLikes, setLiveSentLikes] = useState<SentLikeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-    Promise.all([getLikesReceived(), getSentLikes()])
-      .then(([received, sent]) => {
-        if (isMounted) {
-          setLiveLikesReceived(received);
-          setLiveSentLikes(sent);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
+  useFocusEffect(
+    useCallback(() => {
+      let isFocused = true;
+      setIsLoading(true);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      Promise.all([getLikesReceived(), getSentLikes()])
+        .then(([received, sent]) => {
+          if (isFocused) {
+            setLiveLikesReceived(received);
+            setLiveSentLikes(sent);
+          }
+        })
+        .finally(() => {
+          if (isFocused) setIsLoading(false);
+        });
+
+      return () => {
+        isFocused = false;
+      };
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -96,7 +101,7 @@ export default function LikesScreen() {
           <View key="liked-you-page" style={{ flex: 1 }}>
             <View style={styles.sectionHeaderContainer}>
               <Text style={styles.headerSubtitle}>
-                People who liked your profile (Unlock to view)
+                People who liked your profile
               </Text>
             </View>
             <ScrollView
@@ -117,20 +122,19 @@ export default function LikesScreen() {
                     return (
                       <TouchableOpacity
                         key={item.swipeId || item.userId || `like-${idx}`}
-                        style={styles.blurredCard}
+                        style={styles.card}
                         activeOpacity={0.85}
                       >
                         {photo ? (
                           <Image
                             source={{ uri: formatApiImageUrl(photo) }}
-                            style={styles.blurredCardImage}
-                            blurRadius={10}
+                            style={styles.cardImg}
                             resizeMode="cover"
                           />
                         ) : (
                           <View
                             style={[
-                              styles.blurredCardImage,
+                              styles.cardImg,
                               styles.imagePlaceholder,
                             ]}
                           >
@@ -141,18 +145,15 @@ export default function LikesScreen() {
                             />
                           </View>
                         )}
-                        <View style={styles.blurredCardOverlay} />
-                        <View style={styles.lockIconBadge}>
-                          <Ionicons
-                            name="lock-closed-outline"
-                            size={14}
-                            color="#FFFFFF"
-                          />
+                        <View style={styles.infoBox}>
+                          <Text style={styles.name}>
+                            {name}
+                            {age !== null && age !== undefined ? `, ${age}` : ""}
+                          </Text>
+                          {item.user?.city ? (
+                            <Text style={styles.sub}>{item.user.city}</Text>
+                          ) : null}
                         </View>
-                        <Text style={styles.cardNameText}>
-                          {name}
-                          {age !== null && age !== undefined ? `, ${age}` : ""}
-                        </Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -278,47 +279,10 @@ const styles = StyleSheet.create({
     fontFamily: "DM_Sans_400Regular",
     textAlign: "center",
   },
-  blurredCard: {
-    width: "48%",
-    height: 160,
-    borderRadius: 14,
-    overflow: "hidden",
-    position: "relative",
-    backgroundColor: "#374151",
-  },
-  blurredCardImage: {
-    width: "100%",
-    height: "100%",
-  },
   imagePlaceholder: {
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#E2E8F0",
-  },
-  blurredCardOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.18)",
-  },
-  lockIconBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.25)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardNameText: {
-    position: "absolute",
-    bottom: 8,
-    left: 8,
-    right: 8,
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontFamily: "DM_Sans_700Bold",
-    fontWeight: "700",
   },
   card: {
     width: "48%",
