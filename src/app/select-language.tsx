@@ -14,11 +14,11 @@ export default function LanguageSelectionScreen() {
       <View style={styles.container}>
         <Pressable 
                 onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
+                //   if (router.canGoBack()) {
+                //     router.back();
+                //   } else {
                     router.replace('/verified-profiles' as any);
-                  }
+                  // }
                 }} 
                 style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
                 accessibilityRole="button"
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'web' ? 48 : 88,
+    paddingTop: 88,
   },
   title: {
     fontFamily: 'DM_Sans_700Bold',

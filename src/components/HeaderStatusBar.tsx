@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 interface HeaderStatusBarProps {
   title: string;
@@ -21,13 +21,13 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 30 : 30,
+    // paddingTop: 30,
     paddingBottom: 8,
   },
   titleContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    // paddingVertical: 0,
   },
   titleText: {
     fontFamily: 'DM_Sans_700Bold',

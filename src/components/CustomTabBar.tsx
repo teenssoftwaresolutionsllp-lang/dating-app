@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { router, usePathname } from 'expo-router';
+import { router, useFocusEffect, usePathname } from 'expo-router';
+import { getLikesReceived } from '@/services/matchApi';
 
 function MatchesTabIcon({ color, size = 22 }: { color: string; size?: number }) {
   return (
@@ -94,17 +95,54 @@ const TABS: TabItem[] = [
   { id: 'me', label: 'Me', route: '/(tab)/me', renderIcon: (c) => <MeTabIcon color={c} /> },
 ];
 
+function isTabActive(tabId: string, pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const path = pathname.trim().replace(/\/+$/, '');
+
+  if (tabId === 'matches') {
+    return (
+      path === '/(tab)/matches' ||
+      path === '/(tab)/home' ||
+      path === '/(tab)' ||
+      path === '/matches' ||
+      path === '/home' ||
+      path === '/' ||
+      path === ''
+    );
+  }
+
+  return (
+    path === `/(tab)/${tabId}` ||
+    path === `/${tabId}` ||
+    path.startsWith(`/(tab)/${tabId}/`) ||
+    path.startsWith(`/${tabId}/`)
+  );
+}
+
 export const CustomTabBar: React.FC = () => {
   const pathname = usePathname();
+  const [likesCount, setLikesCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isFocused = true;
+
+      getLikesReceived().then((likes) => {
+        if (isFocused) {
+          setLikesCount(likes.length);
+        }
+      });
+
+      return () => {
+        isFocused = false;
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
       {TABS.map((tab) => {
-        const isActive =
-          pathname === tab.route ||
-          (tab.id === 'people' && (pathname === '/(tab)/home' || pathname === '/(tab)')) ||
-          pathname.includes(tab.id);
-
+        const isActive = isTabActive(tab.id, pathname);
         const color = isActive ? '#0D7A74' : '#78B0A8';
 
         return (
@@ -112,13 +150,25 @@ export const CustomTabBar: React.FC = () => {
             key={tab.id}
             style={styles.tabButton}
             activeOpacity={0.7}
+            accessibilityLabel={
+              tab.id === 'likes' && likesCount > 0
+                ? `Likes, ${likesCount} ${likesCount === 1 ? 'person' : 'people'} liked your profile`
+                : tab.label
+            }
             onPress={() => {
               if (!isActive) {
-                router.push(tab.route as any);
+                router.replace(tab.route as any);
               }
             }}>
             <View style={styles.iconWrapper}>
               {tab.renderIcon(color)}
+              {tab.id === 'likes' && likesCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {likesCount > 99 ? '99+' : likesCount}
+                  </Text>
+                </View>
+              )}
             </View>
             <Text style={[styles.tabLabel, { color, fontWeight: isActive ? '700' : '500' }]}>
               {tab.label}
@@ -137,7 +187,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    paddingBottom: 24,
     paddingHorizontal: 8,
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -155,6 +205,26 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     marginBottom: 6,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -12,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   tabLabel: {
     fontSize: 11,

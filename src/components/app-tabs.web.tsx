@@ -54,9 +54,9 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 }
 
 export function CustomTabList(props: TabListProps) {
-  const children = React.Children.toArray(props.children).map((child) => {
+  const children = React.Children.toArray(props.children).map((child, index) => {
     if (typeof child === 'string' || typeof child === 'number') {
-      return <ThemedText type="smallBold">{child}</ThemedText>;
+      return <ThemedText key={`tab-label-${index}`} type="smallBold">{child}</ThemedText>;
     }
     return child;
   });

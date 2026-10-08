@@ -1,70 +1,194 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/hooks/use-theme';
-import { OnboardingHeader } from '@/components/onboarding-header';
-import { OnboardingFooter } from '@/components/onboarding-footer';
+import { router } from "expo-router";
+import React, { useState, useEffect } from "react";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/hooks/use-theme";
+import { OnboardingHeader } from "@/components/onboarding-header";
+import { OnboardingFooter } from "@/components/onboarding-footer";
+import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getLanguagesCatalog,
+  updateLanguages,
+  type CatalogItem,
+} from "@/services/profileApi";
 
+const DEFAULT_LANGUAGES = [
+  "English",
+  "Hindi",
+  "Telugu",
+  "Tamil",
+  "Kannada",
+  "Malayalam",
+  "Marathi",
+  "Bengali",
+];
 
 export default function ChooseLanguagesScreen() {
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
-  const insets = useSafeAreaInsets();
+  const isDark = theme.text === "#ffffff";
 
-  const languages = [
-    'English',
-    'Hindi',
-    'Telugu',
-    'Tamil',
-    'Kannada',
-    'Malayalam',
-    'Marathi',
-    'Bengali',
-  ];
-
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [languageError, setLanguageError] = useState(false);
+
+  const [languageShakeAnim] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    getLanguagesCatalog().then((items) => {
+      if (items && items.length > 0) {
+        setCatalog(items);
+      }
+    });
+  }, []);
+
+  const availableLanguages =
+    catalog.length > 0 ? catalog.map((c) => c.name) : DEFAULT_LANGUAGES;
+
+  const triggerLanguageShake = () => {
+    shakeAnimSequence();
+  };
+
+  const shakeAnimSequence = () => {
+    languageShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(languageShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(languageShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const toggleLanguage = (lang: string) => {
     if (selected.includes(lang)) {
-      setSelected(selected.filter((item) => item !== lang));
+      if (selected.length > 1) {
+        setSelected(selected.filter((item) => item !== lang));
+      }
     } else {
       setSelected([...selected, lang]);
+      if (languageError) {
+        setLanguageError(false);
+      }
     }
   };
 
-  const handleNext = () => {
-    router.push('/(onboarding)/qualification');
+  const handleNext = async () => {
+    if (selected.length === 0) {
+      setLanguageError(true);
+      triggerLanguageShake();
+      return;
+    }
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ languages: selected.join(", ") });
+      const languageIds = selected
+        .map(
+          (name) =>
+            catalog.find((c) => c.name.toLowerCase() === name.toLowerCase())
+              ?.id,
+        )
+        .filter((id): id is number => typeof id === "number");
+
+      if (languageIds.length > 0) {
+        await updateLanguages(languageIds).catch((e) => {
+          console.warn("Backend sync warning on languages update:", e);
+        });
+      }
+      router.push("/qualification");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/relationship' as any);
+      router.replace("/relationship");
     }
   };
 
   const activeColor = theme.primaryButton;
-  const inactiveColor = isDark ? theme.backgroundElement : '#E0F7FA';
+  const inactiveColor = isDark ? theme.backgroundElement : "#E0F7FA";
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
+      edges={["top", "bottom", "left", "right"]}
+    >
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-       <OnboardingHeader progress={0.3} />
+        <OnboardingHeader progress={0.3} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>Choose your languages</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Select the languages you speak or prefer to chat in.
-          </Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerSection}>
+            <Text style={[styles.title, { color: theme.text }]}>
+              Choose your languages
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Select the languages you speak or prefer to chat in.
+            </Text>
+
+            {languageError && (
+              <Animated.Text
+                style={[
+                  styles.errorMessage,
+                  {
+                    transform: [{ translateX: languageShakeAnim }],
+                  },
+                ]}
+              >
+                Please choose a language
+              </Animated.Text>
+            )}
+          </View>
 
           {/* Options List */}
           <View style={styles.optionsList}>
-            {languages.map((lang) => {
+            {availableLanguages.map((lang: string) => {
               const isSelected = selected.includes(lang);
               return (
                 <Pressable
@@ -74,9 +198,9 @@ export default function ChooseLanguagesScreen() {
                     styles.optionButton,
                     {
                       backgroundColor: isSelected ? activeColor : inactiveColor,
-                      shadowColor: '#000000',
+                      shadowColor: "#000000",
                     },
-                    Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                    Platform.OS === "web" && ({ cursor: "pointer" } as any),
                   ]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
@@ -85,8 +209,10 @@ export default function ChooseLanguagesScreen() {
                     style={[
                       styles.optionText,
                       {
-                        color: isSelected ? '#000000' : theme.text,
-                        fontFamily: isSelected ? 'DM_Sans_700Bold' : 'DM_Sans_500Medium',
+                        color: isSelected ? "#000000" : theme.text,
+                        fontFamily: isSelected
+                          ? "DM_Sans_700Bold"
+                          : "DM_Sans_500Medium",
                       },
                     ]}
                   >
@@ -103,7 +229,10 @@ export default function ChooseLanguagesScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selected}
+          nextButtonStyle={{
+            backgroundColor:
+              selected.length > 0 ? theme.primaryButton : "#BDFFF9",
+          }}
         />
       </View>
     </SafeAreaView>
@@ -113,57 +242,47 @@ export default function ChooseLanguagesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   responsiveContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
-    justifyContent: 'space-between',
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
+    justifyContent: "space-between",
   },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
+  },
+  headerSection: {
+    width: "100%",
+    alignItems: "center",
+    position: "relative",
   },
   title: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 24,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 10,
   },
   subtitle: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
     maxWidth: 280,
   },
   optionsList: {
-    width: '100%',
+    width: "100%",
     maxWidth: 340,
     gap: 16,
     marginTop: 36,
   },
   optionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     height: 48,
     borderRadius: 24,
     shadowOffset: { width: 0, height: 2 },
@@ -174,9 +293,18 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
   },
+  errorMessage: {
+    position: "absolute",
+    bottom: -22,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#FF3B30",
+    textAlign: "center",
+    fontFamily: "DM_Sans_500Medium",
+  },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
     paddingHorizontal: 24,
     paddingTop: 16,
@@ -185,19 +313,19 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   nextButton: {
     flex: 1,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 16,
-    color: '#000000',
+    color: "#000000",
   },
 });

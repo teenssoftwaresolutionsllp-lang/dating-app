@@ -82,25 +82,27 @@ export function RelationshipArtwork({ variant }: { variant: 'welcome' | 'otp' })
 
   const dynamicHeight = '48%';
 
+  const images = [
+    require('@/assets/images/image 2.png'),
+    require('@/assets/images/OTP.png'),
+    require('@/assets/images/login3.png'),
+  ];
+
+  useEffect(() => {
+    if (variant !== 'welcome') return;
+    const timer = setInterval(() => {
+      const nextIndex = (activeIndex + 1) % images.length;
+      scrollViewRef.current?.scrollTo({
+        x: nextIndex * slideWidth,
+        animated: true,
+      });
+      setActiveIndex(nextIndex);
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [variant, activeIndex, images.length, slideWidth]);
+
   if (variant === 'welcome') {
-    const images = [
-      require('@/assets/images/image 2.png'),
-      require('@/assets/images/OTP.png'),
-      require('@/assets/images/login3.png'),
-    ];
-
-    useEffect(() => {
-      const timer = setInterval(() => {
-        const nextIndex = (activeIndex + 1) % images.length;
-        scrollViewRef.current?.scrollTo({
-          x: nextIndex * slideWidth,
-          animated: true,
-        });
-        setActiveIndex(nextIndex);
-      }, 3000);
-
-      return () => clearInterval(timer);
-    }, [activeIndex, images.length, slideWidth]);
 
     const handleScroll = (event: any) => {
       const scrollOffset = event.nativeEvent.contentOffset.x;

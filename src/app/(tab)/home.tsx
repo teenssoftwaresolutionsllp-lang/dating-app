@@ -1,6 +1,6 @@
 import React from 'react';
-import DatingProfileScreen from '@/components/DatingProfileScreen';
+import { Redirect } from 'expo-router';
 
 export default function HomeScreen() {
-  return <DatingProfileScreen />;
+  return <Redirect href="/(tab)/matches" />;
 }

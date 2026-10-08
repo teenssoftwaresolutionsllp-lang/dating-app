@@ -1,109 +1,254 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TextInputKeyPressEventData,
   View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
-import { useTheme } from '@/hooks/use-theme';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  LegalFooter,
+  PrimaryButton,
+  RelationshipArtwork,
+} from "@/components/onboarding";
+import { useTheme } from "@/hooks/use-theme";
+import { resendOtp, verifyOtp } from "@/utils/api";
+
+const OTP_LENGTH = 4;
+const RESEND_SECONDS = 30;
 
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone?: string }>();
-  const [code, setCode] = useState(['', '', '', '']);
-  const [seconds, setSeconds] = useState(30);
+  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [seconds, setSeconds] = useState(RESEND_SECONDS);
+  const [error, setError] = useState("");
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
-  const complete = code.every(Boolean);
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
+  const isDark = theme.text.toLowerCase() === "#ffffff";
+  const complete = code.every(Boolean);
+  const [initialHeight] = useState(() => Dimensions.get("window").height);
+  const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   useEffect(() => {
-    if (seconds === 0) return;
-    const timer = setInterval(() => setSeconds((value) => value - 1), 1000);
+    if (seconds <= 0) return;
+    const timer = setInterval(
+      () => setSeconds((value) => Math.max(0, value - 1)),
+      1000,
+    );
     return () => clearInterval(timer);
   }, [seconds]);
 
-  function updateCode(value: string, index: number) {
-    const digit = value.replace(/\D/g, '').slice(-1);
+  const updateCode = (value: string, index: number) => {
+    const digits = value.replace(/\D/g, "");
+    if (error) setError("");
+
+    if (!digits) {
+      setCode((current) =>
+        current.map((digit, position) => (position === index ? "" : digit)),
+      );
+      return;
+    }
+
     const next = [...code];
-    next[index] = digit;
+    digits
+      .slice(0, OTP_LENGTH - index)
+      .split("")
+      .forEach((digit, offset) => {
+        if (index + offset < OTP_LENGTH) {
+          next[index + offset] = digit;
+        }
+      });
     setCode(next);
-    if (digit && index < 3) {
-      inputs.current[index + 1]?.focus();
-    }
-  }
 
-  function handleKeyPress(e: any, index: number) {
-    if (e.nativeEvent.key === 'Backspace') {
-      if (!code[index] && index > 0) {
-        inputs.current[index - 1]?.focus();
-      }
+    if (next.every(Boolean)) {
+      Keyboard.dismiss();
+    } else {
+      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
+      inputs.current[nextIndex]?.focus();
     }
-  }
+  };
 
-  function resend() {
-    if (seconds === 0) {
-      setCode(['', '', '', '']);
-      setSeconds(30);
-      inputs.current[0]?.focus();
+  const handleKeyPress = (
+    event: NativeSyntheticEvent<TextInputKeyPressEventData>,
+    index: number,
+  ) => {
+    if (event.nativeEvent.key !== "Backspace") return;
+    if (code[index]) {
+      setCode((current) =>
+        current.map((digit, position) => (position === index ? "" : digit)),
+      );
+    } else if (index > 0) {
+      setCode((current) =>
+        current.map((digit, position) => (position === index - 1 ? "" : digit)),
+      );
+      inputs.current[index - 1]?.focus();
     }
-  }
+  };
+
+  const resend = async () => {
+    if (seconds > 0) return;
+    setCode(Array(OTP_LENGTH).fill(""));
+    setSeconds(RESEND_SECONDS);
+    setError("");
+    requestAnimationFrame(() => inputs.current[0]?.focus());
+
+    const digits = phone ? phone.replace(/\D/g, "") : "";
+    if (!digits) {
+      setError("Phone number is missing");
+      triggerShake();
+      return;
+    }
+
+    try {
+      await resendOtp(digits, "+91");
+    } catch (err: any) {
+      setError(err?.message || "Failed to resend OTP. Please try again.");
+      triggerShake();
+    }
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/login");
+  };
+
+  const handleVerify = async () => {
+    if (isVerifying) return;
+    if (!complete) {
+      setError("Invalid OTP");
+      triggerShake();
+      return;
+    }
+    setError("");
+    setIsVerifying(true);
+
+    const digits = phone ? phone.replace(/\D/g, "") : "";
+    const enteredOtp = code.join("");
+
+    try {
+      const response = await verifyOtp(digits, enteredOtp, "+91");
+      router.replace(
+        response.data.isNewUser
+          ? "/(onboarding)/set-profile"
+          : "/(tab)/matches",
+      );
+    } catch (err: any) {
+      setError(err?.message || "Invalid OTP");
+      triggerShake();
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable 
-        onPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/login');
-          }
-        }} 
-        style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
+      <Pressable
+        onPress={handleBack}
         accessibilityRole="button"
+        accessibilityLabel="Go back"
+        hitSlop={8}
+        style={[
+          styles.backButton,
+          { top: Math.max(insets.top, 16) + 4, left: 16 },
+        ]}
       >
-        <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
+        <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
       </Pressable>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={false}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.responsiveWrapper}>
-            <RelationshipArtwork variant="otp" />
+        <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
+          <RelationshipArtwork variant="otp" />
 
-            <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
-              <View style={styles.content}>
+          <SafeAreaView
+            style={styles.contentSafeArea}
+            edges={["bottom", "left", "right"]}
+          >
+            <View style={styles.content}>
+              <View style={styles.formTopSection}>
                 <View style={styles.headingRow}>
-                  <Text style={[styles.heading, { color: theme.text }]}>Enter OTP to Verify</Text>
+                  <Text style={[styles.heading, { color: theme.text }]}>
+                    Enter OTP to Verify
+                  </Text>
                   <Pressable
                     onPress={resend}
                     disabled={seconds > 0}
-                    style={Platform.OS === 'web' ? ({ cursor: seconds === 0 ? 'pointer' : 'default' } as any) : {}}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resend OTP"
+                    style={seconds === 0 ? styles.webPointer : undefined}
                   >
                     <Text
                       style={[
                         styles.resend,
-                        { color: isDark ? '#538DFF' : '#1769FF' },
+                        { color: isDark ? "#538DFF" : "#1769FF" },
                         seconds > 0 && styles.disabled,
                       ]}
                     >
-                      Resend in 00:{String(seconds).padStart(2, '0')}
+                      {seconds > 0
+                        ? `Resend in 00:${String(seconds).padStart(2, "0")}`
+                        : "Resend OTP"}
                     </Text>
                   </Pressable>
                 </View>
@@ -117,87 +262,122 @@ export default function OtpScreen() {
                       }}
                       value={digit}
                       onChangeText={(value) => updateCode(value, index)}
-                      onKeyPress={(e) => handleKeyPress(e, index)}
+                      onKeyPress={(event) => handleKeyPress(event, index)}
+                      onFocus={() => setFocusedIndex(index)}
+                      onBlur={() => setFocusedIndex(null)}
+                      selectionColor="#00E4E8"
                       keyboardType="number-pad"
-                      maxLength={1}
+                      inputMode="numeric"
+                      textContentType="oneTimeCode"
+                      autoComplete="sms-otp"
+                      maxLength={index === 0 ? OTP_LENGTH : 1}
+                      selectTextOnFocus
+                      autoCorrect={false}
                       style={[
                         styles.otpInput,
                         {
                           color: theme.text,
-                          borderColor: theme.border,
-                          backgroundColor: isDark ? theme.backgroundElement : '#ffffff',
+                          borderColor: error
+                            ? "#FF3B30"
+                            : focusedIndex === index
+                              ? "#00E4E8"
+                              : theme.border,
+                          backgroundColor: isDark
+                            ? theme.backgroundElement
+                            : "#FFFFFF",
                         },
-                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+                        Platform.OS === "web" &&
+                          ({ outlineStyle: "none" } as any),
                       ]}
                       textAlign="center"
+                      accessibilityLabel={`OTP digit ${index + 1}`}
                     />
                   ))}
                 </View>
 
-                <View style={styles.sentRow}>
-                  <Text style={[styles.sent, { color: theme.textSecondary }]}>
-                    We have sent OTP to {phone || '00000 00000'}
-                  </Text>
-                  <Pressable
-                    onPress={() => router.back()}
-                    style={[styles.editButton, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
-                  >
-                    <Ionicons name="pencil" size={14} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
+                <View style={styles.sentContainer}>
+                  <View style={styles.sentRow}>
+                    <Text style={[styles.sent, { color: theme.textSecondary }]}>
+                      We have sent OTP to {phone || "00000 00000"}
+                    </Text>
+                    <Pressable
+                      onPress={handleBack}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit phone number"
+                      hitSlop={8}
+                      style={[
+                        styles.editButton,
+                        Platform.OS === "web" && ({ cursor: "pointer" } as any),
+                      ]}
+                    >
+                      <Ionicons
+                        name="pencil"
+                        size={14}
+                        color={theme.textSecondary}
+                      />
+                    </Pressable>
+                  </View>
 
+                  {!!error && (
+                    <Animated.View
+                      style={[
+                        styles.errorWrapper,
+                        { transform: [{ translateX: shakeAnim }] },
+                      ]}
+                    >
+                      <Text style={styles.errorText}>{error}</Text>
+                    </Animated.View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.bottomButtonSection}>
                 <PrimaryButton
-                  disabled={!complete}
-                  onPress={() => router.replace('/(onboarding)/set-profile')}
-                  style={[styles.verifyButton, { opacity: complete ? 1 : 0.5 }]}
+                  onPress={handleVerify}
+                  style={[
+                    styles.verifyButton,
+                    {
+                      backgroundColor: complete
+                        ? theme.primaryButton
+                        : "#BDFFF9",
+                    },
+                  ]}
                 >
                   Verify
                 </PrimaryButton>
-
                 <LegalFooter />
               </View>
-            </SafeAreaView>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            </View>
+          </SafeAreaView>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    width: '100%',
-  },
-  dismissArea: {
-    flex: 1,
-    width: '100%',
-  },
-  keyboardContainer: {
-    flex: 1,
-    width: '100%',
-  },
+  root: { flex: 1, width: "100%" },
   scrollContent: {
     flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    alignItems: "center",
+    justifyContent: "flex-start",
   },
   responsiveWrapper: {
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     zIndex: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...(Platform.OS === "web" ? ({ cursor: "pointer" } as any) : {}),
   },
   contentSafeArea: {
     flex: 1,
@@ -205,57 +385,83 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 16,
+    justifyContent: "space-between",
+  },
+  formTopSection: {
+    width: "100%",
   },
   headingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   heading: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 14,
   },
   resend: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 12,
   },
   disabled: {
     opacity: 0.65,
   },
   otpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 26,
   },
+  webPointer:
+    Platform.OS === "web" ? ({ cursor: "pointer" } as any) : undefined,
   otpInput: {
-    fontFamily: 'DM_Sans_500Medium',
-    fontSize: 20,
     width: 58,
     height: 58,
     borderRadius: 14,
     borderWidth: 1,
+    fontFamily: "DM_Sans_500Medium",
+    fontSize: 20,
+    textAlign: "center",
+    padding: 0,
+  },
+  sentContainer: {
+    width: "100%",
+    marginTop: 16,
+    position: "relative",
   },
   sentRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 6,
-    marginTop: 16,
   },
   sent: {
-    fontFamily: 'DM_Sans_400Regular',
+    flex: 1,
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 12,
   },
   editButton: {
     padding: 4,
     marginLeft: 2,
   },
+  errorWrapper: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+  },
+  errorText: {
+    fontFamily: "DM_Sans_400Regular",
+    fontSize: 12,
+    color: "#FF3B30",
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  bottomButtonSection: {
+    width: "100%",
+    paddingBottom: 8,
+  },
   verifyButton: {
-    marginTop: 120,
-    marginBottom: 20,
+    marginBottom: 16,
   },
 });
-
-
-

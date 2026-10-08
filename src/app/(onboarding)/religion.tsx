@@ -1,13 +1,13 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import React, { useState } from 'react';
+import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-
-
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
 
 export default function ReligionScreen() {
   const theme = useTheme();
@@ -31,33 +31,95 @@ export default function ReligionScreen() {
   ];
 
   const [selectedReligion, setSelectedReligion] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleSelect = (religion: string) => {
     setSelectedReligion(religion);
+    if (error) {
+      setError(false);
+    }
     setModalVisible(false);
   };
 
-  const handleNext = () => {
-    router.push({
-      pathname: '/(onboarding)/looking-for',
-      params: { religion: selectedReligion || 'Not specified' },
-    });
+  const handleNext = async () => {
+    if (!selectedReligion) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      updateStoredUserProfile({ religion: selectedReligion });
+      await updateCurrentProfile({ religion: selectedReligion }).catch((e) => {
+        console.warn('Backend sync warning on religion update:', e);
+      });
+      router.push({
+        pathname: '/(onboarding)/looking-for',
+        params: { religion: selectedReligion },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-    const handleBack = () => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/interests' as any);
+      router.replace('/(onboarding)/nature' as any);
     }
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.responsiveContainer}>
-        {/* Progress Bar */}
-        <OnboardingHeader progress={0.75} />
+        <OnboardingHeader progress={0.84} />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
@@ -77,7 +139,7 @@ export default function ReligionScreen() {
             style={[
               styles.selectBox,
               {
-                borderColor: selectedReligion ? theme.primaryButton : isDark ? '#3E4044' : '#B9B9B9',
+                borderColor: selectedReligion ? theme.primaryButton : error ? '#FF3B30' : isDark ? '#3E4044' : '#B9B9B9',
                 backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
               },
               Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
@@ -101,6 +163,19 @@ export default function ReligionScreen() {
               color={selectedReligion ? theme.primaryButton : theme.textSecondary}
             />
           </Pressable>
+
+          {error && (
+            <Animated.Text
+              style={[
+                styles.errorMessage,
+                {
+                  transform: [{ translateX: shakeAnim }],
+                },
+              ]}
+            >
+              Please choose your Religion / Community
+            </Animated.Text>
+          )}
         </ScrollView>
 
         {/* Footer Navigation */}
@@ -108,7 +183,11 @@ export default function ReligionScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedReligion}
+          nextButtonStyle={{
+            backgroundColor: selectedReligion
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
 
@@ -195,21 +274,6 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     justifyContent: 'space-between',
   },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 24,
@@ -249,32 +313,6 @@ const styles = StyleSheet.create({
   selectBoxText: {
     fontSize: 15,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
@@ -283,7 +321,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 20,
@@ -316,5 +354,13 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 15,
+  },
+  errorMessage: {
+    marginTop: 8,
+    marginLeft: 16,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

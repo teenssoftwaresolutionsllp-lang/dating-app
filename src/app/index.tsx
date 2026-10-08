@@ -1,14 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { isUserLoggedIn } from '@/utils/authPersistence';
 
 export default function WelcomeScreen() {
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const loggedIn = await isUserLoggedIn();
+        if (loggedIn && active) {
+          router.replace('/(tab)/matches');
+          return;
+        }
+      } catch {
+        // Ignore errors
+      }
+      if (active) {
+        setCheckingAuth(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleGetStart = () => {
     router.push('/verified-profiles' as any);
   };
+
+  if (checkingAuth) {
+    return (
+      <View style={styles.root}>
+        <StatusBar style="dark" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -67,15 +100,15 @@ const styles = StyleSheet.create({
   responsiveContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 480,
     position: 'relative',
     backgroundColor: '#ffffff',
     overflow: 'hidden',
   },
   backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
-    height: '100%',
+    height: '100%'
   },
   overlayContainer: {
     flex: 1,
@@ -83,7 +116,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   headerSection: {
-    paddingTop: Platform.OS === 'web' ? 44 : 20,
+    paddingTop: 20,
     paddingHorizontal: 4,
     transform: [{ translateY: 170 }],
   },
@@ -112,7 +145,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomSection: {
-    paddingBottom: Platform.OS === 'web' ? 28 : 16,
+    paddingBottom: 16,
     width: '100%',
     alignItems: 'center',
     bottom:30,

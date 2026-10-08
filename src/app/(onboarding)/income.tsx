@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   TouchableOpacity,
@@ -11,6 +12,9 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
+import { getStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
+import { useTheme } from '@/hooks/use-theme';
 
 const INCOME_OPTIONS = [
   'Below ₹2 Lakh',
@@ -23,18 +27,88 @@ const INCOME_OPTIONS = [
 
 export default function IncomeScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [selectedIncome, setSelectedIncome] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleNext = () => {
-    if (!selectedIncome) return;
-    router.push('/(onboarding)/verification' as any);
+  const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleNext = async () => {
+    if (!selectedIncome) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const profile = getStoredUserProfile();
+      const eduParts = (profile.education || 'Bachelors').split('-');
+      const eduLevel = eduParts[0]?.trim() || 'Bachelors';
+      const qual = eduParts[1]?.trim() || eduLevel;
+
+      await updateEducation({
+        educationLevel: eduLevel,
+        qualification: qual,
+        profession: profile.profession || 'Professional',
+        incomeRange: selectedIncome,
+      }).catch((e) => {
+        console.warn('Backend sync warning on education update:', e);
+      });
+
+      router.push('/(onboarding)/verification' as any);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/company' as any);
+      router.replace('/company');
     }
   };
 
@@ -56,6 +130,19 @@ export default function IncomeScreen() {
           {/* Question Heading */}
           <View style={styles.sectionHeaderContainer}>
             <Text style={styles.sectionTitle}>What is your annual income?</Text>
+
+            {error && (
+              <Animated.Text
+                style={[
+                  styles.errorMessage,
+                  {
+                    transform: [{ translateX: shakeAnim }],
+                  },
+                ]}
+              >
+                Select your income
+              </Animated.Text>
+            )}
           </View>
 
           {/* Radio Options List */}
@@ -66,7 +153,12 @@ export default function IncomeScreen() {
                 <TouchableOpacity
                   key={option}
                   style={styles.radioOptionRow}
-                  onPress={() => setSelectedIncome(option)}
+                  onPress={() => {
+                    setSelectedIncome(option);
+                    if (error) {
+                      setError(false);
+                    }
+                  }}
                   activeOpacity={0.7}
                 >
                   <View
@@ -89,7 +181,11 @@ export default function IncomeScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selectedIncome}
+          nextButtonStyle={{
+            backgroundColor: selectedIncome
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -105,7 +201,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 480,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -128,6 +224,7 @@ const styles = StyleSheet.create({
   },
   sectionHeaderContainer: {
     width: '100%',
+    position: 'relative',
     marginBottom: 20,
   },
   sectionTitle: {
@@ -168,5 +265,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#374151',
     marginLeft: 14,
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
   },
 });

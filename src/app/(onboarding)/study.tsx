@@ -1,12 +1,24 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateEducation } from '@/services/profileApi';
 
 export default function StudyScreen() {
   const { qualification } = useLocalSearchParams<{ qualification?: string }>();
@@ -49,99 +61,396 @@ export default function StudyScreen() {
       'PhD - Science',
       'PhD - Arts / Humanities',
       'PhD - Management / Commerce',
-      'PhD - Other',
+      'Other',
     ],
     'Others': [
-      'Vocational',
-      'Certification',
+      'ITI / Vocational',
+      'Certification / Professional Course',
       'Other',
     ],
   };
 
-  const currentQualification = qualification || 'Bachelors';
-  const options = studyOptionsMap[currentQualification] || studyOptionsMap['Bachelors'];
+  const currentQualification = qualification;
+  const options = currentQualification
+    ? studyOptionsMap[currentQualification]
+    : undefined;
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [otherText, setOtherText] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleNext = () => {
-    if (selected) {
-      router.push({
-        pathname: '/(onboarding)/profession',
-        params: { qualification: currentQualification, study: selected },
+  const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const otherInputRef = useRef<TextInput>(null);
+  const otherInputContainerRef = useRef<View>(null);
+  const scrollYRef = useRef(0);
+  const keyboardHeightRef = useRef(0);
+  const keyboardTopRef = useRef<number | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [initialHeight, setInitialHeight] = useState(
+    () => Dimensions.get('window').height,
+  );
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      if (keyboardHeightRef.current === 0) {
+        setInitialHeight(window.height);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const isOtherSelected = selected === 'Other' || (selected ? selected.endsWith('Other') : false);
+  const isFormValid = Boolean(
+    selected && (!isOtherSelected || otherText.trim().length > 0)
+  );
+
+  const scrollInputIntoView = (currentKeyboardHeight?: number, currentKeyboardTop?: number) => {
+    const kh = currentKeyboardHeight ?? keyboardHeightRef.current;
+    const kt = currentKeyboardTop ?? keyboardTopRef.current;
+
+    if (!otherInputContainerRef.current || !scrollViewRef.current) return;
+
+    otherInputContainerRef.current.measureInWindow((x, y, width, height) => {
+      if (y === undefined || height === undefined || isNaN(y) || isNaN(height)) return;
+
+      const screenHeight = initialHeight || Dimensions.get('window').height;
+      const keyboardTop = kt ?? (screenHeight - kh);
+      const visibleBottom = kh > 0 ? keyboardTop : screenHeight - 75 - insets.bottom;
+      const desiredMargin = 20;
+      const inputBottom = y + height;
+      const deficit = inputBottom - (visibleBottom - desiredMargin);
+
+      if (deficit > 0) {
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, scrollYRef.current + deficit),
+          animated: true,
+        });
+      }
+    });
+  };
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e.endCoordinates.height;
+      const screenY = e.endCoordinates.screenY;
+      keyboardHeightRef.current = height;
+      keyboardTopRef.current = screenY;
+      setKeyboardHeight(height);
+
+      if (selected === 'Other' || selected?.endsWith('Other')) {
+        requestAnimationFrame(() => {
+          scrollInputIntoView(height, screenY);
+        });
+        setTimeout(() => {
+          scrollInputIntoView(height, screenY);
+        }, 100);
+      }
+    });
+
+    const didShowSub = Platform.OS === 'ios'
+      ? Keyboard.addListener('keyboardDidShow', (e) => {
+          const height = e.endCoordinates.height;
+          const screenY = e.endCoordinates.screenY;
+          keyboardHeightRef.current = height;
+          keyboardTopRef.current = screenY;
+          if (selected === 'Other' || selected?.endsWith('Other')) {
+            scrollInputIntoView(height, screenY);
+          }
+        })
+      : null;
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      keyboardHeightRef.current = 0;
+      keyboardTopRef.current = null;
+      setInitialHeight(Dimensions.get('window').height);
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      didShowSub?.remove();
+      hideSub.remove();
+    };
+  }, [selected]);
+
+  const handleOptionPress = (option: string) => {
+    setSelected(option);
+    if (error) {
+      setError(false);
+    }
+    const isOther = option === 'Other' || option.endsWith('Other');
+    if (isOther) {
+      requestAnimationFrame(() => {
+        otherInputRef.current?.focus();
+        scrollInputIntoView();
       });
+      setTimeout(() => {
+        otherInputRef.current?.focus();
+        scrollInputIntoView();
+      }, 50);
+    } else {
+      setOtherText('');
+      Keyboard.dismiss();
     }
   };
 
-    const handleBack = () => {
+  const handleNext = async () => {
+    if (!currentQualification || !options) {
+      setError(true);
+      return;
+    }
+    if (!selected || (isOtherSelected && otherText.trim().length === 0)) {
+      setError(true);
+      triggerShake();
+      return;
+    }
+    const finalStudy = isOtherSelected ? otherText.trim() : selected;
+    updateStoredUserProfile({
+      education: `${currentQualification} - ${finalStudy}`,
+    });
+    await updateEducation({
+      educationLevel: currentQualification,
+      qualification: finalStudy,
+    }).catch((e) => {
+      console.warn('Backend sync warning on study update:', e);
+    });
+    router.push({
+      pathname: '/profession',
+      params: { qualification: currentQualification, study: finalStudy },
+    });
+  };
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(onboarding)/qualification' as any);
+      router.replace('/qualification');
     }
   };
 
+  const fixedHeightStyle = isOtherSelected
+    ? {
+        height: initialHeight,
+        minHeight: initialHeight,
+      }
+    : null;
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.responsiveContainer}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: theme.background },
+        fixedHeightStyle,
+      ]}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
+      <View style={[styles.responsiveContainer, fixedHeightStyle]}>
         {/* Progress Bar */}
-     <OnboardingHeader progress={0.4} />
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Add your education and work details to complete your profile.
-          </Text>
+        <OnboardingHeader progress={0.4} />
 
-          {/* Section Title */}
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            What did you study?
-          </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            ref={scrollViewRef}
+            onScroll={(e) => {
+              scrollYRef.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            contentContainerStyle={[
+              styles.scrollContent,
+              isOtherSelected && keyboardHeight > 0 && { paddingBottom: keyboardHeight + 20 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Add your education and work details to complete your profile.
+            </Text>
 
-          {/* Radio list options */}
-          <View style={styles.optionsList}>
-            {options.map((option) => {
-              const isSelected = selected === option;
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() => setSelected(option)}
-                  style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: isSelected }}
+            {/* Section Title */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                What did you study?
+              </Text>
+
+              {error && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
                 >
-                  {/* Radio Circle */}
-                  <View
-                    style={[
-                      styles.radioCircle,
-                      { borderColor: isSelected ? theme.primaryButton : theme.border },
-                    ]}
-                  >
-                    {isSelected && (
+                  {!currentQualification || !options
+                    ? 'Qualification data is unavailable. Please select it again.'
+                    : 'Please choose any one option'}
+                </Animated.Text>
+              )}
+            </View>
+
+            {/* Radio list options */}
+            <View style={styles.optionsList}>
+              {options ? options.map((option) => {
+                const isSelected = selected === option;
+                const isOther = option === 'Other' || option.endsWith('Other');
+
+                return (
+                  <View key={option} style={styles.optionWrapper}>
+                    <Pressable
+                      onPress={() => handleOptionPress(option)}
+                      style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected }}
+                    >
+                      {/* Radio Circle */}
                       <View
                         style={[
-                          styles.radioInnerCircle,
-                          { backgroundColor: theme.primaryButton },
+                          styles.radioCircle,
+                          { borderColor: isSelected ? theme.primaryButton : theme.border },
                         ]}
-                      />
+                      >
+                        {isSelected && (
+                          <View
+                            style={[
+                              styles.radioInnerCircle,
+                              { backgroundColor: theme.primaryButton },
+                            ]}
+                          />
+                        )}
+                      </View>
+
+                      {/* Option Text */}
+                      <Text style={[styles.optionText, { color: theme.text }]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+
+                    {/* Text input box below Other option when selected */}
+                    {isSelected && isOther && (
+                      <View
+                        ref={otherInputContainerRef}
+                        onLayout={() => {
+                          requestAnimationFrame(() => {
+                            otherInputRef.current?.focus();
+                            scrollInputIntoView();
+                          });
+                        }}
+                        style={[
+                          styles.otherInputContainer,
+                          {
+                            backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
+                            borderColor: isInputFocused ? theme.primaryButton : (isDark ? '#374151' : '#D1D5DB'),
+                          },
+                        ]}
+                      >
+                        <TextInput
+                          ref={otherInputRef}
+                          style={[
+                            styles.otherTextInput,
+                            { color: theme.text },
+                          ]}
+                          value={otherText}
+                          onChangeText={setOtherText}
+                          onFocus={() => {
+                            setIsInputFocused(true);
+                            setTimeout(() => {
+                              scrollInputIntoView();
+                            }, 100);
+                          }}
+                          onBlur={() => setIsInputFocused(false)}
+                          placeholder="Enter your field of study"
+                          placeholderTextColor={theme.textSecondary || '#9CA3AF'}
+                          selectionColor={theme.primaryButton}
+                          returnKeyType="done"
+                          onSubmitEditing={isFormValid ? handleNext : undefined}
+                          {...({ outlineStyle: 'none' } as any)}
+                        />
+                      </View>
                     )}
                   </View>
-
-                  {/* Option Text */}
-                  <Text style={[styles.optionText, { color: theme.text }]}>
-                    {option}
+                );
+              }) : (
+                <View>
+                  <Text style={[styles.unavailableMessage, { color: theme.textSecondary }]}>
+                    No study options are available without a valid qualification.
                   </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
+                  <Pressable
+                    onPress={() => router.replace('/qualification')}
+                    style={styles.backToQualification}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.optionText, { color: theme.primaryButton }]}>
+                      Select qualification
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         {/* Footer Navigation */}
         <OnboardingFooter
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          disabled={!selected}
+          nextButtonStyle={{
+            backgroundColor: isFormValid
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
         />
       </View>
     </SafeAreaView>
@@ -153,30 +462,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  keyboardView: {
+    flex: 1,
+    width: '100%',
+  },
   responsiveContainer: {
     flex: 1,
     width: '100%',
     maxWidth: 480,
     justifyContent: 'space-between',
   },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 20,
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'DM_Sans_700Bold',
@@ -193,15 +492,40 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     maxWidth: 290,
   },
+  sectionHeader: {
+    width: '100%',
+    position: 'relative',
+    marginTop: 34,
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 16,
-    marginTop: 34,
-    marginBottom: 24,
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    fontFamily: 'DM_Sans_500Medium',
+  },
+  unavailableMessage: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  backToQualification: {
+    alignSelf: 'flex-start',
+    marginTop: 16,
   },
   optionsList: {
     width: '100%',
     gap: 22,
+  },
+  optionWrapper: {
+    width: '100%',
   },
   radioContainer: {
     flexDirection: 'row',
@@ -225,30 +549,20 @@ const styles = StyleSheet.create({
     fontFamily: 'DM_Sans_500Medium',
     fontSize: 15,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  backButton: {
-    width: 48,
+  otherInputContainer: {
+    marginTop: 12,
+    marginLeft: 36,
     height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
     justifyContent: 'center',
   },
-  nextButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontFamily: 'DM_Sans_700Bold',
-    fontSize: 16,
-    color: '#000000',
+  otherTextInput: {
+    fontSize: 15,
+    fontFamily: 'DM_Sans_400Regular',
+    paddingVertical: 0,
+    height: '100%',
+    width: '100%',
   },
 });

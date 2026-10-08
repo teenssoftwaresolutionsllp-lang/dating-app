@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,40 +7,73 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView,
   StatusBar,
   Animated,
+  Alert,
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
-  Platform,
-  TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
-import { router } from 'expo-router';
-import PeopleScreen from '../app/(tab)/people';
-import ChatScreen from '../app/(tab)/chats';
-import MeScreen from '../app/(tab)/me';
+import { CustomTabBar } from './CustomTabBar';
+import { formatApiImageUrl } from '@/services/api';
+import {
+  getDiscoveryFeed,
+  swipeUser,
+  blockUser,
+  reportUser,
+  startMatchChat,
+  type DiscoveryCard,
+} from '@/services/matchApi';
 
-// Rosette Ribbon Badge Component (Bottom Right of Photo Card as shown in Image 2)
-export function RosetteBadge({ percentage = 80 }: { percentage?: number }) {
+// Rosette Ribbon Badge Component (Bottom Right of Photo Card as shown in Figma Image 1)
+export function RosetteBadge({ percentage = 100 }: { percentage?: number }) {
+  let ribbonColor = '#10B981';
+  let strokeColor = '#059669';
+  let textColor = '#047857';
+  let innerBg = '#D1FAE5';
+
+  if (percentage >= 100) {
+    ribbonColor = '#10B981';
+    strokeColor = '#059669';
+    textColor = '#047857';
+    innerBg = '#D1FAE5';
+  } else if (percentage >= 75) {
+    ribbonColor = '#00BCD4';
+    strokeColor = '#00838F';
+    textColor = '#0077B6';
+    innerBg = '#E0F7FA';
+  } else if (percentage >= 50) {
+    ribbonColor = '#F59E0B';
+    strokeColor = '#D97706';
+    textColor = '#B45309';
+    innerBg = '#FEF3C7';
+  } else {
+    ribbonColor = '#EF4444';
+    strokeColor = '#DC2626';
+    textColor = '#B91C1C';
+    innerBg = '#FEE2E2';
+  }
+
   return (
     <View style={badgeStyles.rosetteContainer}>
       <Svg width={46} height={56} viewBox="0 0 44 54" fill="none">
         {/* Left Ribbon Tail */}
         <Path
           d="M13 34L9 50L16 45L21 50L19 34"
-          fill="#00BCD4"
-          stroke="#00838F"
+          fill={ribbonColor}
+          stroke={strokeColor}
           strokeWidth={1.2}
           strokeLinejoin="round"
         />
         {/* Right Ribbon Tail */}
         <Path
           d="M25 34L23 50L28 45L35 50L31 34"
-          fill="#00BCD4"
-          stroke="#00838F"
+          fill={ribbonColor}
+          stroke={strokeColor}
           strokeWidth={1.2}
           strokeLinejoin="round"
         />
@@ -48,18 +81,18 @@ export function RosetteBadge({ percentage = 80 }: { percentage?: number }) {
         <Path
           d="M22 3C23.3 3 24.3 1.8 25.6 2.2C26.9 2.6 27.3 3.9 28.6 4.6C29.9 5.2 31.2 4.8 32.3 5.8C33.4 6.8 33 8.1 33.6 9.4C34.3 10.7 35.6 11.1 36 12.4C36.4 13.7 35.1 14.6 35.1 15.9C35.1 17.2 36.4 18.1 36 19.4C35.6 20.7 34.3 21.1 33.6 22.4C33 23.7 33.4 25 32.3 26C31.2 27 29.9 26.6 28.6 27.2C27.3 27.9 26.9 29.2 25.6 29.6C24.3 30 23.3 28.8 22 28.8C20.7 28.8 19.7 30 18.4 29.6C17.1 29.2 16.7 27.9 15.4 27.2C14.1 26.6 12.8 27 11.7 26C10.6 25 11 23.7 10.4 22.4C9.7 21.1 8.4 20.7 8 19.4C7.6 18.1 8.9 17.2 8.9 15.9C8.9 14.6 7.6 13.7 8 12.4C8.4 11.1 9.7 10.7 10.4 9.4C11 8.1 10.6 6.8 11.7 5.8C12.8 4.8 14.1 5.2 15.4 4.6C16.7 3.9 17.1 2.6 18.4 2.2C19.7 1.8 20.7 3 22 3Z"
           fill="rgba(255, 255, 255, 0.95)"
-          stroke="#00BCD4"
+          stroke={ribbonColor}
           strokeWidth={1.8}
         />
         {/* Inner Circle Accent */}
-        <Circle cx="22" cy="16" r="10" stroke="#00BCD4" strokeWidth={1.2} fill="#E0F7FA" />
+        <Circle cx="22" cy="16" r="10" stroke={strokeColor} strokeWidth={1.2} fill={innerBg} />
         {/* Score Text */}
         <SvgText
           x="22"
           y="19"
           fontSize="9"
           fontWeight="bold"
-          fill="#0077B6"
+          fill={textColor}
           textAnchor="middle"
         >
           {`${percentage}%`}
@@ -167,163 +200,107 @@ function MeTabIcon({ color, size = 22 }: { color: string; size?: number }) {
   );
 }
 
-// User provided asset images
-const ASSET_IMAGES = [
-  require('../../assets/images/profile_asset1.jpg'),
-  require('../../assets/images/profile_asset2.jpg'),
-  require('../../assets/images/profile_asset3.jpg'),
-];
+const MATCH_VIBE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Caring: 'heart',
+  'Fun & Funny': 'happy',
+  Peaceful: 'leaf',
+  'Deep Talks': 'chatbubbles',
+  Romantic: 'rose',
+  Adventurous: 'compass',
+  Classy: 'sparkles',
+  Chill: 'cafe',
+  Positive: 'sunny',
+  Creative: 'color-palette',
+};
 
-// Profile data structure with multiple detailed profiles
-const PROFILES_DATA = [
-  {
-    id: '1',
-    name: 'Ammu',
-    age: 23,
-    height: '5.6 fts',
-    location: 'Lives in Hyderabad',
-    about: 'Looking for good vibes, genuine conversations, and a real connection.',
-    interests: ['Music', 'Movies', 'Travel'],
-    education: 'B. Tech',
-    profession: 'Designer',
-    attributes: {
-      food: 'Foodie / Veg',
-      politics: 'Moderate',
-      lookingFor: 'Long-term relationship',
-      zodiac: 'Libra ♎',
-      personality: 'Ambivert',
-      firstDate: 'Coffee & Walks',
-      drink: 'Socially',
-      smoke: 'No',
-      religion: 'Hindu',
-      pastTime: 'Listening to Music',
-    },
-    images: [ASSET_IMAGES[0], ASSET_IMAGES[1], ASSET_IMAGES[2]],
-  },
-  {
-    id: '2',
-    name: 'Pinky',
-    age: 24,
-    height: '5.4 fts',
-    location: 'Lives in Bangalore',
-    about: 'Passionate about photography, artisanal coffee, and spontaneous weekend road trips! ☕📸',
-    interests: ['Photography', 'Coffee', 'Road Trips'],
-    education: 'M.B.A',
-    profession: 'Product Manager',
-    attributes: {
-      food: 'Non-Veg',
-      politics: 'Open-minded',
-      lookingFor: 'Something real',
-      zodiac: 'Gemini ♊',
-      personality: 'Extrovert',
-      firstDate: 'Cozy Cafe',
-      drink: 'Occasionally',
-      smoke: 'No',
-      religion: 'Spiritual',
-      pastTime: 'Sunset Watching',
-    },
-    images: [ASSET_IMAGES[1], ASSET_IMAGES[2], ASSET_IMAGES[0]],
-  },
-  {
-    id: '3',
-    name: 'Priya',
-    age: 22,
-    height: '5.5 fts',
-    location: 'Lives in Mumbai',
-    about: 'Art enthusiast, foodie, and dog lover. Let’s talk about favorite books, movies, and indie songs! 🎨🐾',
-    interests: ['Art & Painting', 'Indie Music', 'Dogs'],
-    education: 'B.A. Fine Arts',
-    profession: 'UI/UX Designer',
-    attributes: {
-      food: 'Vegetarian',
-      politics: 'Liberal',
-      lookingFor: 'Meaningful bond',
-      zodiac: 'Leo ♌',
-      personality: 'Creative & Warm',
-      firstDate: 'Art Gallery & Tea',
-      drink: 'Never',
-      smoke: 'No',
-      religion: 'Hindu',
-      pastTime: 'Sketching & Reading',
-    },
-    images: [ASSET_IMAGES[2], ASSET_IMAGES[0], ASSET_IMAGES[1]],
-  },
-  {
-    id: '4',
-    name: 'Sneha',
-    age: 25,
-    height: '5.7 fts',
-    location: 'Lives in Delhi',
-    about: 'Fitness junkie, tech explorer, and lover of acoustic tunes. Always up for deep conversations! 🎧⚡',
-    interests: ['Fitness', 'Tech & Code', 'Acoustic Music'],
-    education: 'B. Tech CS',
-    profession: 'Software Engineer',
-    attributes: {
-      food: 'Eggetarian',
-      politics: 'Centrist',
-      lookingFor: 'Date to marry',
-      zodiac: 'Aries ♈',
-      personality: 'Energetic',
-      firstDate: 'Bowling & Drinks',
-      drink: 'Socially',
-      smoke: 'No',
-      religion: 'Hindu',
-      pastTime: 'Trekking & Gaming',
-    },
-    images: [ASSET_IMAGES[0], ASSET_IMAGES[2], ASSET_IMAGES[1]],
-  },
-];
-
-// Cards data for Likes Screen (Liked You vs You Liked)
-const LIKED_YOU_DATA = [
-  { id: 'ly1', name: 'Ammu, 23', image: ASSET_IMAGES[0], time: '2 hrs ago' },
-  { id: 'ly2', name: 'Pinky, 24', image: ASSET_IMAGES[1], time: '5 hrs ago' },
-  { id: 'ly3', name: 'Priya, 22', image: ASSET_IMAGES[2], time: '1 day ago' },
-];
-
-const YOU_LIKED_DATA = [
-  { id: 'yl1', name: 'Ananya, 24', image: ASSET_IMAGES[2], time: 'Yesterday', match: '96%' },
-  { id: 'yl2', name: 'Swathi, 23', image: ASSET_IMAGES[1], time: '2 days ago', match: '90%' },
-  { id: 'yl3', name: 'Teju, 23', image: ASSET_IMAGES[0], time: '3 days ago', match: '87%' },
-];
-
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'profile';
-  text: string;
-  time: string;
+function getMatchVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
+  return MATCH_VIBE_ICONS[vibe] || 'sparkles';
 }
 
+type ProfileCard = {
+  id: string;
+  userId: string;
+  name: string | null;
+  age: number | null;
+  height: string | null;
+  isOnline: boolean;
+  location: string | null;
+  about: string | null;
+  interests: string[];
+  education: string | null;
+  profession: string | null;
+  trustScore: DiscoveryCard['trustScore'];
+  foodPreference: string | null;
+  drinking: string | null;
+  smoking: string | null;
+  lookingFor: string | null;
+  religion: string | null;
+  relationshipStatus: string | null;
+  nature: string[];
+  images: { uri: string }[];
+};
+
 export default function DatingProfileScreen() {
-  const [activeTab, setActiveTab] = useState<'matches' | 'likes' | 'people' | 'chats' | 'me'>('matches');
-  const [likesSubTab, setLikesSubTab] = useState<'likedYou' | 'youLiked'>('youLiked');
+  const router = useRouter();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [showLikedToast, setShowLikedToast] = useState(false);
-  const [selectedPersonForChat, setSelectedPersonForChat] = useState<{
-    name: string;
-    avatar: any;
+  const [cards, setCards] = useState<ProfileCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [matchModalData, setMatchModalData] = useState<{
+    name: string | null;
+    photo: any;
+    matchId?: string | null;
+    userId: string;
   } | null>(null);
+  const [showSafetyModal, setShowSafetyModal] = useState(false);
+  const [safetyActionStatus, setSafetyActionStatus] = useState<string | null>(null);
 
-  // Chat conversation state
-  const [chatMessages, setChatMessages] = useState<{ [profileId: string]: ChatMessage[] }>({
-    '1': [
-      { id: 'm1', sender: 'profile', text: 'Hey there! 👋 Saw you looking at my profile. How is your day going?', time: '10:30 AM' },
-    ],
-    '2': [
-      { id: 'm1', sender: 'profile', text: 'Hi! ☕ Love road trips and good coffee. What about you?', time: '11:15 AM' },
-    ],
-    '3': [
-      { id: 'm1', sender: 'profile', text: 'Hey! 🎨 What kind of music or art do you like?', time: '12:00 PM' },
-    ],
-    '4': [
-      { id: 'm1', sender: 'profile', text: 'Hello! 🎧 Always up for a chat about tech or music!', time: '1:45 PM' },
-    ],
-  });
-  const [inputText, setInputText] = useState('');
+  React.useEffect(() => {
+    getDiscoveryFeed()
+      .then((feed) => {
+        const mapped = feed
+          .filter((card) => card.photos.some((photo) => photo.url))
+          .map((card) => ({
+          id: card.userId,
+          userId: card.userId,
+          name: card.name,
+          age: card.age,
+          height: card.formattedHeight || card.heightFt,
+          isOnline: card.isOnline,
+          location: card.city ? `Lives in ${card.city}` : card.location,
+          about: card.bio,
+          interests: card.interests || [],
+          education: card.education?.qualification || card.education?.educationLevel || null,
+          profession: card.education?.profession || null,
+          trustScore: card.trustScore,
+          foodPreference: card.foodPreference || null,
+          drinking: card.drinking || null,
+          smoking: card.smoking || null,
+          lookingFor: card.lookingFor?.[0] || null,
+          religion: card.religion || null,
+          relationshipStatus: card.relationshipStatus,
+          nature: card.nature || [],
+          images: card.photos
+            .filter((photo) => Boolean(photo.url))
+            .map((photo) => ({ uri: formatApiImageUrl(photo.url) })),
+        }));
+        setCards(mapped);
+      })
+      .catch((error: unknown) => {
+        console.warn('Failed to load discovery feed:', error);
+        setFeedError(
+          error instanceof Error ? error.message : 'Please try again later.',
+        );
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  const currentProfile = PROFILES_DATA[currentProfileIndex];
+  const currentProfile = cards.length > 0
+    ? cards[currentProfileIndex % cards.length]
+    : undefined;
 
   // Responsive container width calculation
   const [cardWidth, setCardWidth] = useState<number>(
@@ -331,31 +308,21 @@ export default function DatingProfileScreen() {
   );
 
   const scrollViewRef = useRef<ScrollView>(null);
-  const chatScrollRef = useRef<ScrollView>(null);
-  const scrollXAnim = useRef(new Animated.Value(0)).current;
-  const heartScaleAnim = useRef(new Animated.Value(1)).current;
+  const [scrollXAnim] = useState(() => new Animated.Value(0));
+  const [heartScaleAnim] = useState(() => new Animated.Value(1));
 
   // Slide animation for complete screen swipe effect
   const [isAnimating, setIsAnimating] = useState(false);
-  const cardSlideAnim = useRef(new Animated.Value(0)).current;
+  const [cardSlideAnim] = useState(() => new Animated.Value(0));
 
   const cardRotateInterpolation = cardSlideAnim.interpolate({
     inputRange: [-cardWidth * 1.5, 0, cardWidth * 1.5],
     outputRange: ['-14deg', '0deg', '14deg'],
   });
 
-  // Handle back navigation
-  const handleGoBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.push('/(onboarding)/photos' as any);
-    }
-  };
-
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    if (cardWidth > 0) {
+    if (currentProfile && cardWidth > 0) {
       const index = Math.round(offsetX / cardWidth);
       if (index >= 0 && index < currentProfile.images.length && index !== currentImageIndex) {
         setCurrentImageIndex(index);
@@ -364,7 +331,7 @@ export default function DatingProfileScreen() {
   };
 
   const scrollToImage = (index: number) => {
-    if (index >= 0 && index < currentProfile.images.length && cardWidth > 0) {
+    if (currentProfile && index >= 0 && index < currentProfile.images.length && cardWidth > 0) {
       setCurrentImageIndex(index);
       scrollViewRef.current?.scrollTo({
         x: index * cardWidth,
@@ -374,19 +341,28 @@ export default function DatingProfileScreen() {
   };
 
   const handlePrevImage = () => {
+    if (!currentProfile) return;
     const prevIndex = (currentImageIndex - 1 + currentProfile.images.length) % currentProfile.images.length;
     scrollToImage(prevIndex);
   };
 
   const handleNextImage = () => {
+    if (!currentProfile) return;
     const nextIndex = (currentImageIndex + 1) % currentProfile.images.length;
     scrollToImage(nextIndex);
   };
 
   // Reject (❌): slide complete screen LEFT and smoothly move to the next profile
   const handleReject = () => {
-    if (isAnimating) return;
+    if (isAnimating || !currentProfile) return;
     setIsAnimating(true);
+
+    const targetId = currentProfile.userId || currentProfile.id;
+    if (targetId) {
+      swipeUser(targetId, 'dislike').catch((e) => {
+        console.warn('Backend sync warning on swipe dislike:', e);
+      });
+    }
 
     Animated.timing(cardSlideAnim, {
       toValue: -cardWidth * 1.25,
@@ -396,7 +372,7 @@ export default function DatingProfileScreen() {
       cardSlideAnim.setValue(cardWidth * 1.25);
       setCurrentImageIndex(0);
       scrollViewRef.current?.scrollTo({ x: 0, animated: false });
-      setCurrentProfileIndex((prevIndex) => (prevIndex + 1) % PROFILES_DATA.length);
+      setCurrentProfileIndex((prevIndex) => (prevIndex + 1) % cards.length);
 
       Animated.spring(cardSlideAnim, {
         toValue: 0,
@@ -411,10 +387,28 @@ export default function DatingProfileScreen() {
 
   // Like (❤️): show "Liked" toast notification, slide complete screen RIGHT and smoothly move to the next profile
   const handleToggleLike = () => {
-    if (isAnimating) return;
+    if (isAnimating || !currentProfile) return;
     setIsAnimating(true);
     setIsLiked(true);
     setShowLikedToast(true);
+
+    const targetId = currentProfile.userId || currentProfile.id;
+    if (targetId) {
+      swipeUser(targetId, 'like')
+        .then((res) => {
+          if (res && res.isMatch) {
+            setMatchModalData({
+              name: currentProfile.name,
+              photo: currentProfile.images[0],
+              matchId: res.matchId,
+              userId: targetId,
+            });
+          }
+        })
+        .catch((e) => {
+          console.warn('Backend sync warning on swipe like:', e);
+        });
+    }
 
     Animated.sequence([
       Animated.timing(heartScaleAnim, {
@@ -439,7 +433,7 @@ export default function DatingProfileScreen() {
       cardSlideAnim.setValue(-cardWidth * 1.25);
       setCurrentImageIndex(0);
       scrollViewRef.current?.scrollTo({ x: 0, animated: false });
-      setCurrentProfileIndex((prevIndex) => (prevIndex + 1) % PROFILES_DATA.length);
+      setCurrentProfileIndex((prevIndex) => (prevIndex + 1) % cards.length);
 
       Animated.spring(cardSlideAnim, {
         toValue: 0,
@@ -452,54 +446,95 @@ export default function DatingProfileScreen() {
     });
   };
 
-  // Chat (💬): open the individual chat screen for the selected person
-  const handleOpenChat = () => {
-    setSelectedPersonForChat({
-      name: currentProfile.name,
-      avatar: currentProfile.images[0],
-    });
-    setActiveTab('chats');
+  // Block user safety action
+  const handleBlockUser = async () => {
+    if (!currentProfile) return;
+    const targetId = currentProfile.userId || currentProfile.id;
+    if (targetId) {
+      try {
+        await blockUser(targetId);
+        setSafetyActionStatus('User blocked successfully.');
+        setTimeout(() => {
+          setShowSafetyModal(false);
+          setSafetyActionStatus(null);
+          handleReject();
+        }, 1200);
+      } catch (err) {
+        console.warn('Error blocking user:', err);
+      }
+    }
   };
 
-  // Send message in chat screen
-  const handleSendMessage = (textToSend?: string) => {
-    const text = textToSend || inputText;
-    if (!text.trim()) return;
+  // Report user safety action
+  const handleReportUser = async (reason: string = 'fake_profile') => {
+    if (!currentProfile) return;
+    const targetId = currentProfile.userId || currentProfile.id;
+    if (targetId) {
+      try {
+        await reportUser(targetId, reason, 'Reported from profile detail screen');
+        setSafetyActionStatus('Report submitted to safety team.');
+        setTimeout(() => {
+          setShowSafetyModal(false);
+          setSafetyActionStatus(null);
+          handleReject();
+        }, 1200);
+      } catch (err) {
+        console.warn('Error reporting user:', err);
+      }
+    }
+  };
 
-    const newMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: text.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
+  // Open a direct chat; the backend enforces the two-message pre-match limit.
+  const handleOpenChat = () => {
+    if (!currentProfile) return;
+    const partnerId = currentProfile.userId || currentProfile.id;
+    const photoSource = currentProfile.images[0];
+    const partnerPhoto =
+      typeof photoSource === 'object' &&
+      photoSource !== null &&
+      'uri' in photoSource &&
+      typeof photoSource.uri === 'string'
+        ? photoSource.uri
+        : '';
+    router.push({
+      pathname: '/(tab)/chats',
+      params: {
+        partnerId,
+        partnerName: currentProfile.name,
+        partnerPhoto,
+      },
+    } as any);
+  };
 
-    setChatMessages((prev) => ({
-      ...prev,
-      [currentProfile.id]: [...(prev[currentProfile.id] || []), newMsg],
-    }));
+  const handleStartChatWithMatch = async () => {
+    if (!matchModalData?.matchId) return;
 
-    if (!textToSend) setInputText('');
-
-    setTimeout(() => {
-      chatScrollRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-
-    // Auto-reply simulation from profile
-    setTimeout(() => {
-      const replyMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'profile',
-        text: `Thanks for messaging! 😊 I'd love to chat more!`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setChatMessages((prev) => ({
-        ...prev,
-        [currentProfile.id]: [...(prev[currentProfile.id] || []), replyMsg],
-      }));
-      setTimeout(() => {
-        chatScrollRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }, 1200);
+    try {
+      await startMatchChat(matchModalData.matchId);
+      const partnerId = matchModalData.userId;
+      const partnerPhoto =
+        typeof matchModalData.photo === 'object' &&
+        matchModalData.photo !== null &&
+        'uri' in matchModalData.photo &&
+        typeof matchModalData.photo.uri === 'string'
+          ? matchModalData.photo.uri
+          : '';
+      setMatchModalData(null);
+      router.push({
+        pathname: '/(tab)/chats',
+        params: {
+          partnerId,
+          partnerName: matchModalData.name,
+          partnerPhoto,
+        },
+      } as any);
+    } catch (error) {
+      console.warn('Failed to start chat with match:', error);
+      Alert.alert(
+        'Unable to start chat',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    }
   };
 
   const onCardLayout = (e: LayoutChangeEvent) => {
@@ -509,134 +544,38 @@ export default function DatingProfileScreen() {
     }
   };
 
-  const currentMessages = chatMessages[currentProfile.id] || [];
-
   return (
     <View style={styles.outerContainer}>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-        {/* SCREEN RENDER LOGIC */}
-        {activeTab === 'chats' ? (
-          /* CHAT SCREEN (MESSAGES & CALLS TABS) */
-          <ChatScreen showTabBar={false} initialConversation={selectedPersonForChat} />
-        ) : activeTab === 'likes' ? (
-          /* LIKES SCREEN (Liked You & You Liked) */
-          <View style={styles.likesScreenContainer}>
-            {/* Title Header */}
-            <View style={styles.likesHeader}>
-              <Text style={styles.likesHeaderTitle}>Likes</Text>
+        {/* MATCHES SCREEN (Main Dating Profile Screen with multi-image carousel) */}
+        <View style={{ flex: 1 }}>
+          {currentProfile ? (
+          <>
+          {/* Liked Toast Notification */}
+          {showLikedToast && (
+            <View style={styles.likedToast}>
+              <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.likedToastText}>
+                {currentProfile.name ? `Liked ${currentProfile.name}'s profile!` : 'Liked profile!'}
+              </Text>
             </View>
+          )}
 
-            {/* Sub Tabs Navigation (Liked You / You Liked) */}
-            <View style={styles.likesSubTabBar}>
-              <TouchableOpacity
-                style={styles.likesSubTabItem}
-                onPress={() => setLikesSubTab('likedYou')}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.likesSubTabText,
-                    likesSubTab === 'likedYou' && styles.activeLikesSubTabText,
-                  ]}
-                >
-                  Liked You
-                </Text>
-                {likesSubTab === 'likedYou' && <View style={styles.activeUnderline} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.likesSubTabItem}
-                onPress={() => setLikesSubTab('youLiked')}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.likesSubTabText,
-                    likesSubTab === 'youLiked' && styles.activeLikesSubTabText,
-                  ]}
-                >
-                  You Liked
-                </Text>
-                {likesSubTab === 'youLiked' && <View style={styles.activeUnderline} />}
-              </TouchableOpacity>
-            </View>
-
-            {/* FRESH SEPARATE SECTION RENDERING BASED ON SUB TAB */}
-            {likesSubTab === 'likedYou' ? (
-              <View key="liked-you-page" style={{ flex: 1 }}>
-                <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
-                  <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500' }}>
-                    People who liked your profile (Unlock to view)
-                  </Text>
-                </View>
-                <ScrollView contentContainerStyle={styles.likesGridContainer} key="scroll-liked-you">
-                  <View style={styles.likesGridRow}>
-                    {LIKED_YOU_DATA.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={styles.blurredCard}
-                        activeOpacity={0.85}
-                      >
-                        <Image
-                          source={item.image}
-                          style={styles.blurredCardImage}
-                          blurRadius={Platform.OS === 'web' ? 8 : 10}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.blurredCardOverlay} />
-                        <View style={styles.lockIconBadge}>
-                          <Ionicons name="lock-closed-outline" size={14} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.cardNameText}>{item.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-            ) : (
-              <View key="you-liked-page" style={{ flex: 1 }}>
-                <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
-                  <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500' }}>
-                    Profiles you have liked
-                  </Text>
-                </View>
-                <ScrollView contentContainerStyle={styles.likesGridContainer} key="scroll-you-liked">
-                  <View style={styles.likesGridRow}>
-                    {YOU_LIKED_DATA.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={styles.blurredCard}
-                        activeOpacity={0.85}
-                      >
-                        <Image
-                          source={item.image}
-                          style={styles.blurredCardImage}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.blurredCardOverlay} />
-                        <View style={[styles.lockIconBadge, { backgroundColor: '#0F766E' }]}>
-                          <Ionicons name="heart" size={12} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.cardNameText}>{item.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-            )}
+          {/* Top Header Bar with Profile Viewers Eye Icon (Matching Reference Image 1) */}
+          <View style={styles.topHeaderNav}>
+            <View style={styles.topHeaderSpacer} />
+            <TouchableOpacity
+              style={styles.viewersIconButton}
+              onPress={() => router.push('/profile-viewers' as any)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="View Profile Viewers"
+            >
+              <Ionicons name="eye-outline" size={20} color="#0D7A74" />
+            </TouchableOpacity>
           </View>
-        ) : activeTab === 'matches' ? (
-          /* MATCHES SCREEN (Main Dating Profile Screen with multi-image carousel) */
-          <View style={{ flex: 1 }}>
-            {/* Liked Toast Notification */}
-            {showLikedToast && (
-              <View style={styles.likedToast}>
-                <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.likedToastText}>Liked {currentProfile.name}'s profile!</Text>
-              </View>
-            )}
 
             {/* Main Scrollable Content with Animated Slide */}
             <ScrollView
@@ -666,7 +605,7 @@ export default function DatingProfileScreen() {
                     scrollEventThrottle={16}
                     style={styles.horizontalImageScrollView}
                   >
-                    {currentProfile.images.map((imgSrc, idx) => (
+                    {currentProfile.images.map((imgSrc: any, idx: number) => (
                       <View key={idx} style={[styles.imageSlide, { width: cardWidth }]}>
                         <Image source={imgSrc} style={[styles.profileImage, { width: cardWidth }]} resizeMode="cover" />
                         <View style={styles.imageOverlayBadge}>
@@ -698,7 +637,7 @@ export default function DatingProfileScreen() {
 
                   {/* Smooth Dots Pagination Indicator */}
                   <View style={styles.paginationContainer}>
-                    {currentProfile.images.map((_, idx) => (
+                    {currentProfile.images.map((_: any, idx: number) => (
                       <TouchableOpacity
                         key={idx}
                         onPress={() => scrollToImage(idx)}
@@ -714,147 +653,177 @@ export default function DatingProfileScreen() {
                     ))}
                   </View>
 
-                  {/* 100% Profile Match Badge (Bottom Right of Photo Card) */}
-                  <View style={styles.hundredPercentBadgeOverlay}>
-                    <View style={styles.hundredPercentBadge}>
-                      <Text style={styles.hundredPercentBadgeText}>100%</Text>
+                  {/* Rosette Ribbon Trust Score Badge (Bottom Right of Photo Card) */}
+                  {currentProfile.trustScore?.score != null && (
+                    <View style={styles.hundredPercentBadgeOverlay}>
+                      <RosetteBadge percentage={currentProfile.trustScore.score} />
                     </View>
-                  </View>
+                  )}
                 </View>
 
                 {/* Profile Basic Details */}
                 <View style={styles.profileDetailsHeader}>
                   <View style={styles.nameRow}>
-                    <Text style={styles.profileName}>
-                      {currentProfile.name}, {currentProfile.age}, {currentProfile.height.split(' ')[0]} <Text style={styles.heightSuffix}>fts</Text>
-                    </Text>
+                    {(currentProfile.name || currentProfile.age != null || currentProfile.height) && (
+                      <Text style={styles.profileName}>
+                        {currentProfile.name}
+                        {currentProfile.age != null ? `, ${currentProfile.age}` : ''}
+                        {currentProfile.height ? ` · ${currentProfile.height}` : ''}
+                      </Text>
+                    )}
 
                     {/* Online Status Badge */}
-                    <View style={styles.onlineBadge}>
-                      <View style={styles.onlineDot} />
-                      <Text style={styles.onlineText}>Online</Text>
-                    </View>
+                    {currentProfile.isOnline && (
+                      <View style={styles.onlineBadge}>
+                        <View style={styles.onlineDot} />
+                        <Text style={styles.onlineText}>Online</Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* Location Line */}
-                  <View style={styles.locationRow}>
-                    <Ionicons name="location-sharp" size={16} color="#111827" />
-                    <Text style={styles.locationText}>{currentProfile.location}</Text>
-                  </View>
+                  {currentProfile.location && (
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-sharp" size={16} color="#111827" />
+                      <Text style={styles.locationText}>{currentProfile.location}</Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* About Me Section */}
-                <View style={styles.aboutMeCard}>
-                  <Text style={styles.aboutMeTitle}>About Me</Text>
-                  <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
+                {(currentProfile.about || currentProfile.interests.length > 0) && (
+                  <View style={styles.aboutMeCard}>
+                    {currentProfile.about && (
+                      <>
+                        <Text style={styles.aboutMeTitle}>About Me</Text>
+                        <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
+                      </>
+                    )}
 
-                  {/* Interest Chips */}
-                  <View style={styles.interestChipsContainer}>
-                    {currentProfile.interests.map((interest, idx) => (
-                      <View key={idx} style={styles.interestChip}>
-                        <Text style={styles.interestChipText}>{interest}</Text>
+                    {currentProfile.interests.length > 0 && (
+                      <View style={styles.interestChipsContainer}>
+                        {currentProfile.interests.map((interest, idx) => (
+                          <View key={idx} style={styles.interestChip}>
+                            <Text style={styles.interestChipText}>{interest}</Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
+                    )}
                   </View>
-                </View>
+                )}
 
                 {/* Profession & Education */}
-                <View style={styles.professionContainer}>
-                  <View style={styles.professionPill}>
-                    <Ionicons name="school-outline" size={18} color="#0D9488" />
-                    <Text style={styles.professionPillText}>{currentProfile.education}</Text>
+                {(currentProfile.education || currentProfile.profession) && (
+                  <View style={styles.professionContainer}>
+                    {currentProfile.education && (
+                      <View style={styles.professionPill}>
+                        <Ionicons name="school-outline" size={18} color="#0D9488" />
+                        <Text style={styles.professionPillText}>{currentProfile.education}</Text>
+                      </View>
+                    )}
+                    {currentProfile.profession && (
+                      <View style={styles.professionPill}>
+                        <Ionicons name="briefcase-outline" size={18} color="#0D9488" />
+                        <Text style={styles.professionPillText}>{currentProfile.profession}</Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={styles.professionPill}>
-                    <Ionicons name="briefcase-outline" size={18} color="#0D9488" />
-                    <Text style={styles.professionPillText}>{currentProfile.profession}</Text>
-                  </View>
-                </View>
+                )}
 
-                {/* Attributes Grid */}
-                <View style={styles.attributesGrid}>
+                {/* Attributes Grid (Real Data: Food, Drink, Smoke, Looking For, Religion, Relationship Status) */}
+                {(currentProfile.foodPreference || currentProfile.drinking || currentProfile.smoking ||
+                  currentProfile.lookingFor || currentProfile.religion || currentProfile.relationshipStatus) && (
+                  <View style={styles.attributesGrid}>
+                  {currentProfile.foodPreference && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="restaurant-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Food Preferences</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>{currentProfile.foodPreference}</Text>
                   </View>
+                  )}
 
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="bulb-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Political Views</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="glasses-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Looking for</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="sparkles-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Zodiac Sign</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="happy-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Personality</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="calendar-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>First Date</Text>
-                    </View>
-                    <Text style={styles.attributeDashes}>------</Text>
-                  </View>
-
+                  {currentProfile.drinking && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="wine-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Drink</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>{currentProfile.drinking}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.smoking && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="cloud-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Smoke</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>{currentProfile.smoking}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.lookingFor && (
+                  <View style={styles.attributeBox}>
+                    <View style={styles.attributeHeaderRow}>
+                      <Ionicons name="heart-outline" size={15} color="#0D7A74" />
+                      <Text style={styles.attributeTitle}>Looking for</Text>
+                    </View>
+                    <Text style={styles.attributeValue} numberOfLines={1}>
+                      {currentProfile.lookingFor}
+                    </Text>
+                  </View>
+                  )}
+
+                  {currentProfile.religion && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="flower-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Religion</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>{currentProfile.religion}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.relationshipStatus && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="game-controller-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Favourite Past time</Text>
+                      <Ionicons name="person-outline" size={15} color="#0D7A74" />
+                      <Text style={styles.attributeTitle}>Relationship Status</Text>
                     </View>
-                    <Text style={styles.attributeDashes}>------</Text>
+                    <Text style={styles.attributeValue}>{currentProfile.relationshipStatus}</Text>
+                  </View>
+                  )}
+                </View>
+                )}
+
+                {/* Nature Section (Dynamically rendered from candidate's real nature traits) */}
+                {currentProfile.nature.length > 0 && (
+                <View style={styles.myVibesSection}>
+                  <Text style={styles.myVibesTitle}>Nature</Text>
+                  <View style={styles.myVibesRow}>
+                    {currentProfile.nature.slice(0, 5)
+                      .map((trait: string, idx: number) => (
+                        <View key={idx} style={styles.vibeItem}>
+                          <View style={styles.vibeIconCircle}>
+                            <Ionicons name={getMatchVibeIcon(trait)} size={18} color="#0D7A74" />
+                          </View>
+                          <Text style={styles.vibeLabel} numberOfLines={1}>
+                            {trait}
+                          </Text>
+                        </View>
+                      ))}
                   </View>
                 </View>
+                )}
 
                 {/* Report & Block Profile Link */}
-                <TouchableOpacity style={styles.reportButton} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={styles.reportButton}
+                  activeOpacity={0.7}
+                  onPress={() => setShowSafetyModal(true)}
+                >
                   <Ionicons name="alert-circle-outline" size={16} color="#FF4D4D" />
                   <Text style={styles.reportButtonText}>Report & block profile</Text>
                 </TouchableOpacity>
@@ -903,120 +872,106 @@ export default function DatingProfileScreen() {
                 </View>
               </View>
             </View>
-          </View>
-        ) : activeTab === 'people' ? (
-          /* PEOPLE SCREEN INTEGRATED */
-          <PeopleScreen showTabBar={false} showHeaderBar={true} />
-        ) : activeTab === 'me' ? (
-          /* BOY PROFILE SCREEN INTEGRATED */
-          <MeScreen showTabBar={false} showHeaderBar={true} />
-        ) : (
-          <View style={styles.otherTabContainer}>
-            <Text style={styles.otherTabTitle}>
-              {(activeTab as string).charAt(0).toUpperCase() + (activeTab as string).slice(1)}
-            </Text>
-            <Text style={styles.otherTabSubText}>Section content coming soon</Text>
+
+        {/* Mutual Match Celebration Modal */}
+        {matchModalData && (
+          <View style={styles.matchModalOverlay}>
+            <View style={styles.matchModalCard}>
+              <Text style={styles.matchModalTitle}>🎉 It&apos;s a Match!</Text>
+              <Text style={styles.matchModalSubtitle}>
+                {matchModalData.name
+                  ? `You and ${matchModalData.name} liked each other.`
+                  : 'You both liked each other.'}
+              </Text>
+              <Image source={matchModalData.photo} style={styles.matchModalAvatar} />
+              
+              <TouchableOpacity
+                style={styles.matchModalPrimaryBtn}
+                onPress={handleStartChatWithMatch}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.matchModalPrimaryBtnText}>Send Message</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.matchModalSecondaryBtn}
+                onPress={() => setMatchModalData(null)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.matchModalSecondaryBtnText}>Keep Swiping</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {/* Bottom Navigation Bar Matching Image 1 */}
-        <View style={styles.bottomTabBar}>
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => {
-              setActiveTab('matches');
-              router.push('/(tab)/matches' as any);
-            }}
-            activeOpacity={0.8}
-          >
-            <MatchesTabIcon color={activeTab === 'matches' ? '#0D7A74' : '#78B0A8'} size={22} />
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === 'matches' && styles.activeTabLabel,
-              ]}
-            >
-              Matches
-            </Text>
-          </TouchableOpacity>
+        {/* Safety & Moderation Modal */}
+        {showSafetyModal && (
+          <View style={styles.matchModalOverlay}>
+            <View style={styles.safetyModalCard}>
+              <Text style={styles.safetyModalTitle}>Safety & Moderation</Text>
+              {safetyActionStatus ? (
+                <Text style={styles.safetyActionFeedback}>{safetyActionStatus}</Text>
+              ) : (
+                <>
+                          <Text style={styles.safetyModalSubtitle}>
+                            {currentProfile.name
+                              ? `Manage connection with ${currentProfile.name}:`
+                              : 'Manage this profile:'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.safetyActionBtn}
+                    onPress={() => handleReportUser('fake_profile')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="flag-outline" size={18} color="#EF4444" />
+                    <Text style={styles.safetyActionBtnText}>Report Inappropriate / Fake Profile</Text>
+                  </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => {
-              setActiveTab('likes');
-              router.push('/(tab)/likes' as any);
-            }}
-            activeOpacity={0.8}
-          >
-            <LikesTabIcon color={activeTab === 'likes' ? '#0D7A74' : '#78B0A8'} size={22} />
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === 'likes' && styles.activeTabLabel,
-              ]}
-            >
-              Likes
-            </Text>
-          </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.safetyActionBtn}
+                    onPress={handleBlockUser}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="ban-outline" size={18} color="#DC2626" />
+                    <Text style={styles.safetyActionBtnText}>Block Profile Immediately</Text>
+                  </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => {
-              setActiveTab('people');
-              router.push('/(tab)/people' as any);
-            }}
-            activeOpacity={0.8}
-          >
-            <PeopleTabIcon color={activeTab === 'people' ? '#0D7A74' : '#78B0A8'} size={22} />
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === 'people' && styles.activeTabLabel,
-              ]}
-            >
-              People
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => {
-              setSelectedPersonForChat(null);
-              setActiveTab('chats');
-              router.push('/(tab)/chats' as any);
-            }}
-            activeOpacity={0.8}
-          >
-            <ChatsTabIcon color={activeTab === 'chats' ? '#0D7A74' : '#78B0A8'} size={22} />
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === 'chats' && styles.activeTabLabel,
-              ]}
-            >
-              Chats
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => {
-              setActiveTab('me');
-              router.push('/(tab)/me' as any);
-            }}
-            activeOpacity={0.8}
-          >
-            <MeTabIcon color={activeTab === 'me' ? '#0D7A74' : '#78B0A8'} size={22} />
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === 'me' && styles.activeTabLabel,
-              ]}
-            >
-              Me
-            </Text>
-          </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.safetyCancelBtn}
+                    onPress={() => setShowSafetyModal(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.safetyCancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        )}
+          </>
+          ) : (
+            <View style={styles.emptyFeedContainer}>
+              <Text style={styles.emptyFeedTitle}>
+                {isLoading
+                  ? 'Loading profiles…'
+                  : feedError
+                    ? 'Unable to load profiles'
+                    : 'No profiles available'}
+              </Text>
+              {!isLoading && !feedError && (
+                <Text style={styles.emptyFeedMessage}>
+                  Profiles with uploaded photos will appear here when available.
+                </Text>
+              )}
+              {!isLoading && feedError && (
+                <Text style={styles.emptyFeedMessage}>{feedError}</Text>
+              )}
+            </View>
+          )}
         </View>
+
+        {/* Bottom Navigation Bar */}
+        <CustomTabBar />
       </SafeAreaView>
     </View>
   );
@@ -1040,6 +995,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+  },
+  emptyFeedContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  emptyFeedTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  emptyFeedMessage: {
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+    textAlign: 'center',
   },
   // CHAT SCREEN STYLES
   chatScreenContainer: {
@@ -1262,7 +1236,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   blurredCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.18)',
   },
   lockIconBadge: {
@@ -1307,14 +1281,27 @@ const styles = StyleSheet.create({
   },
   // MATCHES / PROFILE SCREEN STYLES
   topHeaderNav: {
-    height: 50,
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E7EB',
+  },
+  topHeaderSpacer: {
+    width: 34,
+  },
+  viewersIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backButton: {
     width: 36,
@@ -1354,7 +1341,7 @@ const styles = StyleSheet.create({
   mainScrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop:20,
+    // marginTop:5,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1405,9 +1392,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#22C55E',
+    backgroundColor: '#DBFDDE',
     borderWidth: 2.5,
-    borderColor: '#15803D',
+    borderColor: '#00FF19',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000000',
@@ -1420,7 +1407,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DM_Sans_700Bold',
     fontSize: 12.5,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#064E1D',
     textAlign: 'center',
   },
   rosetteBadgeOverlay: {
@@ -1601,12 +1588,48 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flexShrink: 1,
   },
-  attributeDashes: {
-    fontSize: 12,
-    color: '#0D7A74',
-    fontWeight: '600',
-    letterSpacing: 2,
-    marginTop: 2,
+  attributeValue: {
+    fontSize: 13,
+    color: '#0F766E',
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  myVibesSection: {
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  myVibesTitle: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  myVibesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  vibeItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  vibeIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#D1F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  vibeLabel: {
+    fontFamily: 'DM_Sans_500Medium',
+    fontSize: 11,
+    color: '#374151',
+    fontWeight: '500',
   },
   reportButton: {
     flexDirection: 'row',
@@ -1705,6 +1728,7 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   tabLabel: {
     fontSize: 11,
@@ -1715,5 +1739,126 @@ const styles = StyleSheet.create({
   activeTabLabel: {
     color: '#0D7A74',
     fontWeight: '700',
+  },
+  matchModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    paddingHorizontal: 24,
+  },
+  matchModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  matchModalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  matchModalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  matchModalAvatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 24,
+    borderWidth: 3,
+    borderColor: '#00F5D4',
+  },
+  matchModalPrimaryBtn: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#00F5D4',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  matchModalPrimaryBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  matchModalSecondaryBtn: {
+    paddingVertical: 10,
+  },
+  matchModalSecondaryBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  safetyModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+  },
+  safetyModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  safetyModalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  safetyActionBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: '#FEF2F2',
+    marginBottom: 10,
+  },
+  safetyActionBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+    flex: 1,
+  },
+  safetyCancelBtn: {
+    marginTop: 10,
+    paddingVertical: 10,
+  },
+  safetyCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  safetyActionFeedback: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#059669',
+    paddingVertical: 20,
+    textAlign: 'center',
   },
 });

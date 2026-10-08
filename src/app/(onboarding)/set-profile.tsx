@@ -6,143 +6,337 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+// import { Image } from 'expo-image';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { Image } from 'expo-image';
+import { updateStoredUserProfile } from '@/constants/userProfile';
+import { updateCurrentProfile } from '@/services/profileApi';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function SetProfileScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [userName, setUserName] = useState('');
   const [gender, setGender] = useState<'Female' | 'Male' | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userNameError, setUserNameError] = useState(false);
+  const [genderError, setGenderError] = useState(false);
 
-  const isProfileValid = userName.trim().length > 0 && gender !== null;
+  const [bio, setBio] = useState('');
+  const [isBioFocused, setIsBioFocused] = useState(false);
 
-  const handleNext = () => {
-    if (!isProfileValid) return;
-    router.push('/(onboarding)/birthday' as any);
+  const isComplete = Boolean(userName.trim() && gender);
+
+  const [userNameShakeAnim] = useState(() => new Animated.Value(0));
+  const [genderShakeAnim] = useState(() => new Animated.Value(0));
+  const [initialHeight] = useState(() => Dimensions.get('window').height);
+
+  const triggerUserNameShake = () => {
+    userNameShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(userNameShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(userNameShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(userNameShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(userNameShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(userNameShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(userNameShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(userNameShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/otp' as any);
+  const triggerGenderShake = () => {
+    genderShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(genderShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(genderShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(genderShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(genderShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(genderShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(genderShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(genderShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleNext = async () => {
+    if (!userName.trim()) {
+      setUserNameError(true);
+      setGenderError(false);
+      triggerUserNameShake();
+      return;
+    }
+    if (!gender) {
+      setGenderError(true);
+      triggerGenderShake();
+      return;
+    }
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const selectedGender = gender.toLowerCase();
+      updateStoredUserProfile({
+        name: userName.trim(),
+        gender: selectedGender,
+        about: bio.trim() || undefined,
+      });
+      await updateCurrentProfile({
+        name: userName.trim(),
+        gender: selectedGender,
+        bio: bio.trim() || undefined,
+      }).catch((e: unknown) => {
+        console.warn('Backend sync warning on profile update:', e);
+      });
+      router.push({
+        pathname: '/(onboarding)/birthday',
+        params: { name: userName.trim(), gender: selectedGender },
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <OnboardingHeader progress={0.05} />
+    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
+      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
+        <OnboardingHeader progress={0.05} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header Title */}
-          <Text style={styles.title}>Set Profile</Text>
+        <View style={styles.keyboardView}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header Title */}
+            <Text style={styles.title}>Set Profile</Text>
 
-          {/* User Name Section */}
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>User Name</Text>
-            <View
-              style={[
-                styles.inputContainer,
-                isFocused && styles.inputContainerFocused,
-              ]}
-            >
-              <TextInput
-                style={styles.textInput}
-                value={userName}
-                onChangeText={setUserName}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Enter user name"
-                placeholderTextColor="#9CA3AF"
-                selectionColor="#00F5D4"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => {
-                  if (gender) {
-                    handleNext();
-                  }
-                }}
-              />
-            </View>
-            <Text style={styles.helperText}>
-              only letters, numbers, special characters and no spaces.
-            </Text>
-          </View>
-
-          {/* You Are Section */}
-          <View style={styles.genderSection}>
-            <Text style={styles.sectionTitle}>You Are</Text>
-
-            <View style={styles.genderCardsRow}>
-              {/* Female Card */}
-              <TouchableOpacity
+            {/* User Name Section */}
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>User Name</Text>
+              <View
                 style={[
-                  styles.genderCard,
-                  gender === 'Female' && styles.genderCardSelected,
+                  styles.inputContainer,
+                  isFocused && styles.inputContainerFocused,
+                  userNameError && styles.inputContainerError,
                 ]}
-                onPress={() => setGender('Female')}
-                activeOpacity={0.3}
               >
-                <Image
-                  source={require('@/assets/images/female-avatar.jpg')}
-                  style={styles.genderImage}
-                  contentFit="contain"
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    userNameError && styles.textInputError,
+                  ]}
+                  value={userName}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/\s/g, '');
+                    setUserName(cleaned);
+                    if (userNameError && cleaned.length > 0) {
+                      setUserNameError(false);
+                    }
+                  }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  placeholder="Enter user name"
+                  placeholderTextColor={userNameError ? '#9CA3AF' : '#9CA3AF'}
+                  selectionColor="#00E4E8"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  onSubmitEditing={handleNext}
                 />
-                <Text style={styles.genderLabel}>Female</Text>
-              </TouchableOpacity>
-
-              {/* Male Card */}
-              <TouchableOpacity
-                style={[
-                  styles.genderCard,
-                  gender === 'Male' && styles.genderCardSelected,
-                ]}
-                onPress={() => setGender('Male')}
-                activeOpacity={0.3}
-              >
-                <Image
-                  source={require('@/assets/images/male-avatar.jpg')}
-                  style={styles.genderImage}
-                  contentFit="contain"
-                />
-                <Text style={styles.genderLabel}>Male</Text>
-              </TouchableOpacity>
+              </View>
+              <Text style={styles.helperText}>
+               Letters, numbers & special characters only. No spaces
+              </Text>
+              {userNameError && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: userNameShakeAnim }],
+                    },
+                  ]}
+                >
+                  Enter User Name
+                </Animated.Text>
+              )}
             </View>
-          </View>
 
-          {/* Warning Banner */}
-          <View style={styles.warningRow}>
-            <Ionicons name="information-circle-outline" size={18} color="#FF3B30" />
-            <Text style={styles.warningText}>{"Gender can't be changed later"}</Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            {/* You Are Section */}
+            <View style={styles.genderSection}>
+              <Text style={styles.sectionTitle}>You Are</Text>
 
-      {/* Action Button */}
-      <OnboardingFooter
-        showBack
-        onBack={handleBack}
-        onNext={handleNext}
-        disabled={!isProfileValid}
-      />
+              <View style={styles.genderCardsRow}>
+                {/* Female Card */}
+                <TouchableOpacity
+                  style={[
+                    styles.genderCard,
+                    gender === 'Female' && styles.genderCardSelected,
+                  ]}
+                  onPress={() => {
+                    setGender('Female');
+                    if (genderError) {
+                      setGenderError(false);
+                    }
+                  }}
+                  activeOpacity={0.3}
+                >
+                  <Image
+                    source={require('@/assets/images/female-avatar.jpg')}
+                    style={styles.genderImage}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.genderLabel}>Female</Text>
+                </TouchableOpacity>
+
+                {/* Male Card */}
+                <TouchableOpacity
+                  style={[
+                    styles.genderCard,
+                    gender === 'Male' && styles.genderCardSelected,
+                  ]}
+                  onPress={() => {
+                    setGender('Male');
+                    if (genderError) {
+                      setGenderError(false);
+                    }
+                  }}
+                  activeOpacity={0.3}
+                >
+                  <Image
+                    source={require('@/assets/images/male-avatar.jpg')}
+                    style={styles.genderImage}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.genderLabel}>Male</Text>
+                </TouchableOpacity>
+              </View>
+              {genderError && (
+                <Animated.Text
+                  style={[
+                    styles.genderErrorMessage,
+                    {
+                      transform: [{ translateX: genderShakeAnim }],
+                    },
+                  ]}
+                >
+                  Select your gender
+                </Animated.Text>
+              )}
+            
+            </View>
+
+            {/* About Me / Bio Section (Optional) */}
+            <View style={[styles.inputSection, { marginTop: 24 }]}>
+              <View style={styles.bioTitleRow}>
+                <Text style={styles.label}>About Me (Bio)</Text>
+                <Text style={styles.optionalBadge}>Optional</Text>
+              </View>
+              <View
+                style={[
+                  styles.bioInputContainer,
+                  isBioFocused && styles.inputContainerFocused,
+                ]}
+              >
+                <TextInput
+                  style={styles.bioTextInput}
+                  value={bio}
+                  onChangeText={setBio}
+                  onFocus={() => setIsBioFocused(true)}
+                  onBlur={() => setIsBioFocused(false)}
+                  placeholder="Share a few words about yourself, hobbies, or what you're looking for..."
+                  placeholderTextColor="#9CA3AF"
+                  selectionColor="#00E4E8"
+                  multiline
+                  numberOfLines={3}
+                  maxLength={300}
+                  textAlignVertical="top"
+                />
+              </View>
+              <Text style={styles.bioCharCount}>{bio.length} / 300</Text>
+            </View>
+
+            {/* Warning Banner */}
+            <View style={styles.warningRow}>
+              <Ionicons name="information-circle-outline" size={18} color="#9CA3AF" />
+              <Text style={styles.warningText}>{"Gender can't be changed later"}</Text>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Action Button */}
+        <OnboardingFooter
+          onNext={handleNext}
+          nextButtonStyle={{
+            backgroundColor: isComplete
+              ? theme.primaryButton
+              : '#BDFFF9',
+          }}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -151,6 +345,12 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
   },
   keyboardView: {
     flex: 1,
@@ -171,6 +371,7 @@ const styles = StyleSheet.create({
   inputSection: {
     width: '100%',
     marginBottom: 36,
+    position: 'relative',
   },
   label: {
     fontSize: 14,
@@ -188,7 +389,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   inputContainerFocused: {
-    borderColor: '#00F5D4',
+    borderColor: '#00E4E8',
+  },
+  inputContainerError: {
+    borderColor: '#FF3B30',
   },
   textInput: {
     fontSize: 16,
@@ -197,7 +401,10 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
     paddingVertical: 0,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+    outlineStyle: 'none' as any,
+  },
+  textInputError: {
+    color: '#FF3B30',
   },
   helperText: {
     fontSize: 12,
@@ -208,6 +415,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     marginBottom: 40,
+    position: 'relative',
   },
   sectionTitle: {
     fontSize: 16,
@@ -234,14 +442,13 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   genderCardSelected: {
-    borderColor: '#00F5D4',
+    borderColor: '#00E4E8',
     // backgroundColor: '#ccf8fb',
   },
   genderImage: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 16,
-    
   },
   genderLabel: {
     fontSize: 14,
@@ -259,7 +466,57 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: 13,
-    color: '#FF3B30',
+    color: '#9CA3AF',
     fontWeight: '500',
+  },
+  errorMessage: {
+    position: 'absolute',
+    bottom: -20,
+    left: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+  },
+  genderErrorMessage: {
+    position: 'absolute',
+    bottom: -22,
+    left: 0,
+    right: 0,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
+    textAlign: 'center',
+  },
+  bioTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  optionalBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  bioInputContainer: {
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 80,
+  },
+  bioTextInput: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+    minHeight: 60,
+  },
+  bioCharCount: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'right',
+    marginTop: 4,
   },
 });
