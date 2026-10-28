@@ -6,8 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Modal,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,8 +16,10 @@ import {
   type CategoryUser,
   type PeopleCategoriesResponse,
 } from "@/services/matchApi";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+import {
+  PeopleProfileModal,
+  type PeopleProfilePreview,
+} from "@/components/PeopleProfileModal";
 
 interface SectionImageItem {
   id: string;
@@ -36,7 +36,7 @@ export default function ViewAllScreen() {
   const sectionId = params.sectionId || "active";
   const title = params.title || "All Images";
 
-  const [selectedImage, setSelectedImage] = useState<SectionImageItem | null>(
+  const [selectedProfile, setSelectedProfile] = useState<PeopleProfilePreview | null>(
     null,
   );
   const [items, setItems] = useState<SectionImageItem[]>([]);
@@ -156,7 +156,15 @@ export default function ViewAllScreen() {
                 key={item.id}
                 style={styles.gridCard}
                 activeOpacity={0.88}
-                onPress={() => setSelectedImage(item)}
+                onPress={() =>
+                  setSelectedProfile({
+                    id: item.id,
+                    name: item.name,
+                    age: item.age,
+                    image: item.image,
+                    subtitle: item.subtitle,
+                  })
+                }
               >
                 <View style={styles.imageWrapper}>
                   {item.image ? (
@@ -213,49 +221,10 @@ export default function ViewAllScreen() {
           </View>
         </ScrollView>
 
-        {/* Full-Screen Lightbox Modal for Image Inspection */}
-        <Modal
-          visible={!!selectedImage}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSelectedImage(null)}
-        >
-          {selectedImage && (
-            <View style={styles.modalOverlay}>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setSelectedImage(null)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="close" size={28} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <View style={styles.modalContent}>
-                {selectedImage.image ? (
-                  <Image
-                    source={{ uri: formatApiImageUrl(selectedImage.image) }}
-                    style={styles.fullImage}
-                  />
-                ) : (
-                  <View style={[styles.fullImage, styles.imagePlaceholder]}>
-                    <Ionicons name="person-outline" size={64} color="#94A3B8" />
-                  </View>
-                )}
-                <View style={styles.modalFooter}>
-                  <Text style={styles.modalName}>
-                    {selectedImage.name}
-                    {selectedImage.age !== null ? `, ${selectedImage.age}` : ""}
-                  </Text>
-                  {selectedImage.subtitle && (
-                    <Text style={styles.modalSub}>
-                      {selectedImage.subtitle}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            </View>
-          )}
-        </Modal>
+        <PeopleProfileModal
+          profile={selectedProfile}
+          onClose={() => setSelectedProfile(null)}
+        />
       </View>
     </SafeAreaView>
   );
@@ -412,49 +381,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#6B7280",
     marginTop: 2,
-  },
-  /* Lightbox Modal */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.92)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalCloseButton: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    zIndex: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    padding: 8,
-    borderRadius: 20,
-  },
-  modalContent: {
-    width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_HEIGHT * 0.7,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "#1E293B",
-  },
-  fullImage: {
-    width: "100%",
-    height: "85%",
-    resizeMode: "cover",
-  },
-  modalFooter: {
-    padding: 16,
-    backgroundColor: "#1E293B",
-    justifyContent: "center",
-  },
-  modalName: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontFamily: "DM_Sans_700Bold",
-  },
-  modalSub: {
-    color: "#9CA3AF",
-    fontSize: 13,
-    fontFamily: "DM_Sans_400Regular",
-    marginTop: 4,
   },
 });

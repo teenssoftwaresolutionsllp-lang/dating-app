@@ -19,6 +19,10 @@ import {
   type LikeReceivedItem,
   type SentLikeItem,
 } from "@/services/matchApi";
+import {
+  PeopleProfileModal,
+  type PeopleProfilePreview,
+} from "@/components/PeopleProfileModal";
 
 export default function LikesScreen() {
   const [likesSubTab, setLikesSubTab] = useState<"likedYou" | "youLiked">(
@@ -29,6 +33,35 @@ export default function LikesScreen() {
   >([]);
   const [liveSentLikes, setLiveSentLikes] = useState<SentLikeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedProfile, setSelectedProfile] =
+    useState<PeopleProfilePreview | null>(null);
+
+  const openReceivedProfile = (item: LikeReceivedItem) => {
+    const id = item.user?.userId || item.userId;
+    if (!id) {
+      console.warn("Cannot open received like: profile user ID is missing.");
+      return;
+    }
+
+    setSelectedProfile({
+      id,
+      name: item.user?.name || item.name || "Someone",
+      age: item.user?.age ?? item.age ?? null,
+      image: item.user?.primaryPhoto || item.photo || null,
+      subtitle: item.user?.city,
+    });
+  };
+
+  const openSentProfile = (item: SentLikeItem) => {
+    setSelectedProfile({
+      id: item.userId,
+      name: item.name,
+      age: item.age,
+      image: item.photo,
+      subtitle: item.location || item.city || item.profession || undefined,
+      alreadyLiked: true,
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -124,6 +157,7 @@ export default function LikesScreen() {
                         key={item.swipeId || item.userId || `like-${idx}`}
                         style={styles.card}
                         activeOpacity={0.85}
+                        onPress={() => openReceivedProfile(item)}
                       >
                         {photo ? (
                           <Image
@@ -184,6 +218,7 @@ export default function LikesScreen() {
                       key={item.userId || `sent-${idx}`}
                       style={styles.card}
                       activeOpacity={0.85}
+                      onPress={() => openSentProfile(item)}
                     >
                       {item.photo ? (
                         <Image
@@ -217,6 +252,17 @@ export default function LikesScreen() {
             </ScrollView>
           </View>
         )}
+
+        <PeopleProfileModal
+          profile={selectedProfile}
+          onClose={() => setSelectedProfile(null)}
+          onUnlike={(profileId) => {
+            setLiveSentLikes((current) =>
+              current.filter((item) => item.userId !== profileId),
+            );
+            setSelectedProfile(null);
+          }}
+        />
 
         <CustomTabBar />
       </View>
