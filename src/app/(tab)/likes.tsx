@@ -49,6 +49,8 @@ export default function LikesScreen() {
       age: item.user?.age ?? item.age ?? null,
       image: item.user?.primaryPhoto || item.photo || null,
       subtitle: item.user?.city,
+      isMatched: item.isMatched === true,
+      matchId: item.matchId ?? null,
     });
   };
 
