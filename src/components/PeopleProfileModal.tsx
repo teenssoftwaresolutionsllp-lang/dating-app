@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { swipeUser } from "@/services/matchApi";
+import { startMatchChat, swipeUser } from "@/services/matchApi";
 import { formatApiImageUrl } from "@/services/api";
 
 export interface PeopleProfilePreview {
@@ -21,6 +21,8 @@ export interface PeopleProfilePreview {
   image: string | null;
   subtitle?: string;
   alreadyLiked?: boolean;
+  isMatched?: boolean;
+  matchId?: string | null;
 }
 
 interface PeopleProfileModalProps {
@@ -79,13 +81,34 @@ export function PeopleProfileModal({
     }
   };
 
-  const handleMessage = () => {
+  const handleMessage = async () => {
     if (!profile) return;
     const partnerId = profile.id;
     const partnerName = profile.name;
     const partnerPhoto = profile.image
       ? formatApiImageUrl(profile.image)
       : "";
+    if (profile.isMatched) {
+      if (!profile.matchId) {
+        Alert.alert(
+          "Couldn't open match",
+          "The match details are unavailable. Please refresh and try again.",
+        );
+        return;
+      }
+
+      try {
+        await startMatchChat(profile.matchId);
+      } catch (error) {
+        console.warn("Failed to start matched chat:", error);
+        Alert.alert(
+          "Couldn't open chat",
+          error instanceof Error ? error.message : "Please try again.",
+        );
+        return;
+      }
+    }
+
     onClose();
     router.push({
       pathname: "/(tab)/chats",
@@ -133,47 +156,55 @@ export function PeopleProfileModal({
               {profile.subtitle ? (
                 <Text style={styles.profileSubtitle}>{profile.subtitle}</Text>
               ) : null}
+              {profile.isMatched ? (
+                <View style={styles.matchBadge}>
+                  <Ionicons name="heart" size={16} color="#168A62" />
+                  <Text style={styles.matchBadgeText}>You both have a match</Text>
+                </View>
+              ) : null}
 
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.likeButton]}
-                  onPress={() =>
-                    void (profile.alreadyLiked ? handleUnlike() : handleLike())
-                  }
-                  disabled={isSavingLike || (isLiked && !profile.alreadyLiked)}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    profile.alreadyLiked
-                      ? "Unlike profile"
-                      : isLiked
-                        ? "Profile liked"
-                        : "Like profile"
-                  }
-                >
-                  {isSavingLike ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Ionicons
-                      name={
-                        profile.alreadyLiked
-                          ? "heart-dislike-outline"
-                          : isLiked
-                            ? "heart"
-                            : "heart-outline"
-                      }
-                      size={19}
-                      color="#FFFFFF"
-                    />
-                  )}
-                  <Text style={styles.actionButtonText}>
-                    {profile.alreadyLiked
-                      ? "Unlike"
-                      : isLiked
-                        ? "Liked"
-                        : "Like"}
-                  </Text>
-                </TouchableOpacity>
+                {!profile.isMatched ? (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.likeButton]}
+                    onPress={() =>
+                      void (profile.alreadyLiked ? handleUnlike() : handleLike())
+                    }
+                    disabled={isSavingLike || (isLiked && !profile.alreadyLiked)}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      profile.alreadyLiked
+                        ? "Unlike profile"
+                        : isLiked
+                          ? "Profile liked"
+                          : "Like profile"
+                    }
+                  >
+                    {isSavingLike ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Ionicons
+                        name={
+                          profile.alreadyLiked
+                            ? "heart-dislike-outline"
+                            : isLiked
+                              ? "heart"
+                              : "heart-outline"
+                        }
+                        size={19}
+                        color="#FFFFFF"
+                      />
+                    )}
+                    <Text style={styles.actionButtonText}>
+                      {profile.alreadyLiked
+                        ? "Unlike"
+                        : isLiked
+                          ? "Liked"
+                          : "Like"}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
 
                 <TouchableOpacity
                   style={[styles.actionButton, styles.messageButton]}
@@ -248,6 +279,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: "#64748B",
     fontSize: 14,
+  },
+  matchBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: "#E8F7F0",
+    borderWidth: 1,
+    borderColor: "#B8E5D0",
+  },
+  matchBadgeText: {
+    color: "#137A57",
+    fontSize: 13,
+    fontWeight: "700",
   },
   actions: {
     flexDirection: "row",

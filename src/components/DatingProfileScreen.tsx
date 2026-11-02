@@ -220,6 +220,9 @@ function getMatchVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
 type ProfileCard = {
   id: string;
   userId: string;
+  alreadyLiked: boolean;
+  theyLikedYou: boolean;
+  isMatched: boolean;
   name: string | null;
   age: number | null;
   height: string | null;
@@ -266,6 +269,9 @@ export default function DatingProfileScreen() {
           .map((card) => ({
           id: card.userId,
           userId: card.userId,
+          alreadyLiked: card.alreadyLiked,
+          theyLikedYou: card.theyLikedYou,
+          isMatched: card.isMatched,
           name: card.name,
           age: card.age,
           height: card.formattedHeight || card.heightFt,
@@ -387,15 +393,29 @@ export default function DatingProfileScreen() {
 
   // Like (❤️): show "Liked" toast notification, slide complete screen RIGHT and smoothly move to the next profile
   const handleToggleLike = () => {
-    if (isAnimating || !currentProfile) return;
+    if (isAnimating || !currentProfile || currentProfile.alreadyLiked) return;
     setIsAnimating(true);
     setIsLiked(true);
     setShowLikedToast(true);
 
     const targetId = currentProfile.userId || currentProfile.id;
     if (targetId) {
+      setCards((currentCards) =>
+        currentCards.map((card) =>
+          card.userId === targetId
+            ? { ...card, alreadyLiked: true }
+            : card,
+        ),
+      );
       swipeUser(targetId, 'like')
         .then((res) => {
+          setCards((currentCards) =>
+            currentCards.map((card) =>
+              card.userId === targetId
+                ? { ...card, isMatched: res.isMatch }
+                : card,
+            ),
+          );
           if (res && res.isMatch) {
             setMatchModalData({
               name: currentProfile.name,
@@ -406,6 +426,13 @@ export default function DatingProfileScreen() {
           }
         })
         .catch((e) => {
+          setCards((currentCards) =>
+            currentCards.map((card) =>
+              card.userId === targetId
+                ? { ...card, alreadyLiked: false, isMatched: false }
+                : card,
+            ),
+          );
           console.warn('Backend sync warning on swipe like:', e);
         });
     }
@@ -834,6 +861,24 @@ export default function DatingProfileScreen() {
             </ScrollView>
 
             {/* Floating Action Buttons Overlay (Positioned close to footer with Chat slightly higher matching reference image) */}
+            {(currentProfile.isMatched ||
+              currentProfile.theyLikedYou ||
+              currentProfile.alreadyLiked) && (
+              <View style={styles.alreadyLikedBadge}>
+                <Ionicons
+                  name={currentProfile.isMatched ? 'heart' : 'checkmark-circle'}
+                  size={16}
+                  color="#168A62"
+                />
+                <Text style={styles.alreadyLikedLabel}>
+                  {currentProfile.isMatched
+                    ? "It's a match!"
+                    : currentProfile.theyLikedYou
+                      ? 'They liked you'
+                      : 'You already liked this profile'}
+                </Text>
+              </View>
+            )}
             <View style={styles.floatingActionRow}>
               {/* Dislike / Red X Button (#FFC5C5 outer ring, #EB1B1B inner circle, white X) */}
               <View style={styles.actionBtnRedOuter}>
@@ -861,12 +906,29 @@ export default function DatingProfileScreen() {
               <View style={styles.actionBtnPinkOutermost}>
                 <View style={styles.actionBtnPinkMiddle}>
                   <TouchableOpacity
-                    style={[styles.actionBtnPinkInner, isLiked && styles.actionBtnPinkLiked]}
+                    style={[
+                      styles.actionBtnPinkInner,
+                      isLiked && styles.actionBtnPinkLiked,
+                      (currentProfile.alreadyLiked || currentProfile.isMatched) &&
+                        styles.actionBtnPinkDisabled,
+                    ]}
                     activeOpacity={0.85}
+                    disabled={currentProfile.alreadyLiked || currentProfile.isMatched}
+                    accessibilityState={{
+                      disabled: currentProfile.alreadyLiked || currentProfile.isMatched,
+                    }}
                     onPress={handleToggleLike}
                   >
                     <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
-                      <Ionicons name="heart" size={22} color="#FF1FC7" />
+                      <Ionicons
+                        name="heart"
+                        size={22}
+                        color={
+                          currentProfile.alreadyLiked || currentProfile.isMatched
+                            ? '#9CA3AF'
+                            : '#FF1FC7'
+                        }
+                      />
                     </Animated.View>
                   </TouchableOpacity>
                 </View>
@@ -1655,6 +1717,26 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 999,
   },
+  alreadyLikedBadge: {
+    position: 'absolute',
+    bottom: 70,
+    zIndex: 999,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#E8F7F0',
+    borderWidth: 1,
+    borderColor: '#B8E5D0',
+  },
+  alreadyLikedLabel: {
+    color: '#137A57',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   actionBtnRedOuter: {
     width: 56,
     height: 56,
@@ -1714,6 +1796,10 @@ const styles = StyleSheet.create({
   },
   actionBtnPinkLiked: {
     transform: [{ scale: 1.08 }],
+  },
+  actionBtnPinkDisabled: {
+    backgroundColor: '#E5E7EB',
+    opacity: 0.7,
   },
   bottomTabBar: {
     height: 64,

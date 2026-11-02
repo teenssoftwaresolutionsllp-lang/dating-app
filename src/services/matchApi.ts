@@ -4,6 +4,9 @@ export type SwipeDirection = "like" | "dislike" | "superlike";
 
 export interface DiscoveryCard {
   userId: string;
+  alreadyLiked: boolean;
+  theyLikedYou: boolean;
+  isMatched: boolean;
   name: string | null;
   age: number | null;
   dateOfBirth?: string | null;
@@ -103,6 +106,8 @@ export interface LikeReceivedItem {
   likedAt?: string;
   isSuperLike?: boolean;
   action?: string;
+  isMatched?: boolean;
+  matchId?: string | null;
   user?: {
     userId: string;
     name: string;
