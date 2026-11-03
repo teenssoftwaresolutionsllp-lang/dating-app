@@ -34,10 +34,9 @@ export default function BirthdayScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [pickerDate, setPickerDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [dobError, setDobError] = useState(false);
 
-  const dobShakeAnim = useRef(new Animated.Value(0)).current;
+  const [dobShakeAnim] = useState(() => new Animated.Value(0));
 
   const feetInputRef = useRef<TextInput>(null);
   const inchesInputRef = useRef<TextInput>(null);
@@ -235,7 +234,6 @@ export default function BirthdayScreen() {
                 value={pickerDate}
                 onChange={handleDatePicked}
                 onNextField={() => {
-                  setShowDatePicker(false);
                   feetInputRef.current?.focus();
                 }}
                 placeholder="DD/MM/YY"

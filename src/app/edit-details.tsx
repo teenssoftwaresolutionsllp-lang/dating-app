@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,77 +9,78 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { getStoredUserProfile, updateStoredUserProfile } from '@/constants/userProfile';
-import { updateCurrentProfile, updateEducation } from '@/services/profileApi';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import {
+  getStoredUserProfile,
+  updateStoredUserProfile,
+} from "@/constants/userProfile";
+import { updateCurrentProfile, updateEducation } from "@/services/profileApi";
 
 const EDUCATION_OPTIONS = [
-  'Graduation / B.Tech',
-  'Master / M.Tech / MBA',
-  'Doctorate / Ph.D',
-  'Diploma / Vocational',
-  'High School',
+  "Graduation / B.Tech",
+  "Master / M.Tech / MBA",
+  "Doctorate / Ph.D",
+  "Diploma / Vocational",
+  "High School",
 ];
 
 const RELIGION_OPTIONS = [
-  'Hindu',
-  'Muslim',
-  'Christian',
-  'Sikh',
-  'Jain',
-  'Buddhist',
-  'Spiritual',
-  'Atheist / Agnostic',
+  "Hindu",
+  "Muslim",
+  "Christian",
+  "Sikh",
+  "Jain",
+  "Buddhist",
+  "Spiritual",
+  "Atheist / Agnostic",
 ];
 
 const RELATIONSHIP_OPTIONS = [
-  'Single',
-  'Never Married',
-  'Divorced',
-  'Separated',
-  'Widowed',
+  "Single",
+  "Never Married",
+  "Divorced",
+  "Separated",
+  "Widowed",
 ];
 
 const FOOD_OPTIONS = [
-  'Vegetarian',
-  'Non-Vegetarian',
-  'Eggetarian',
-  'Vegan',
-  'Jain',
-  'Foodie / Veg',
+  "Vegetarian",
+  "Non-Vegetarian",
+  "Eggetarian",
+  "Vegan",
+  "Jain",
+  "Foodie / Veg",
 ];
 
-const DRINK_OPTIONS = [
-  'Never',
-  'Socially',
-  'Frequently',
-  'Planning to quit',
-];
+const DRINK_OPTIONS = ["Never", "Socially", "Frequently", "Planning to quit"];
 
-const SMOKE_OPTIONS = [
-  'No',
-  'Socially',
-  'Regularly',
-  'Trying to quit',
-];
+const SMOKE_OPTIONS = ["No", "Socially", "Regularly", "Trying to quit"];
 
 export default function EditDetailsScreen() {
   const router = useRouter();
   const profile = getStoredUserProfile();
 
-  const [education, setEducation] = useState(profile.education || 'Graduation / B.Tech');
-  const [languages, setLanguages] = useState(profile.languages || 'English, Telugu');
-  const [religion, setReligion] = useState(profile.religion || 'Hindu');
-  const [profession, setProfession] = useState(profile.profession || 'Software Engineer');
-  const [relationshipStatus, setRelationshipStatus] = useState(
-    profile.relationshipStatus || 'Single'
+  const [education, setEducation] = useState(
+    profile.education || "Graduation / B.Tech",
   );
-  const [foodPreference, setFoodPreference] = useState(profile.foodPreference || 'Foodie / Veg');
-  const [drinking, setDrinking] = useState(profile.drinking || 'Socially');
-  const [smoking, setSmoking] = useState(profile.smoking || 'No');
+  const [languages, setLanguages] = useState(
+    profile.languages || "English, Telugu",
+  );
+  const [religion, setReligion] = useState(profile.religion || "Hindu");
+  const [profession, setProfession] = useState(
+    profile.profession || "Software Engineer",
+  );
+  const [relationshipStatus, setRelationshipStatus] = useState(
+    profile.relationshipStatus || "Single",
+  );
+  const [foodPreference, setFoodPreference] = useState(
+    profile.foodPreference || "",
+  );
+  const [drinking, setDrinking] = useState(profile.drinking || "");
+  const [smoking, setSmoking] = useState(profile.smoking || "");
   const [height, setHeight] = useState(profile.height || `5'10" (178 cm)`);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -127,17 +128,25 @@ export default function EditDetailsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+            >
               <Ionicons name="chevron-back" size={24} color="#0D7A74" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Edit Profile Details</Text>
-            <TouchableOpacity style={styles.saveHeaderBtn} onPress={handleSave} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.saveHeaderBtn}
+              onPress={handleSave}
+              activeOpacity={0.8}
+            >
               <Text style={styles.saveHeaderBtnText}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -149,14 +158,20 @@ export default function EditDetailsScreen() {
           >
             <Text style={styles.sectionHeading}>Key Details</Text>
             <Text style={styles.sectionSubtitle}>
-              Update your education, profession, height, languages, and personal background.
+              Update your education, profession, height, languages, and personal
+              background.
             </Text>
 
             {/* Profession Input */}
             <View style={styles.formGroup}>
               <Text style={styles.fieldLabel}>Profession / Occupation</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="briefcase-outline" size={20} color="#0D7A74" style={styles.inputIcon} />
+                <Ionicons
+                  name="briefcase-outline"
+                  size={20}
+                  color="#0D7A74"
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.textInput}
                   value={profession}
@@ -198,7 +213,12 @@ export default function EditDetailsScreen() {
             <View style={styles.formGroup}>
               <Text style={styles.fieldLabel}>Languages Spoken</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="language-outline" size={20} color="#0D7A74" style={styles.inputIcon} />
+                <Ionicons
+                  name="language-outline"
+                  size={20}
+                  color="#0D7A74"
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.textInput}
                   value={languages}
@@ -214,12 +234,17 @@ export default function EditDetailsScreen() {
               <View style={[styles.formGroup, { flex: 1 }]}>
                 <Text style={styles.fieldLabel}>Height</Text>
                 <View style={styles.inputWrap}>
-                  <Ionicons name="body-outline" size={18} color="#0D7A74" style={styles.inputIcon} />
+                  <Ionicons
+                    name="body-outline"
+                    size={18}
+                    color="#0D7A74"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.textInput}
                     value={height}
                     onChangeText={setHeight}
-                    placeholder={'e.g. 5\'10" (178 cm)'}
+                    placeholder={"e.g. 5'10\" (178 cm)"}
                     placeholderTextColor="#94A3B8"
                   />
                 </View>
@@ -228,7 +253,12 @@ export default function EditDetailsScreen() {
               <View style={[styles.formGroup, { flex: 1 }]}>
                 <Text style={styles.fieldLabel}>Religion</Text>
                 <View style={styles.inputWrap}>
-                  <Ionicons name="sparkles-outline" size={18} color="#0D7A74" style={styles.inputIcon} />
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={18}
+                    color="#0D7A74"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.textInput}
                     value={religion}
@@ -257,7 +287,8 @@ export default function EditDetailsScreen() {
                     <Text
                       style={[
                         styles.choiceChipText,
-                        relationshipStatus === item && styles.choiceChipTextSelected,
+                        relationshipStatus === item &&
+                          styles.choiceChipTextSelected,
                       ]}
                     >
                       {item}
@@ -284,7 +315,8 @@ export default function EditDetailsScreen() {
                     <Text
                       style={[
                         styles.choiceChipText,
-                        foodPreference === item && styles.choiceChipTextSelected,
+                        foodPreference === item &&
+                          styles.choiceChipTextSelected,
                       ]}
                     >
                       {item}
@@ -349,7 +381,11 @@ export default function EditDetailsScreen() {
             </View>
 
             {/* Bottom Save Button */}
-            <TouchableOpacity style={styles.bottomSaveBtn} onPress={handleSave} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.bottomSaveBtn}
+              onPress={handleSave}
+              activeOpacity={0.85}
+            >
               <Text style={styles.bottomSaveBtnText}>Save Profile Details</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -362,25 +398,25 @@ export default function EditDetailsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingTop: 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FAFCFC',
+    backgroundColor: "#FAFCFC",
     maxWidth: 500,
-    width: '100%',
-    alignSelf: 'center',
+    width: "100%",
+    alignSelf: "center",
   },
   header: {
     height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: "#F1F5F9",
   },
   backBtn: {
     padding: 6,
@@ -388,21 +424,21 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
   },
   saveHeaderBtn: {
-    backgroundColor: '#E6FFFA',
+    backgroundColor: "#E6FFFA",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
   },
   saveHeaderBtnText: {
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0D7A74',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0D7A74",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -411,15 +447,15 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
-    color: '#0F172A',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+    color: "#0F172A",
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 13,
-    fontFamily: 'DM_Sans_400Regular',
-    color: '#64748B',
+    fontFamily: "DM_Sans_400Regular",
+    color: "#64748B",
     lineHeight: 19,
     marginBottom: 20,
   },
@@ -427,26 +463,26 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   twoColumnRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   fieldLabel: {
     fontSize: 13.5,
-    fontWeight: '600',
-    fontFamily: 'DM_Sans_500Medium',
-    color: '#334155',
+    fontWeight: "600",
+    fontFamily: "DM_Sans_500Medium",
+    color: "#334155",
     marginBottom: 8,
   },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    shadowColor: '#64748B',
+    shadowColor: "#64748B",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -458,52 +494,52 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 14.5,
-    fontFamily: 'DM_Sans_400Regular',
-    color: '#0F172A',
+    fontFamily: "DM_Sans_400Regular",
+    color: "#0F172A",
   },
   chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   choiceChip: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: "#CBD5E1",
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   choiceChipSelected: {
-    backgroundColor: '#E6FFFA',
-    borderColor: '#0D7A74',
+    backgroundColor: "#E6FFFA",
+    borderColor: "#0D7A74",
   },
   choiceChipText: {
     fontSize: 13,
-    fontFamily: 'DM_Sans_400Regular',
-    color: '#475569',
+    fontFamily: "DM_Sans_400Regular",
+    color: "#475569",
   },
   choiceChipTextSelected: {
-    color: '#0D7A74',
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
+    color: "#0D7A74",
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
   },
   bottomSaveBtn: {
-    backgroundColor: '#0D7A74',
+    backgroundColor: "#0D7A74",
     paddingVertical: 15,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 12,
-    shadowColor: '#0D7A74',
+    shadowColor: "#0D7A74",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
   bottomSaveBtnText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'DM_Sans_700Bold',
+    fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
   },
 });

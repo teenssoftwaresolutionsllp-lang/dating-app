@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Platform,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -31,15 +33,109 @@ export default function SetProfileScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userNameError, setUserNameError] = useState(false);
   const [genderError, setGenderError] = useState(false);
+  const [bioError, setBioError] = useState(false);
 
   const [bio, setBio] = useState('');
   const [isBioFocused, setIsBioFocused] = useState(false);
+  const isBioFocusedRef = useRef(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardHeightRef = useRef(0);
 
-  const isComplete = Boolean(userName.trim() && gender);
+  const isComplete = Boolean(userName.trim() && gender && bio.trim());
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const bioSectionYRef = useRef<number | null>(null);
+  const savedScrollYRef = useRef(0);
+  const currentScrollYRef = useRef(0);
   const userNameShakeAnim = useRef(new Animated.Value(0)).current;
   const genderShakeAnim = useRef(new Animated.Value(0)).current;
-  const initialHeight = useRef(Dimensions.get('window').height).current;
+  const bioShakeAnim = useRef(new Animated.Value(0)).current;
+
+  const scrollToBio = () => {
+    const doScroll = () => {
+      if (bioSectionYRef.current !== null && scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({
+          y: Math.max(0, bioSectionYRef.current - 16),
+          animated: true,
+        });
+      } else {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }
+    };
+
+    doScroll();
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 100);
+    setTimeout(doScroll, 250);
+  };
+
+  const restoreOriginalPosition = () => {
+    const doRestore = () => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({
+          y: Math.max(0, savedScrollYRef.current),
+          animated: true,
+        });
+      }
+    };
+
+    doRestore();
+    requestAnimationFrame(doRestore);
+    setTimeout(doRestore, 100);
+  };
+
+  const handleBioFocus = () => {
+    if (!isBioFocusedRef.current && keyboardHeightRef.current === 0) {
+      savedScrollYRef.current = currentScrollYRef.current;
+    }
+    setIsBioFocused(true);
+    isBioFocusedRef.current = true;
+    scrollToBio();
+  };
+
+  const handleBioBlur = () => {
+    setIsBioFocused(false);
+    isBioFocusedRef.current = false;
+    if (keyboardHeightRef.current === 0) {
+      restoreOriginalPosition();
+    }
+  };
+
+  useEffect(() => {
+    const onKeyboardShow = (e: any) => {
+      const height = e?.endCoordinates?.height || 0;
+      keyboardHeightRef.current = height;
+      setKeyboardHeight(height);
+      if (isBioFocusedRef.current) {
+        scrollToBio();
+      }
+    };
+
+    const onKeyboardHide = () => {
+      keyboardHeightRef.current = 0;
+      setKeyboardHeight(0);
+      restoreOriginalPosition();
+    };
+
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      onKeyboardShow
+    );
+    const didShowSub =
+      Platform.OS === 'ios'
+        ? Keyboard.addListener('keyboardDidShow', onKeyboardShow)
+        : null;
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      onKeyboardHide
+    );
+
+    return () => {
+      showSub.remove();
+      didShowSub?.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const triggerUserNameShake = () => {
     userNameShakeAnim.setValue(0);
@@ -123,19 +219,75 @@ export default function SetProfileScreen() {
     ]).start();
   };
 
+  const triggerBioShake = () => {
+    bioShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(bioShakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bioShakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bioShakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bioShakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bioShakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bioShakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bioShakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const handleNext = async () => {
     if (!userName.trim()) {
       setUserNameError(true);
       setGenderError(false);
+      setBioError(false);
       triggerUserNameShake();
       return;
     }
+
     if (!gender) {
       setGenderError(true);
+      setUserNameError(false);
+      setBioError(false);
       triggerGenderShake();
       return;
     }
-    if (isSubmitting) return;
+
+    if (!bio.trim()) {
+      setBioError(true);
+      setUserNameError(false);
+      setGenderError(false);
+      triggerBioShake();
+      return;
+    }
+
+    if (isSubmitting) {
+      return;
+    }
     setIsSubmitting(true);
     try {
       const selectedGender = gender.toLowerCase();
@@ -161,13 +313,29 @@ export default function SetProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
-      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
         <OnboardingHeader progress={0.05} />
 
-        <View style={styles.keyboardView}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
+        >
           <ScrollView
-            contentContainerStyle={styles.scrollContent}
+            ref={scrollViewRef}
+            onScroll={(e) => {
+              currentScrollYRef.current = e.nativeEvent.contentOffset.y;
+              if (!isBioFocusedRef.current && keyboardHeightRef.current === 0) {
+                savedScrollYRef.current = e.nativeEvent.contentOffset.y;
+              }
+            }}
+            scrollEventThrottle={16}
+            contentContainerStyle={[
+              styles.scrollContent,
+              (isBioFocused || keyboardHeight > 0) && {
+                paddingBottom: Math.max(keyboardHeight + 60, 320),
+              },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -289,24 +457,34 @@ export default function SetProfileScreen() {
             
             </View>
 
-            {/* About Me / Bio Section (Optional) */}
-            <View style={[styles.inputSection, { marginTop: 24 }]}>
+            {/* About Me / Bio Section */}
+            <View
+              style={[styles.inputSection, { marginTop: 24 }]}
+              onLayout={(e) => {
+                bioSectionYRef.current = e.nativeEvent.layout.y;
+              }}
+            >
               <View style={styles.bioTitleRow}>
                 <Text style={styles.label}>About Me (Bio)</Text>
-                <Text style={styles.optionalBadge}>Optional</Text>
               </View>
               <View
                 style={[
                   styles.bioInputContainer,
                   isBioFocused && styles.inputContainerFocused,
+                  bioError && styles.inputContainerError,
                 ]}
               >
                 <TextInput
                   style={styles.bioTextInput}
                   value={bio}
-                  onChangeText={setBio}
-                  onFocus={() => setIsBioFocused(true)}
-                  onBlur={() => setIsBioFocused(false)}
+                  onChangeText={(text) => {
+                    setBio(text);
+                    if (bioError && text.trim().length > 0) {
+                      setBioError(false);
+                    }
+                  }}
+                  onFocus={handleBioFocus}
+                  onBlur={handleBioBlur}
                   placeholder="Share a few words about yourself, hobbies, or what you're looking for..."
                   placeholderTextColor="#9CA3AF"
                   selectionColor="#00E4E8"
@@ -316,7 +494,21 @@ export default function SetProfileScreen() {
                   textAlignVertical="top"
                 />
               </View>
-              <Text style={styles.bioCharCount}>{bio.length} / 300</Text>
+              <View style={styles.bioBottomRow}>
+                {bioError ? (
+                  <Animated.Text
+                    style={[
+                      styles.bioErrorMessage,
+                      {
+                        transform: [{ translateX: bioShakeAnim }],
+                      },
+                    ]}
+                  >
+                    Please enter your bio
+                  </Animated.Text>
+                ) : <View />}
+                <Text style={styles.bioCharCount}>{bio.length} / 300</Text>
+              </View>
             </View>
 
             {/* Warning Banner */}
@@ -325,11 +517,12 @@ export default function SetProfileScreen() {
               <Text style={styles.warningText}>{"Gender can't be changed later"}</Text>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
 
         {/* Action Button */}
         <OnboardingFooter
           onNext={handleNext}
+          disabled={isSubmitting}
           nextButtonStyle={{
             backgroundColor: isComplete
               ? theme.primaryButton
@@ -516,7 +709,17 @@ const styles = StyleSheet.create({
   bioCharCount: {
     fontSize: 11,
     color: '#9CA3AF',
-    textAlign: 'right',
+  },
+  bioBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 4,
+    minHeight: 18,
+  },
+  bioErrorMessage: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF3B30',
   },
 });

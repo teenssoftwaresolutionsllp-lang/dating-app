@@ -9,6 +9,7 @@ import {
   Dimensions,
   StatusBar,
   Animated,
+  Alert,
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
@@ -28,85 +29,94 @@ import {
   type DiscoveryCard,
 } from '@/services/matchApi';
 
-// Rosette Ribbon Badge Component (Bottom Right of Photo Card as shown in Figma Image 1)
-export function RosetteBadge({ percentage = 100 }: { percentage?: number }) {
-  let ribbonColor = '#10B981';
-  let strokeColor = '#059669';
-  let textColor = '#047857';
-  let innerBg = '#D1FAE5';
+// Circular Trust Score Badge Component (Bottom Right of Photo Card matching reference images)
+export function CircularTrustBadge({ percentage = 100 }: { percentage?: number }) {
+  const size = 44;
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  let bgFill = '#DBFDDE';
+  let strokeColor = '#00FF19';
+  let textColor = '#064E1D';
 
   if (percentage >= 100) {
-    ribbonColor = '#10B981';
-    strokeColor = '#059669';
-    textColor = '#047857';
-    innerBg = '#D1FAE5';
+    bgFill = '#DBFDDE';
+    strokeColor = '#00FF19';
+    textColor = '#064E1D';
   } else if (percentage >= 75) {
-    ribbonColor = '#00BCD4';
-    strokeColor = '#00838F';
-    textColor = '#0077B6';
-    innerBg = '#E0F7FA';
+    bgFill = '#E1F5FC';
+    strokeColor = '#21C4FF';
+    textColor = '#024158';
   } else if (percentage >= 50) {
-    ribbonColor = '#F59E0B';
-    strokeColor = '#D97706';
-    textColor = '#B45309';
-    innerBg = '#FEF3C7';
+    bgFill = '#FFF8DA';
+    strokeColor = '#FFD621';
+    textColor = '#514303';
   } else {
-    ribbonColor = '#EF4444';
-    strokeColor = '#DC2626';
-    textColor = '#B91C1C';
-    innerBg = '#FEE2E2';
+    bgFill = '#FED8D8';
+    strokeColor = '#FF1414';
+    textColor = '#3A0203';
   }
 
+  const validPct = Math.max(0, Math.min(100, percentage));
+  const strokeLength = (validPct / 100) * circumference;
+  const strokeOffset = validPct >= 100 ? 0 : strokeLength - circumference;
+
   return (
-    <View style={badgeStyles.rosetteContainer}>
-      <Svg width={46} height={56} viewBox="0 0 44 54" fill="none">
-        {/* Left Ribbon Tail */}
-        <Path
-          d="M13 34L9 50L16 45L21 50L19 34"
-          fill={ribbonColor}
+    <View style={badgeStyles.badgeContainer}>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {/* Background Filled Circle */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill={bgFill}
+        />
+        {/* Progress Arc Stroke */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
           stroke={strokeColor}
-          strokeWidth={1.2}
-          strokeLinejoin="round"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${strokeLength} ${circumference}`}
+          strokeDashoffset={strokeOffset}
         />
-        {/* Right Ribbon Tail */}
-        <Path
-          d="M25 34L23 50L28 45L35 50L31 34"
-          fill={ribbonColor}
-          stroke={strokeColor}
-          strokeWidth={1.2}
-          strokeLinejoin="round"
-        />
-        {/* Rosette Scalloped Outer Seal */}
-        <Path
-          d="M22 3C23.3 3 24.3 1.8 25.6 2.2C26.9 2.6 27.3 3.9 28.6 4.6C29.9 5.2 31.2 4.8 32.3 5.8C33.4 6.8 33 8.1 33.6 9.4C34.3 10.7 35.6 11.1 36 12.4C36.4 13.7 35.1 14.6 35.1 15.9C35.1 17.2 36.4 18.1 36 19.4C35.6 20.7 34.3 21.1 33.6 22.4C33 23.7 33.4 25 32.3 26C31.2 27 29.9 26.6 28.6 27.2C27.3 27.9 26.9 29.2 25.6 29.6C24.3 30 23.3 28.8 22 28.8C20.7 28.8 19.7 30 18.4 29.6C17.1 29.2 16.7 27.9 15.4 27.2C14.1 26.6 12.8 27 11.7 26C10.6 25 11 23.7 10.4 22.4C9.7 21.1 8.4 20.7 8 19.4C7.6 18.1 8.9 17.2 8.9 15.9C8.9 14.6 7.6 13.7 8 12.4C8.4 11.1 9.7 10.7 10.4 9.4C11 8.1 10.6 6.8 11.7 5.8C12.8 4.8 14.1 5.2 15.4 4.6C16.7 3.9 17.1 2.6 18.4 2.2C19.7 1.8 20.7 3 22 3Z"
-          fill="rgba(255, 255, 255, 0.95)"
-          stroke={ribbonColor}
-          strokeWidth={1.8}
-        />
-        {/* Inner Circle Accent */}
-        <Circle cx="22" cy="16" r="10" stroke={strokeColor} strokeWidth={1.2} fill={innerBg} />
-        {/* Score Text */}
+        {/* Centered Percentage Text */}
         <SvgText
-          x="22"
-          y="19"
-          fontSize="9"
-          fontWeight="bold"
-          fill={textColor}
+          x={center}
+          y={center + 4}
           textAnchor="middle"
+          fill={textColor}
+          fontSize={validPct >= 100 ? 11 : 12}
+          fontWeight="800"
+          fontFamily="DM_Sans_700Bold"
         >
-          {`${percentage}%`}
+          {`${Math.round(validPct)}%`}
         </SvgText>
       </Svg>
     </View>
   );
 }
 
+// Preserve RosetteBadge export for compatibility
+export const RosetteBadge = CircularTrustBadge;
+
 const badgeStyles = StyleSheet.create({
-  rosetteContainer: {
-    width: 46,
-    height: 56,
+  badgeContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 4,
   },
 });
 
@@ -199,13 +209,6 @@ function MeTabIcon({ color, size = 22 }: { color: string; size?: number }) {
   );
 }
 
-// User provided asset images
-const ASSET_IMAGES = [
-  require('../../assets/images/profile_asset1.jpg'),
-  require('../../assets/images/profile_asset2.jpg'),
-  require('../../assets/images/profile_asset3.jpg'),
-];
-
 const MATCH_VIBE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Caring: 'heart',
   'Fun & Funny': 'happy',
@@ -223,98 +226,31 @@ function getMatchVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
   return MATCH_VIBE_ICONS[vibe] || 'sparkles';
 }
 
-// Profile data structure with multiple detailed profiles
-const PROFILES_DATA = [
-  {
-    id: '1',
-    name: 'Ammu',
-    age: 23,
-    height: '5.6 fts',
-    location: 'Lives in Hyderabad',
-    about: 'Looking for good vibes, genuine conversations, and a real connection.',
-    interests: ['Music', 'Movies', 'Travel'],
-    education: 'B. Tech',
-    profession: 'Designer',
-    foodPreference: 'Foodie / Veg',
-    drinking: 'Socially',
-    smoking: 'No',
-    lookingFor: 'Long-term relationship',
-    religion: 'Hindu',
-    relationshipStatus: 'Single',
-    vibes: ['Caring', 'Deep Talks', 'Creative', 'Positive', 'Chill'],
-    images: [ASSET_IMAGES[0], ASSET_IMAGES[1], ASSET_IMAGES[2]],
-  },
-  {
-    id: '2',
-    name: 'Pinky',
-    age: 24,
-    height: '5.4 fts',
-    location: 'Lives in Bangalore',
-    about: 'Passionate about photography, artisanal coffee, and spontaneous weekend road trips! ☕📸',
-    interests: ['Photography', 'Coffee', 'Road Trips'],
-    education: 'M.B.A',
-    profession: 'Product Manager',
-    foodPreference: 'Non-Veg',
-    drinking: 'Socially',
-    smoking: 'No',
-    lookingFor: 'Something real',
-    religion: 'Spiritual',
-    relationshipStatus: 'Single',
-    vibes: ['Fun & Funny', 'Adventurous', 'Chill', 'Positive', 'Creative'],
-    images: [ASSET_IMAGES[1], ASSET_IMAGES[2], ASSET_IMAGES[0]],
-  },
-  {
-    id: '3',
-    name: 'Priya',
-    age: 22,
-    height: '5.5 fts',
-    location: 'Lives in Mumbai',
-    about: 'Art enthusiast, foodie, and dog lover. Let’s talk about favorite books, movies, and indie songs! 🎨🐾',
-    interests: ['Art & Painting', 'Indie Music', 'Dogs'],
-    education: 'B.A. Fine Arts',
-    profession: 'UI/UX Designer',
-    foodPreference: 'Vegetarian',
-    drinking: 'Never',
-    smoking: 'No',
-    lookingFor: 'Meaningful bond',
-    religion: 'Hindu',
-    relationshipStatus: 'Single',
-    vibes: ['Peaceful', 'Romantic', 'Creative', 'Caring', 'Deep Talks'],
-    images: [ASSET_IMAGES[2], ASSET_IMAGES[0], ASSET_IMAGES[1]],
-  },
-  {
-    id: '4',
-    name: 'Sneha',
-    age: 25,
-    height: '5.7 fts',
-    location: 'Lives in Delhi',
-    about: 'Fitness junkie, tech explorer, and lover of acoustic tunes. Always up for deep conversations! 🎧⚡',
-    interests: ['Fitness', 'Tech & Code', 'Acoustic Music'],
-    education: 'B. Tech CS',
-    profession: 'Software Engineer',
-    foodPreference: 'Eggetarian',
-    drinking: 'Socially',
-    smoking: 'No',
-    lookingFor: 'Date to marry',
-    religion: 'Hindu',
-    relationshipStatus: 'Single',
-    vibes: ['Adventurous', 'Classy', 'Positive', 'Deep Talks', 'Chill'],
-    images: [ASSET_IMAGES[0], ASSET_IMAGES[2], ASSET_IMAGES[1]],
-  },
-];
-
-// Cards data for Likes Screen (Liked You vs You Liked)
-const LIKED_YOU_DATA = [
-  { id: 'ly1', name: 'Ammu, 23', image: ASSET_IMAGES[0], time: '2 hrs ago' },
-  { id: 'ly2', name: 'Pinky, 24', image: ASSET_IMAGES[1], time: '5 hrs ago' },
-  { id: 'ly3', name: 'Priya, 22', image: ASSET_IMAGES[2], time: '1 day ago' },
-];
-
-const YOU_LIKED_DATA = [
-  { id: 'yl1', name: 'Ananya, 24', image: ASSET_IMAGES[2], time: 'Yesterday', match: '96%' },
-  { id: 'yl2', name: 'Swathi, 23', image: ASSET_IMAGES[1], time: '2 days ago', match: '90%' },
-  { id: 'yl3', name: 'Teju, 23', image: ASSET_IMAGES[0], time: '3 days ago', match: '87%' },
-];
+type ProfileCard = {
+  id: string;
+  userId: string;
+  alreadyLiked: boolean;
+  theyLikedYou: boolean;
+  isMatched: boolean;
+  name: string | null;
+  age: number | null;
+  height: string | null;
+  isOnline: boolean;
+  location: string | null;
+  about: string | null;
+  interests: string[];
+  education: string | null;
+  profession: string | null;
+  trustScore: DiscoveryCard['trustScore'];
+  foodPreference: string | null;
+  drinking: string | null;
+  smoking: string | null;
+  lookingFor: string | null;
+  religion: string | null;
+  relationshipStatus: string | null;
+  nature: string[];
+  images: { uri: string }[];
+};
 
 export default function DatingProfileScreen() {
   const router = useRouter();
@@ -322,9 +258,11 @@ export default function DatingProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [showLikedToast, setShowLikedToast] = useState(false);
-  const [cards, setCards] = useState<any[]>(PROFILES_DATA);
+  const [cards, setCards] = useState<ProfileCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [matchModalData, setMatchModalData] = useState<{
-    name: string;
+    name: string | null;
     photo: any;
     matchId?: string | null;
     userId: string;
@@ -333,42 +271,51 @@ export default function DatingProfileScreen() {
   const [safetyActionStatus, setSafetyActionStatus] = useState<string | null>(null);
 
   React.useEffect(() => {
-    getDiscoveryFeed().then((feed) => {
-      if (feed && feed.length > 0) {
-        const mapped = feed.map((card, idx) => ({
+    getDiscoveryFeed()
+      .then((feed) => {
+        const mapped = feed
+          .filter((card) => card.photos.some((photo) => photo.url))
+          .map((card) => ({
           id: card.userId,
           userId: card.userId,
+          alreadyLiked: card.alreadyLiked,
+          theyLikedYou: card.theyLikedYou,
+          isMatched: card.isMatched,
           name: card.name,
-          age: card.age || 23,
-          height: card.formattedHeight || card.heightFt || `${card.heightCm || 168} cm`,
-          location: card.city ? `Lives in ${card.city}` : card.location || 'Lives in Hyderabad',
-          about: card.bio || 'Looking for good vibes, genuine conversations, and a real connection.',
-          interests: (card.interests && card.interests.length > 0)
-            ? card.interests
-            : (card.languages && card.languages.length > 0)
-            ? card.languages
-            : ['Music', 'Movies', 'Travel'],
-          education: card.education?.qualification || card.education?.educationLevel || 'B.Tech',
-          profession: card.education?.profession || 'Designer',
-          trustScore: card.trustScore || { score: 100, badge: '100%', color: 'green' },
-          foodPreference: card.foodPreference || 'Foodie / Veg',
-          drinking: card.drinking || 'Socially',
-          smoking: card.smoking || 'No',
-          lookingFor: (card.lookingFor && card.lookingFor.length > 0 ? card.lookingFor[0] : card.relationshipStatus) || 'Long-term relationship',
-          religion: card.religion || 'Hindu',
-          relationshipStatus: card.relationshipStatus || 'Single',
-          vibes: (card.vibes && card.vibes.length > 0) ? card.vibes : ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive'],
-          nature: (card.nature && card.nature.length > 0) ? card.nature : ((card.vibes && card.vibes.length > 0) ? card.vibes : ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive']),
-          images: card.photos && card.photos.length > 0
-            ? card.photos.map((p) => ({ uri: formatApiImageUrl(p.url) }))
-            : [ASSET_IMAGES[idx % ASSET_IMAGES.length]],
+          age: card.age,
+          height: card.formattedHeight || card.heightFt,
+          isOnline: card.isOnline,
+          location: card.city ? `Lives in ${card.city}` : card.location,
+          about: card.bio,
+          interests: card.interests || [],
+          education: card.education?.qualification || card.education?.educationLevel || null,
+          profession: card.education?.profession || null,
+          trustScore: card.trustScore,
+          foodPreference: card.foodPreference || null,
+          drinking: card.drinking || null,
+          smoking: card.smoking || null,
+          lookingFor: card.lookingFor?.[0] || null,
+          religion: card.religion || null,
+          relationshipStatus: card.relationshipStatus,
+          nature: card.nature || [],
+          images: card.photos
+            .filter((photo) => Boolean(photo.url))
+            .map((photo) => ({ uri: formatApiImageUrl(photo.url) })),
         }));
         setCards(mapped);
-      }
-    });
+      })
+      .catch((error: unknown) => {
+        console.warn('Failed to load discovery feed:', error);
+        setFeedError(
+          error instanceof Error ? error.message : 'Please try again later.',
+        );
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const currentProfile = cards[currentProfileIndex % cards.length] || PROFILES_DATA[0];
+  const currentProfile = cards.length > 0
+    ? cards[currentProfileIndex % cards.length]
+    : undefined;
 
   // Responsive container width calculation
   const [cardWidth, setCardWidth] = useState<number>(
@@ -390,7 +337,7 @@ export default function DatingProfileScreen() {
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    if (cardWidth > 0) {
+    if (currentProfile && cardWidth > 0) {
       const index = Math.round(offsetX / cardWidth);
       if (index >= 0 && index < currentProfile.images.length && index !== currentImageIndex) {
         setCurrentImageIndex(index);
@@ -399,7 +346,7 @@ export default function DatingProfileScreen() {
   };
 
   const scrollToImage = (index: number) => {
-    if (index >= 0 && index < currentProfile.images.length && cardWidth > 0) {
+    if (currentProfile && index >= 0 && index < currentProfile.images.length && cardWidth > 0) {
       setCurrentImageIndex(index);
       scrollViewRef.current?.scrollTo({
         x: index * cardWidth,
@@ -409,18 +356,20 @@ export default function DatingProfileScreen() {
   };
 
   const handlePrevImage = () => {
+    if (!currentProfile) return;
     const prevIndex = (currentImageIndex - 1 + currentProfile.images.length) % currentProfile.images.length;
     scrollToImage(prevIndex);
   };
 
   const handleNextImage = () => {
+    if (!currentProfile) return;
     const nextIndex = (currentImageIndex + 1) % currentProfile.images.length;
     scrollToImage(nextIndex);
   };
 
   // Reject (❌): slide complete screen LEFT and smoothly move to the next profile
   const handleReject = () => {
-    if (isAnimating) return;
+    if (isAnimating || !currentProfile) return;
     setIsAnimating(true);
 
     const targetId = currentProfile.userId || currentProfile.id;
@@ -453,15 +402,29 @@ export default function DatingProfileScreen() {
 
   // Like (❤️): show "Liked" toast notification, slide complete screen RIGHT and smoothly move to the next profile
   const handleToggleLike = () => {
-    if (isAnimating) return;
+    if (isAnimating || !currentProfile || currentProfile.alreadyLiked) return;
     setIsAnimating(true);
     setIsLiked(true);
     setShowLikedToast(true);
 
     const targetId = currentProfile.userId || currentProfile.id;
     if (targetId) {
+      setCards((currentCards) =>
+        currentCards.map((card) =>
+          card.userId === targetId
+            ? { ...card, alreadyLiked: true }
+            : card,
+        ),
+      );
       swipeUser(targetId, 'like')
         .then((res) => {
+          setCards((currentCards) =>
+            currentCards.map((card) =>
+              card.userId === targetId
+                ? { ...card, isMatched: res.isMatch }
+                : card,
+            ),
+          );
           if (res && res.isMatch) {
             setMatchModalData({
               name: currentProfile.name,
@@ -472,6 +435,13 @@ export default function DatingProfileScreen() {
           }
         })
         .catch((e) => {
+          setCards((currentCards) =>
+            currentCards.map((card) =>
+              card.userId === targetId
+                ? { ...card, alreadyLiked: false, isMatched: false }
+                : card,
+            ),
+          );
           console.warn('Backend sync warning on swipe like:', e);
         });
     }
@@ -514,6 +484,7 @@ export default function DatingProfileScreen() {
 
   // Block user safety action
   const handleBlockUser = async () => {
+    if (!currentProfile) return;
     const targetId = currentProfile.userId || currentProfile.id;
     if (targetId) {
       try {
@@ -532,6 +503,7 @@ export default function DatingProfileScreen() {
 
   // Report user safety action
   const handleReportUser = async (reason: string = 'fake_profile') => {
+    if (!currentProfile) return;
     const targetId = currentProfile.userId || currentProfile.id;
     if (targetId) {
       try {
@@ -548,21 +520,57 @@ export default function DatingProfileScreen() {
     }
   };
 
-  // Chat (💬): open the individual chat screen for the selected person
+  // Open a direct chat; the backend enforces the two-message pre-match limit.
   const handleOpenChat = () => {
-    router.push('/(tab)/chats' as any);
+    if (!currentProfile) return;
+    const partnerId = currentProfile.userId || currentProfile.id;
+    const photoSource = currentProfile.images[0];
+    const partnerPhoto =
+      typeof photoSource === 'object' &&
+      photoSource !== null &&
+      'uri' in photoSource &&
+      typeof photoSource.uri === 'string'
+        ? photoSource.uri
+        : '';
+    router.push({
+      pathname: '/(tab)/chats',
+      params: {
+        partnerId,
+        partnerName: currentProfile.name,
+        partnerPhoto,
+      },
+    } as any);
   };
 
   const handleStartChatWithMatch = async () => {
-    if (matchModalData?.matchId) {
-      try {
-        await startMatchChat(matchModalData.matchId);
-      } catch (e) {
-        console.warn('Failed to start chat with match:', e);
-      }
+    if (!matchModalData?.matchId) return;
+
+    try {
+      await startMatchChat(matchModalData.matchId);
+      const partnerId = matchModalData.userId;
+      const partnerPhoto =
+        typeof matchModalData.photo === 'object' &&
+        matchModalData.photo !== null &&
+        'uri' in matchModalData.photo &&
+        typeof matchModalData.photo.uri === 'string'
+          ? matchModalData.photo.uri
+          : '';
+      setMatchModalData(null);
+      router.push({
+        pathname: '/(tab)/chats',
+        params: {
+          partnerId,
+          partnerName: matchModalData.name,
+          partnerPhoto,
+        },
+      } as any);
+    } catch (error) {
+      console.warn('Failed to start chat with match:', error);
+      Alert.alert(
+        'Unable to start chat',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
     }
-    setMatchModalData(null);
-    router.push('/(tab)/chats' as any);
   };
 
   const onCardLayout = (e: LayoutChangeEvent) => {
@@ -579,11 +587,15 @@ export default function DatingProfileScreen() {
 
         {/* MATCHES SCREEN (Main Dating Profile Screen with multi-image carousel) */}
         <View style={{ flex: 1 }}>
+          {currentProfile ? (
+          <>
           {/* Liked Toast Notification */}
           {showLikedToast && (
             <View style={styles.likedToast}>
               <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.likedToastText}>{`Liked ${currentProfile.name}'s profile!`}</Text>
+              <Text style={styles.likedToastText}>
+                {currentProfile.name ? `Liked ${currentProfile.name}'s profile!` : 'Liked profile!'}
+              </Text>
             </View>
           )}
 
@@ -677,135 +689,155 @@ export default function DatingProfileScreen() {
                     ))}
                   </View>
 
-                  {/* Rosette Ribbon Trust Score Badge (Bottom Right of Photo Card) */}
+                  {/* Circular Trust Score Badge (Bottom Right of Photo Card) */}
                   <View style={styles.hundredPercentBadgeOverlay}>
-                    <RosetteBadge percentage={currentProfile.trustScore?.score ?? 100} />
+                    <CircularTrustBadge percentage={currentProfile.trustScore?.score ?? 100} />
                   </View>
                 </View>
 
                 {/* Profile Basic Details */}
                 <View style={styles.profileDetailsHeader}>
                   <View style={styles.nameRow}>
-                    <Text style={styles.profileName}>
-                      {currentProfile.name}, {currentProfile.age}, {currentProfile.height.split(' ')[0]} <Text style={styles.heightSuffix}>fts</Text>
-                    </Text>
+                    {(currentProfile.name || currentProfile.age != null || currentProfile.height) && (
+                      <Text style={styles.profileName}>
+                        {currentProfile.name}
+                        {currentProfile.age != null ? `, ${currentProfile.age}` : ''}
+                        {currentProfile.height ? ` · ${currentProfile.height}` : ''}
+                      </Text>
+                    )}
 
                     {/* Online Status Badge */}
-                    <View style={styles.onlineBadge}>
-                      <View style={styles.onlineDot} />
-                      <Text style={styles.onlineText}>Online</Text>
-                    </View>
+                    {currentProfile.isOnline && (
+                      <View style={styles.onlineBadge}>
+                        <View style={styles.onlineDot} />
+                        <Text style={styles.onlineText}>Online</Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* Location Line */}
-                  <View style={styles.locationRow}>
-                    <Ionicons name="location-sharp" size={16} color="#111827" />
-                    <Text style={styles.locationText}>{currentProfile.location}</Text>
-                  </View>
+                  {currentProfile.location && (
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-sharp" size={16} color="#111827" />
+                      <Text style={styles.locationText}>{currentProfile.location}</Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* About Me Section */}
-                <View style={styles.aboutMeCard}>
-                  <Text style={styles.aboutMeTitle}>About Me</Text>
-                  <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
+                {(currentProfile.about || currentProfile.interests.length > 0) && (
+                  <View style={styles.aboutMeCard}>
+                    {currentProfile.about && (
+                      <>
+                        <Text style={styles.aboutMeTitle}>About Me</Text>
+                        <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
+                      </>
+                    )}
 
-                  {/* Interest Chips */}
-                  <View style={styles.interestChipsContainer}>
-                    {currentProfile.interests.map((interest: string, idx: number) => (
-                      <View key={idx} style={styles.interestChip}>
-                        <Text style={styles.interestChipText}>{interest}</Text>
+                    {currentProfile.interests.length > 0 && (
+                      <View style={styles.interestChipsContainer}>
+                        {currentProfile.interests.map((interest, idx) => (
+                          <View key={idx} style={styles.interestChip}>
+                            <Text style={styles.interestChipText}>{interest}</Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
+                    )}
                   </View>
-                </View>
+                )}
 
                 {/* Profession & Education */}
-                <View style={styles.professionContainer}>
-                  <View style={styles.professionPill}>
-                    <Ionicons name="school-outline" size={18} color="#0D9488" />
-                    <Text style={styles.professionPillText}>{currentProfile.education}</Text>
+                {(currentProfile.education || currentProfile.profession) && (
+                  <View style={styles.professionContainer}>
+                    {currentProfile.education && (
+                      <View style={styles.professionPill}>
+                        <Ionicons name="school-outline" size={18} color="#0D9488" />
+                        <Text style={styles.professionPillText}>{currentProfile.education}</Text>
+                      </View>
+                    )}
+                    {currentProfile.profession && (
+                      <View style={styles.professionPill}>
+                        <Ionicons name="briefcase-outline" size={18} color="#0D9488" />
+                        <Text style={styles.professionPillText}>{currentProfile.profession}</Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={styles.professionPill}>
-                    <Ionicons name="briefcase-outline" size={18} color="#0D9488" />
-                    <Text style={styles.professionPillText}>{currentProfile.profession}</Text>
-                  </View>
-                </View>
+                )}
 
                 {/* Attributes Grid (Real Data: Food, Drink, Smoke, Looking For, Religion, Relationship Status) */}
-                <View style={styles.attributesGrid}>
+                {(currentProfile.foodPreference || currentProfile.drinking || currentProfile.smoking ||
+                  currentProfile.lookingFor || currentProfile.religion || currentProfile.relationshipStatus) && (
+                  <View style={styles.attributesGrid}>
+                  {currentProfile.foodPreference && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="restaurant-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Food Preferences</Text>
                     </View>
-                    <Text style={styles.attributeValue}>
-                      {currentProfile.foodPreference || 'Foodie / Veg'}
-                    </Text>
+                    <Text style={styles.attributeValue}>{currentProfile.foodPreference}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.drinking && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="wine-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Drink</Text>
                     </View>
-                    <Text style={styles.attributeValue}>
-                      {currentProfile.drinking || 'Socially'}
-                    </Text>
+                    <Text style={styles.attributeValue}>{currentProfile.drinking}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.smoking && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="cloud-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Smoke</Text>
                     </View>
-                    <Text style={styles.attributeValue}>
-                      {currentProfile.smoking || 'No'}
-                    </Text>
+                    <Text style={styles.attributeValue}>{currentProfile.smoking}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.lookingFor && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="heart-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Looking for</Text>
                     </View>
                     <Text style={styles.attributeValue} numberOfLines={1}>
-                      {currentProfile.lookingFor || 'Long-term relationship'}
+                      {currentProfile.lookingFor}
                     </Text>
                   </View>
+                  )}
 
+                  {currentProfile.religion && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="flower-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Religion</Text>
                     </View>
-                    <Text style={styles.attributeValue}>
-                      {currentProfile.religion || 'Hindu'}
-                    </Text>
+                    <Text style={styles.attributeValue}>{currentProfile.religion}</Text>
                   </View>
+                  )}
 
+                  {currentProfile.relationshipStatus && (
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="person-outline" size={15} color="#0D7A74" />
                       <Text style={styles.attributeTitle}>Relationship Status</Text>
                     </View>
-                    <Text style={styles.attributeValue}>
-                      {currentProfile.relationshipStatus || 'Single'}
-                    </Text>
+                    <Text style={styles.attributeValue}>{currentProfile.relationshipStatus}</Text>
                   </View>
+                  )}
                 </View>
+                )}
 
                 {/* Nature Section (Dynamically rendered from candidate's real nature traits) */}
+                {currentProfile.nature.length > 0 && (
                 <View style={styles.myVibesSection}>
                   <Text style={styles.myVibesTitle}>Nature</Text>
                   <View style={styles.myVibesRow}>
-                    {(
-                      (currentProfile.nature && currentProfile.nature.length > 0)
-                        ? currentProfile.nature
-                        : (currentProfile.vibes && currentProfile.vibes.length > 0)
-                        ? currentProfile.vibes
-                        : ['Caring', 'Fun & Funny', 'Peaceful', 'Deep Talks', 'Positive']
-                    )
-                      .slice(0, 5)
+                    {currentProfile.nature.slice(0, 5)
                       .map((trait: string, idx: number) => (
                         <View key={idx} style={styles.vibeItem}>
                           <View style={styles.vibeIconCircle}>
@@ -818,6 +850,7 @@ export default function DatingProfileScreen() {
                       ))}
                   </View>
                 </View>
+                )}
 
                 {/* Report & Block Profile Link */}
                 <TouchableOpacity
@@ -835,6 +868,24 @@ export default function DatingProfileScreen() {
             </ScrollView>
 
             {/* Floating Action Buttons Overlay (Positioned close to footer with Chat slightly higher matching reference image) */}
+            {(currentProfile.isMatched ||
+              currentProfile.theyLikedYou ||
+              currentProfile.alreadyLiked) && (
+              <View style={styles.alreadyLikedBadge}>
+                <Ionicons
+                  name={currentProfile.isMatched ? 'heart' : 'checkmark-circle'}
+                  size={16}
+                  color="#168A62"
+                />
+                <Text style={styles.alreadyLikedLabel}>
+                  {currentProfile.isMatched
+                    ? "It's a match!"
+                    : currentProfile.theyLikedYou
+                      ? 'They liked you'
+                      : 'You already liked this profile'}
+                </Text>
+              </View>
+            )}
             <View style={styles.floatingActionRow}>
               {/* Dislike / Red X Button (#FFC5C5 outer ring, #EB1B1B inner circle, white X) */}
               <View style={styles.actionBtnRedOuter}>
@@ -862,18 +913,34 @@ export default function DatingProfileScreen() {
               <View style={styles.actionBtnPinkOutermost}>
                 <View style={styles.actionBtnPinkMiddle}>
                   <TouchableOpacity
-                    style={[styles.actionBtnPinkInner, isLiked && styles.actionBtnPinkLiked]}
+                    style={[
+                      styles.actionBtnPinkInner,
+                      isLiked && styles.actionBtnPinkLiked,
+                      (currentProfile.alreadyLiked || currentProfile.isMatched) &&
+                        styles.actionBtnPinkDisabled,
+                    ]}
                     activeOpacity={0.85}
+                    disabled={currentProfile.alreadyLiked || currentProfile.isMatched}
+                    accessibilityState={{
+                      disabled: currentProfile.alreadyLiked || currentProfile.isMatched,
+                    }}
                     onPress={handleToggleLike}
                   >
                     <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
-                      <Ionicons name="heart" size={22} color="#FF1FC7" />
+                      <Ionicons
+                        name="heart"
+                        size={22}
+                        color={
+                          currentProfile.alreadyLiked || currentProfile.isMatched
+                            ? '#9CA3AF'
+                            : '#FF1FC7'
+                        }
+                      />
                     </Animated.View>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
-          </View>
 
         {/* Mutual Match Celebration Modal */}
         {matchModalData && (
@@ -881,7 +948,9 @@ export default function DatingProfileScreen() {
             <View style={styles.matchModalCard}>
               <Text style={styles.matchModalTitle}>🎉 It&apos;s a Match!</Text>
               <Text style={styles.matchModalSubtitle}>
-                You and {matchModalData.name} liked each other.
+                {matchModalData.name
+                  ? `You and ${matchModalData.name} liked each other.`
+                  : 'You both liked each other.'}
               </Text>
               <Image source={matchModalData.photo} style={styles.matchModalAvatar} />
               
@@ -913,8 +982,10 @@ export default function DatingProfileScreen() {
                 <Text style={styles.safetyActionFeedback}>{safetyActionStatus}</Text>
               ) : (
                 <>
-                  <Text style={styles.safetyModalSubtitle}>
-                    Manage connection with {currentProfile.name}:
+                          <Text style={styles.safetyModalSubtitle}>
+                            {currentProfile.name
+                              ? `Manage connection with ${currentProfile.name}:`
+                              : 'Manage this profile:'}
                   </Text>
                   <TouchableOpacity
                     style={styles.safetyActionBtn}
@@ -946,6 +1017,27 @@ export default function DatingProfileScreen() {
             </View>
           </View>
         )}
+          </>
+          ) : (
+            <View style={styles.emptyFeedContainer}>
+              <Text style={styles.emptyFeedTitle}>
+                {isLoading
+                  ? 'Loading profiles…'
+                  : feedError
+                    ? 'Unable to load profiles'
+                    : 'No profiles available'}
+              </Text>
+              {!isLoading && !feedError && (
+                <Text style={styles.emptyFeedMessage}>
+                  Profiles with uploaded photos will appear here when available.
+                </Text>
+              )}
+              {!isLoading && feedError && (
+                <Text style={styles.emptyFeedMessage}>{feedError}</Text>
+              )}
+            </View>
+          )}
+        </View>
 
         {/* Bottom Navigation Bar */}
         <CustomTabBar />
@@ -972,6 +1064,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+  },
+  emptyFeedContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  emptyFeedTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  emptyFeedMessage: {
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+    textAlign: 'center',
   },
   // CHAT SCREEN STYLES
   chatScreenContainer: {
@@ -1613,6 +1724,26 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 999,
   },
+  alreadyLikedBadge: {
+    position: 'absolute',
+    bottom: 70,
+    zIndex: 999,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#E8F7F0',
+    borderWidth: 1,
+    borderColor: '#B8E5D0',
+  },
+  alreadyLikedLabel: {
+    color: '#137A57',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   actionBtnRedOuter: {
     width: 56,
     height: 56,
@@ -1672,6 +1803,10 @@ const styles = StyleSheet.create({
   },
   actionBtnPinkLiked: {
     transform: [{ scale: 1.08 }],
+  },
+  actionBtnPinkDisabled: {
+    backgroundColor: '#E5E7EB',
+    opacity: 0.7,
   },
   bottomTabBar: {
     height: 64,

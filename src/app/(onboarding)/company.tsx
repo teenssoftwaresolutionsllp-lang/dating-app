@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
   View,
@@ -25,11 +25,9 @@ export default function CompanyScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const initialHeight = useRef(Dimensions.get('window').height).current;
   const isCompanyValid = Boolean(companyName.trim().length > 0);
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
@@ -103,8 +101,8 @@ export default function CompanyScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
-      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
         <OnboardingHeader progress={0.5} />
 
         <View style={styles.keyboardView}>

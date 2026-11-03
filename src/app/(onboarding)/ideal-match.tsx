@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  Animated,
   Modal,
   PanResponder,
   Platform,
@@ -17,11 +18,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { updateStoredPartnerPreferences } from '@/constants/userProfile';
-import { updateDatingPreferences } from '@/services/profileApi';
+import { updateDatingPreferences,  getCurrentProfile, CatalogItem, getInterestsCatalog, } from '@/services/profileApi';
 
 export default function IdealMatchScreen() {
   const theme = useTheme();
-  const isDark = theme.text === '#ffffff';
+  const isDark = theme.text === "#ffffff";
   const insets = useSafeAreaInsets();
 
   // Age state (18 to 55)
@@ -29,51 +30,89 @@ export default function IdealMatchScreen() {
   const [trackWidth, setTrackWidth] = useState(240);
 
   // Distance state
-  const distanceOptions = ['5 km', '10 km', '25 km', '50 km', 'Any Where'];
+  const distanceOptions = ["5 km", "10 km", "25 km", "50 km", "Any Where"];
   const [selectedDistance, setSelectedDistance] = useState<string | null>(null);
 
   // Partner Religion state
   const religionOptions = [
-    'Open to all',
-    'Hindu',
-    'Muslim',
-    'Christian',
-    'Sikh',
-    'Jain',
-    'Buddhist',
-    'Spiritual - not religious',
-    'Agnostic',
-    'Atheist',
-    'Other',
+    "Open to all",
+    "Hindu",
+    "Muslim",
+    "Christian",
+    "Sikh",
+    "Jain",
+    "Buddhist",
+    "Spiritual - not religious",
+    "Agnostic",
+    "Atheist",
+    "Other",
   ];
-  const [selectedReligion, setSelectedReligion] = useState<string>('');
+  const [selectedReligion, setSelectedReligion] = useState<string>("");
   const [religionModalVisible, setReligionModalVisible] = useState(false);
 
-  // Partner Interests state
-  const interestsList = [
-    'Music',
-    'Movies',
-    'Travel',
-    'Concerts',
-    'Nature',
-    'Dance',
-    'Food',
-    'Fitness',
-    'Gaming',
-    'Books',
-    'Sports',
-    'Cooking',
-    'Photography',
-    'Art',
-    'Pets',
-  ];
+  const [interestsCatalog, setInterestsCatalog] = useState<CatalogItem[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
+  useEffect(() => {
+    getInterestsCatalog().then(setInterestsCatalog);
+  }, []);
+
+  const interestsList = interestsCatalog.map((interest) => interest.name);
+
+  const [error, setError] = useState<'distance' | 'religion' | 'interests' | null>(null);
+  const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const toggleInterest = (interest: string) => {
+    let nextInterests: string[];
     if (selectedInterests.includes(interest)) {
-      setSelectedInterests(selectedInterests.filter((item) => item !== interest));
+      nextInterests = selectedInterests.filter((item) => item !== interest);
     } else {
-      setSelectedInterests([...selectedInterests, interest]);
+      nextInterests = [...selectedInterests, interest];
+    }
+    setSelectedInterests(nextInterests);
+    if (error === 'interests' && nextInterests.length > 0) {
+      setError(null);
     }
   };
 
@@ -96,51 +135,80 @@ export default function IdealMatchScreen() {
       onPanResponderMove: (evt) => {
         handleSliderTouch(evt.nativeEvent.locationX);
       },
-    })
+    }),
   );
 
   const isComplete = Boolean(
-    selectedDistance &&
-    selectedReligion &&
-    selectedInterests.length > 0
+    selectedDistance && selectedReligion && selectedInterests.length > 0,
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleNext = async () => {
-    if (!isComplete || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const distanceNum = selectedDistance ? parseInt(selectedDistance.replace(/\D/g, ''), 10) || 50 : 50;
-
-      updateStoredPartnerPreferences({
-        minAge: 18,
-        maxAge: maxAge || 35,
-        maxDistanceKm: distanceNum,
-        religionPreferences: selectedReligion ? [selectedReligion] : ['Open to all'],
-        preferredInterests: selectedInterests,
-      });
-
-      await updateDatingPreferences({
-        maxAge: maxAge || 35,
-        minAge: 18,
-        maxDistanceKm: distanceNum,
-        religionPreferences: selectedReligion ? [selectedReligion] : undefined,
-      }).catch((e) => {
-        console.warn('Backend sync warning on dating preferences update:', e);
-      });
-
-      router.push('/(onboarding)/ready' as any);
-    } finally {
-      setIsSubmitting(false);
+    if (!selectedDistance) {
+      setError('distance');
+      triggerShake();
+      return;
     }
-  };
+    if (!selectedReligion) {
+      setError('religion');
+      triggerShake();
+      return;
+    }
+    if (selectedInterests.length === 0) {
+      setError('interests');
+      triggerShake();
+      return;
+    }
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
+  try {
+    const distanceNum = selectedDistance
+      ? parseInt(selectedDistance.replace(/\D/g, ''), 10) || 50
+      : 50;
+
+    updateStoredPartnerPreferences({
+      minAge: 18,
+      maxAge: maxAge || 35,
+      maxDistanceKm: distanceNum,
+      religionPreferences: selectedReligion
+        ? [selectedReligion]
+        : ['Open to all'],
+      preferredInterests: selectedInterests,
+    });
+
+    await updateDatingPreferences({
+      maxAge: maxAge || 35,
+      minAge: 18,
+      maxDistanceKm: distanceNum,
+      religionPreferences: selectedReligion
+        ? [selectedReligion]
+        : undefined,
+    });
+
+    // Get gender from database
+    const profile = await getCurrentProfile();
+
+    if (profile?.gender?.toLowerCase() === 'male') {
+      router.push('/(onboarding)/subscription' as any);
+    } else {
+      router.push('/(onboarding)/ready' as any);
+    }
+
+  } catch (error) {
+    console.error('Error completing ideal match:', error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/looking-for');
+      router.replace("/looking-for");
     }
   };
 
@@ -148,32 +216,54 @@ export default function IdealMatchScreen() {
   const sliderProgress = (maxAge - 18) / (55 - 18);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
+      edges={["top", "bottom", "left", "right"]}
+    >
       <View style={styles.responsiveContainer}>
         <OnboardingHeader progress={0.85} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>Your ideal match</Text>
+          <Text style={[styles.title, { color: theme.text }]}>
+            Your ideal match
+          </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Tell us what matters most to you.
           </Text>
 
           {/* 1. Age Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Age</Text>
-            <Text style={[styles.preferredAgeLabel, { color: theme.textSecondary }]}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Age
+            </Text>
+            <Text
+              style={[styles.preferredAgeLabel, { color: theme.textSecondary }]}
+            >
               Preferred Age: {maxAge}
             </Text>
 
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLimitText, { color: theme.text }]}>18</Text>
+              <Text style={[styles.sliderLimitText, { color: theme.text }]}>
+                18
+              </Text>
               <View
-                style={[styles.sliderTrackWrapper, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                style={[
+                  styles.sliderTrackWrapper,
+                  Platform.OS === "web" && ({ cursor: "pointer" } as any),
+                ]}
                 onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
                 {...panResponder.panHandlers}
               >
-                <View style={[styles.sliderTrackBg, { backgroundColor: isDark ? '#333333' : '#E0E0E0' }]}>
+                <View
+                  style={[
+                    styles.sliderTrackBg,
+                    { backgroundColor: isDark ? "#333333" : "#E0E0E0" },
+                  ]}
+                >
                   <View
                     style={[
                       styles.sliderTrackFill,
@@ -191,33 +281,61 @@ export default function IdealMatchScreen() {
                     {
                       left: `${sliderProgress * 100}%`,
                       backgroundColor: theme.primaryButton,
-                      borderColor: isDark ? '#000000' : '#FFFFFF',
+                      borderColor: isDark ? "#000000" : "#FFFFFF",
                     },
                   ]}
                 />
               </View>
-              <Text style={[styles.sliderLimitText, { color: theme.text }]}>55</Text>
+              <Text style={[styles.sliderLimitText, { color: theme.text }]}>
+                55
+              </Text>
             </View>
           </View>
 
           {/* 2. Distance Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 18 }]}>Distance</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Distance
+              </Text>
+              {error === 'distance' && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose your distance preference
+                </Animated.Text>
+              )}
+            </View>
             <View style={styles.distanceList}>
               {distanceOptions.map((dist) => {
                 const isSelected = selectedDistance === dist;
                 return (
                   <Pressable
                     key={dist}
-                    onPress={() => setSelectedDistance(dist)}
-                    style={[styles.radioContainer, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
+                    onPress={() => {
+                      setSelectedDistance(dist);
+                      if (error === 'distance') setError(null);
+                    }}
+                    style={[
+                      styles.radioContainer,
+                      Platform.OS === "web" && ({ cursor: "pointer" } as any),
+                    ]}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: isSelected }}
                   >
                     <View
                       style={[
                         styles.radioCircle,
-                        { borderColor: isSelected ? theme.primaryButton : theme.border },
+                        {
+                          borderColor: isSelected
+                            ? theme.primaryButton
+                            : theme.border,
+                        },
                       ]}
                     >
                       {isSelected && (
@@ -229,7 +347,9 @@ export default function IdealMatchScreen() {
                         />
                       )}
                     </View>
-                    <Text style={[styles.optionText, { color: theme.text }]}>{dist}</Text>
+                    <Text style={[styles.optionText, { color: theme.text }]}>
+                      {dist}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -238,18 +358,39 @@ export default function IdealMatchScreen() {
 
           {/* 3. Partner Religion / Community Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 14 }]}>
-              Partner Religion / Community
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Partner Religion / Community
+              </Text>
+              {error === 'religion' && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose your religion / community
+                </Animated.Text>
+              )}
+            </View>
             <Pressable
               onPress={() => setReligionModalVisible(true)}
               style={[
                 styles.selectBox,
                 {
-                  borderColor: selectedReligion ? theme.primaryButton : isDark ? '#3E4044' : '#B9B9B9',
-                  backgroundColor: isDark ? theme.backgroundElement : '#FFFFFF',
+                  borderColor:
+                    error === 'religion'
+                      ? '#FF3B30'
+                      : selectedReligion
+                      ? theme.primaryButton
+                      : isDark
+                      ? "#3E4044"
+                      : "#B9B9B9",
+                  backgroundColor: isDark ? theme.backgroundElement : "#FFFFFF",
                 },
-                Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                Platform.OS === "web" && ({ cursor: "pointer" } as any),
               ]}
               accessibilityRole="button"
             >
@@ -258,25 +399,47 @@ export default function IdealMatchScreen() {
                   styles.selectBoxText,
                   {
                     color: selectedReligion ? theme.text : theme.textSecondary,
-                    fontFamily: selectedReligion ? 'DM_Sans_500Medium' : 'DM_Sans_400Regular',
+                    fontFamily: selectedReligion
+                      ? "DM_Sans_500Medium"
+                      : "DM_Sans_400Regular",
                   },
                 ]}
               >
-                {selectedReligion || 'Select Religion / Community'}
+                {selectedReligion || "Select Religion / Community"}
               </Text>
               <Ionicons
                 name="chevron-down"
                 size={20}
-                color={selectedReligion ? theme.primaryButton : theme.textSecondary}
+                color={
+                  error === 'religion'
+                    ? '#FF3B30'
+                    : selectedReligion
+                    ? theme.primaryButton
+                    : theme.textSecondary
+                }
               />
             </Pressable>
           </View>
 
           {/* 4. Partner Interests Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
-              Partner Interests
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Partner Interests
+              </Text>
+              {error === 'interests' && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please select at least one interest
+                </Animated.Text>
+              )}
+            </View>
             <View style={styles.chipsContainer}>
               {interestsList.map((interest) => {
                 const isSelected = selectedInterests.includes(interest);
@@ -287,10 +450,18 @@ export default function IdealMatchScreen() {
                     style={[
                       styles.chip,
                       {
-                        backgroundColor: isSelected ? theme.primaryButton : isDark ? theme.backgroundElement : '#FFFFFF',
-                        borderColor: isSelected ? theme.primaryButton : isDark ? '#333333' : '#B9B9B9',
+                        backgroundColor: isSelected
+                          ? theme.primaryButton
+                          : isDark
+                            ? theme.backgroundElement
+                            : "#FFFFFF",
+                        borderColor: isSelected
+                          ? theme.primaryButton
+                          : isDark
+                            ? "#333333"
+                            : "#B9B9B9",
                       },
-                      Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                      Platform.OS === "web" && ({ cursor: "pointer" } as any),
                     ]}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isSelected }}
@@ -299,17 +470,19 @@ export default function IdealMatchScreen() {
                       style={[
                         styles.chipText,
                         {
-                          color: isSelected ? '#000000' : theme.text,
-                          fontFamily: isSelected ? 'DM_Sans_700Bold' : 'DM_Sans_500Medium',
+                          color: isSelected ? "#000000" : theme.text,
+                          fontFamily: isSelected
+                            ? "DM_Sans_700Bold"
+                            : "DM_Sans_500Medium",
                         },
                       ]}
                     >
                       {interest}
                     </Text>
                     <Ionicons
-                      name={isSelected ? 'checkmark' : 'add'}
+                      name={isSelected ? "checkmark" : "add"}
                       size={16}
-                      color={isSelected ? '#000000' : theme.textSecondary}
+                      color={isSelected ? "#000000" : theme.textSecondary}
                       style={styles.chipIcon}
                     />
                   </Pressable>
@@ -325,9 +498,7 @@ export default function IdealMatchScreen() {
           onBack={handleBack}
           onNext={handleNext}
           nextButtonStyle={{
-            backgroundColor: isComplete
-              ? theme.primaryButton
-              : '#BDFFF9',
+            backgroundColor: isComplete ? theme.primaryButton : "#BDFFF9",
           }}
         />
       </View>
@@ -339,14 +510,16 @@ export default function IdealMatchScreen() {
         animationType="slide"
         onRequestClose={() => setReligionModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setReligionModalVisible(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setReligionModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View
                 style={[
                   styles.modalContent,
                   {
-                    backgroundColor: isDark ? '#1F2022' : '#FFFFFF',
+                    backgroundColor: isDark ? "#1F2022" : "#FFFFFF",
                     paddingBottom: Math.max(insets.bottom, 20),
                   },
                 ]}
@@ -358,13 +531,20 @@ export default function IdealMatchScreen() {
                   <Pressable
                     onPress={() => setReligionModalVisible(false)}
                     hitSlop={10}
-                    style={Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}}
+                    style={
+                      Platform.OS === "web"
+                        ? ({ cursor: "pointer" } as any)
+                        : {}
+                    }
                   >
                     <Ionicons name="close" size={24} color={theme.text} />
                   </Pressable>
                 </View>
 
-                <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  style={styles.modalList}
+                  showsVerticalScrollIndicator={false}
+                >
                   {religionOptions.map((item) => {
                     const isSelected = selectedReligion === item;
                     return (
@@ -372,27 +552,41 @@ export default function IdealMatchScreen() {
                         key={item}
                         onPress={() => {
                           setSelectedReligion(item);
+                          if (error === 'religion') setError(null);
                           setReligionModalVisible(false);
                         }}
                         style={[
                           styles.modalOption,
-                          isSelected && { backgroundColor: isDark ? '#2B2D31' : '#E0F7FA' },
-                          Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                          isSelected && {
+                            backgroundColor: isDark ? "#2B2D31" : "#E0F7FA",
+                          },
+                          Platform.OS === "web" &&
+                            ({ cursor: "pointer" } as any),
                         ]}
                       >
                         <Text
                           style={[
                             styles.modalOptionText,
                             {
-                              color: isSelected ? (isDark ? theme.primaryButton : '#007A80') : theme.text,
-                              fontFamily: isSelected ? 'DM_Sans_700Bold' : 'DM_Sans_400Regular',
+                              color: isSelected
+                                ? isDark
+                                  ? theme.primaryButton
+                                  : "#007A80"
+                                : theme.text,
+                              fontFamily: isSelected
+                                ? "DM_Sans_700Bold"
+                                : "DM_Sans_400Regular",
                             },
                           ]}
                         >
                           {item}
                         </Text>
                         {isSelected && (
-                          <Ionicons name="checkmark-circle" size={20} color={theme.primaryButton} />
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={theme.primaryButton}
+                          />
                         )}
                       </Pressable>
                     );
@@ -410,82 +604,82 @@ export default function IdealMatchScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   responsiveContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 30,
   },
   title: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 24,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 6,
   },
   subtitle: {
-    fontFamily: 'DM_Sans_400Regular',
+    fontFamily: "DM_Sans_400Regular",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 6,
     lineHeight: 20,
-    alignSelf: 'center',
+    alignSelf: "center",
     maxWidth: 290,
   },
   section: {
     marginTop: 26,
   },
   sectionTitle: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 16,
   },
   preferredAgeLabel: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 13,
     marginTop: 4,
     marginBottom: 14,
   },
   sliderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginTop: 6,
   },
   sliderLimitText: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 14,
     width: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   sliderTrackWrapper: {
     flex: 1,
     height: 36,
-    justifyContent: 'center',
-    position: 'relative',
+    justifyContent: "center",
+    position: "relative",
   },
   sliderTrackBg: {
     height: 6,
     borderRadius: 3,
-    width: '100%',
-    overflow: 'hidden',
+    width: "100%",
+    overflow: "hidden",
   },
   sliderTrackFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 3,
   },
   sliderThumb: {
-    position: 'absolute',
+    position: "absolute",
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2.5,
     marginLeft: -11,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
@@ -495,8 +689,8 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   radioContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
   },
   radioCircle: {
@@ -504,8 +698,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioInnerCircle: {
     width: 12,
@@ -513,7 +707,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   optionText: {
-    fontFamily: 'DM_Sans_500Medium',
+    fontFamily: "DM_Sans_500Medium",
     fontSize: 15,
   },
   selectBox: {
@@ -521,23 +715,23 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 1,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 4,
   },
   selectBoxText: {
     fontSize: 15,
   },
   chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginTop: 4,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     height: 38,
     borderRadius: 19,
@@ -551,38 +745,38 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    justifyContent: "flex-end",
+    alignItems: "center",
   },
   modalContent: {
-    width: '100%',
+    width: "100%",
     maxWidth: 500,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingHorizontal: 24,
-    maxHeight: '70%',
+    maxHeight: "70%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#888888',
+    borderBottomColor: "#888888",
   },
   modalTitle: {
-    fontFamily: 'DM_Sans_700Bold',
+    fontFamily: "DM_Sans_700Bold",
     fontSize: 18,
   },
   modalList: {
     marginTop: 8,
   },
   modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: 12,
@@ -590,5 +784,18 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 15,
+  },
+  sectionHeader: {
+    position: "relative",
+    marginBottom: 18,
+  },
+  errorMessage: {
+    position: "absolute",
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#FF3B30",
+    fontFamily: "DM_Sans_500Medium",
   },
 });

@@ -64,4 +64,3 @@ export const authStorage = {
     await clearUserAuth();
   },
 };
-

@@ -72,10 +72,22 @@ export default function NotificationScreen() {
   });
 
   const handleToggle = (id: string, value: boolean) => {
-    setToggleState((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    setToggleState((prev) => {
+      if (id !== 'push' && !prev.push) {
+        return prev;
+      }
+
+      if (id === 'push') {
+        return Object.fromEntries(
+          Object.keys(prev).map((settingId) => [settingId, value]),
+        );
+      }
+
+      return {
+        ...prev,
+        [id]: value,
+      };
+    });
   };
 
   const handleBack = () => {
@@ -111,6 +123,7 @@ export default function NotificationScreen() {
         >
           {NOTIFICATION_ITEMS.map((item) => {
             const isEnabled = !!toggleState[item.id];
+            const isDisabled = item.id !== 'push' && !toggleState.push;
             return (
               <View key={item.id} style={styles.cardItem}>
                 <View style={styles.cardLeft}>
@@ -126,6 +139,8 @@ export default function NotificationScreen() {
                 {/* Switch Toggle */}
                 <Switch
                   value={isEnabled}
+                  disabled={isDisabled}
+                  style={isDisabled ? styles.disabledSwitch : undefined}
                   onValueChange={(val) => handleToggle(item.id, val)}
                   trackColor={{ false: '#E2E8F0', true: '#0D7A74' }}
                   thumbColor="#FFFFFF"
@@ -224,5 +239,8 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontFamily: 'DM_Sans_400Regular',
     color: '#64748B',
+  },
+  disabledSwitch: {
+    opacity: 0.5,
   },
 });
