@@ -1,25 +1,43 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
+import slide1 from '@/assets/images/verified_profiles.jpg';
+import slide2 from '@/assets/images/verified_profiles_2.jpg';
+import slide3 from '@/assets/images/verified_profiles_3.jpg';
+
+
+const SLIDES = [slide1, slide2, slide3];
+
 export default function VerifiedProfilesScreen() {
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Automatically advance to the next slide (1 → 2 → 3)
+  useEffect(() => {
+    if (currentIndex < SLIDES.length - 1) {
+      const timer = setTimeout(() => {
+        setCurrentIndex((prev) => prev + 1);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex]);
 
   // Clamped width matching responsiveContainer (maxWidth: 480)
   const containerWidth = Math.min(screenWidth, 480);
 
   // The artwork is 1024 x 1536 (Aspect ratio 2:3).
-  // In the 1024x1536 artwork:
-  // - Top shield badge is at Y = 90..300 (height fraction: 0.058..0.195)
-  // - Blank text area starts at Y = 330 (height fraction: 0.215)
-  // Since rendered image height is containerWidth * 1.5:
-  // Text top offset is containerWidth * 1.5 * 0.22 = containerWidth * 0.33
-  const textTopOffset = Math.round(containerWidth * 0.33);
+  // With contentFit="cover" and contentPosition="top center":
+  // The image scale factor covers the container
+  const imageScale = Math.max(containerWidth / 1024, screenHeight / 1536);
+  // Shield bottom is at Y ≈ 276 in the 1536 artwork, blank text area starts around Y ≈ 330
+  const textTopOffset = Math.round(330 * imageScale) - 15;
 
   const handleNext = () => {
     router.push('/select-language' as any);
@@ -27,13 +45,45 @@ export default function VerifiedProfilesScreen() {
 
   const handleBack = () => {
     router.replace('/' as any);
-  };
+  }
+
+
 
   return (
     <View style={styles.root}>
       <StatusBar style="dark" />
       <View style={styles.responsiveContainer}>
-        {/* Back Button */}
+        {/* Background Artwork - Slide 1 full-cover; Slides 2 & 3 anchored to bottom behind next button */}
+        {/* <Image
+          key={currentIndex}
+          source={SLIDES[currentIndex]}
+          style={styles.artworkImage}
+          contentFit={currentIndex === 0 ? 'cover' : 'contain'}
+          contentPosition={currentIndex === 0 ? 'top center' : 'bottom center'}
+          priority="high"
+        /> */}
+
+
+        <Image
+          key={currentIndex}
+          source={SLIDES[currentIndex]}
+          style={styles.artworkImage}
+          contentFit={
+            currentIndex === 0
+              ? 'cover'
+              : currentIndex === 2
+                ? 'fill'
+                : 'contain'
+          }
+          contentPosition={
+            currentIndex === 0
+              ? 'top center'
+              : 'bottom center'
+          }
+          priority="high"
+        />
+
+        {/* Back Button - Navigates to previous screen and does not change images */}
         <Pressable
           onPress={handleBack}
           style={[
@@ -46,53 +96,104 @@ export default function VerifiedProfilesScreen() {
           <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
         </Pressable>
 
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-          {/* Main Visual Content Section */}
-          <View style={styles.artworkArea}>
-            {/* Background Artwork - Anchored to top-center so shield stays at consistent position */}
-            <Image
-              source={require('@/assets/images/verified_profiles.png')}
-              style={styles.artworkImage}
-              contentFit="contain"
-              contentPosition="top center"
-              priority="high"
-            />
-
-            {/* Title Text Section - Dynamically positioned based on container width so it's always right below the shield */}
-            <View style={[styles.headerSection, { top: textTopOffset }]}>
-              <Text style={styles.titleLine1}>Verified profiles,</Text>
-              <Text style={styles.titleLine2}>
-                <Text style={styles.tealText}>Real</Text>
-                <Text style={styles.blackText}> people</Text>
-              </Text>
-            </View>
+        {/* Title Text Section - Only for slide 1 where text is overlaid below the shield */}
+        {currentIndex === 0 && (
+          <View style={[styles.headerSection, { top: textTopOffset }]}>
+            <Text style={styles.titleLine1}>Verified profiles,</Text>
+            <Text style={styles.titleLine2}>
+              <Text style={styles.tealText}>Real</Text>
+              <Text style={styles.blackText}> people</Text>
+            </Text>
           </View>
+        )}
 
-          {/* Bottom Section with Pagination Hearts & Next Button */}
-          <View style={styles.bottomSection}>
-            {/* 3 Pagination Hearts Indicator */}
-            <View style={styles.paginationRow}>
-              <Ionicons name="heart" size={13} color="#FE3562" style={styles.heartIcon} />
-              <Ionicons name="heart" size={13} color="#FFA0B5" style={styles.heartIcon} />
-              <Ionicons name="heart" size={13} color="#FFCCD7" style={styles.heartIcon} />
-            </View>
+        {currentIndex === 1 && (
+          <View style={[styles.headerSection, { top: 100 }]}>
+            <Text style={styles.titleLine1}>Chat, connect and</Text>
+            <Text style={styles.titleLine1}>build meaningful</Text>
+            <Text style={styles.titleLine2}>
+              <Text style={styles.tealText}>Relationships</Text>
+            </Text>
+          </View>
+        )}
 
-            {/* Next Button */}
+        {currentIndex === 2 && (
+          <View style={[styles.headerSection, { bottom: Math.min(250, Math.round(screenHeight * 0.32)) }]}>
+            <Text style={[styles.titleLine1, { textAlign: 'left' }]}>
+              Connect with
+            </Text>
+
+            <Text style={[styles.titleLine2]}>
+              <Text style={styles.redText}>like-minded</Text>
+              <Text style={styles.blackText}> people</Text>
+            </Text>
+          </View>
+        )}
+
+        {/* Bottom Section with Pagination Hearts & Next Button */}
+        <View
+          style={[
+            styles.bottomSection,
+            { bottom: insets.bottom + 54 },
+          ]}
+        >          
+        {/* 3 Pagination Hearts Indicator - Synced with current image */}
+          <View style={styles.paginationRow}>
             <Pressable
-              onPress={handleNext}
-              style={({ pressed }) => [
-                styles.nextButton,
-                pressed && styles.buttonPressed,
-                Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-              ]}
+              onPress={() => setCurrentIndex(0)}
+              hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Next"
-            
+              accessibilityLabel="Slide 1"
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Ionicons
+                name="heart"
+                size={13}
+                color={currentIndex === 0 ? '#FE3562' : '#FFA0B5'}
+                style={styles.heartIcon}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => setCurrentIndex(1)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Slide 2"
+            >
+              <Ionicons
+                name="heart"
+                size={13}
+                color={currentIndex === 1 ? '#FE3562' : '#FFA0B5'}
+                style={styles.heartIcon}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => setCurrentIndex(2)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Slide 3"
+            >
+              <Ionicons
+                name="heart"
+                size={13}
+                color={currentIndex === 2 ? '#FE3562' : '#FFA0B5'}
+                style={styles.heartIcon}
+              />
             </Pressable>
           </View>
-        </SafeAreaView>
+
+          {/* Next Button */}
+          <Pressable
+            onPress={handleNext}
+            style={({ pressed }) => [
+              styles.nextButton,
+              pressed && styles.buttonPressed,
+              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Next"
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -104,6 +205,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
   },
+  redText: {
+    color: '#FE3562',
+  },
   responsiveContainer: {
     flex: 1,
     width: '100%',
@@ -111,6 +215,15 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: '#ffffff',
     overflow: 'hidden',
+  },
+  artworkImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   backButton: {
     position: 'absolute',
@@ -123,25 +236,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
   },
-  safeArea: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'space-between',
-  },
-  artworkArea: {
-    flex: 1,
-    width: '100%',
-    position: 'relative',
-  },
-  artworkImage: {
-    ...StyleSheet.absoluteFill,
-    width: '100%',
-    height: '100%',
-  },
   headerSection: {
     position: 'absolute',
     left: 24,
     right: 24,
+    zIndex: 5,
   },
   titleLine1: {
     fontFamily: 'DM_Sans_700Bold',
@@ -165,20 +264,21 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   bottomSection: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     width: '100%',
     paddingHorizontal: 24,
-    paddingBottom: 16,
     alignItems: 'center',
     gap: 16,
-    bottom:30,
-
+    zIndex: 10,
   },
   paginationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    zIndex:1
+    zIndex: 1,
   },
   heartIcon: {
     marginHorizontal: 1,
@@ -208,7 +308,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 });
-
-
-
-

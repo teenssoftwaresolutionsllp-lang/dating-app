@@ -4,6 +4,7 @@ import {
   Animated,
   Dimensions,
   Keyboard,
+  KeyboardAvoidingView,
   NativeSyntheticEvent,
   Platform,
   Pressable,
@@ -37,6 +38,9 @@ export default function OtpScreen() {
   const [error, setError] = useState("");
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
   const inputs = useRef<(TextInput | null)[]>([]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -44,6 +48,40 @@ export default function OtpScreen() {
   const complete = code.every(Boolean);
   const [initialHeight] = useState(() => Dimensions.get("window").height);
   const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const scrollToInput = () => {
+    const scrollY = Math.round(initialHeight * 0.28);
+    scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
+  };
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e?.endCoordinates?.height || 0;
+      setKeyboardHeight(height);
+      setIsKeyboardVisible(true);
+      scrollToInput();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [initialHeight]);
+
+  const handleInputFocus = (index: number) => {
+    setFocusedIndex(index);
+    requestAnimationFrame(scrollToInput);
+    setTimeout(scrollToInput, 100);
+  };
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
@@ -106,7 +144,34 @@ export default function OtpScreen() {
       return;
     }
 
+    // Full OTP auto-filled or pasted into any box
+    if (digits.length >= OTP_LENGTH) {
+      const full = digits.slice(0, OTP_LENGTH).split("");
+      setCode(full);
+      Keyboard.dismiss();
+      return;
+    }
+
     const next = [...code];
+
+    // Replacing a digit in an already filled box
+    if (digits.length > 1 && code[index]) {
+      const currentVal = code[index];
+      let newChar = digits.replace(currentVal, '').slice(-1);
+      if (!newChar) {
+        newChar = digits.slice(-1);
+      }
+      next[index] = newChar;
+      setCode(next);
+      const nextIndex = Math.min(index + 1, OTP_LENGTH - 1);
+      inputs.current[nextIndex]?.focus();
+      if (next.every(Boolean)) {
+        Keyboard.dismiss();
+      }
+      return;
+    }
+
+    // Standard digit entry
     digits
       .slice(0, OTP_LENGTH - index)
       .split("")
@@ -212,151 +277,166 @@ export default function OtpScreen() {
         <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
       </Pressable>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={false}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardContainer}
       >
-        <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
-          <RelationshipArtwork variant="otp" />
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isKeyboardVisible && { paddingBottom: Math.max(keyboardHeight, 160) },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={isKeyboardVisible || Platform.OS === "web"}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.responsiveWrapper, { minHeight: initialHeight }]}>
+            <RelationshipArtwork variant="otp" />
 
-          <SafeAreaView
-            style={styles.contentSafeArea}
-            edges={["bottom", "left", "right"]}
-          >
-            <View style={styles.content}>
-              <View style={styles.formTopSection}>
-                <View style={styles.headingRow}>
-                  <Text style={[styles.heading, { color: theme.text }]}>
-                    Enter OTP to Verify
-                  </Text>
-                  <Pressable
-                    onPress={resend}
-                    disabled={seconds > 0}
-                    accessibilityRole="button"
-                    accessibilityLabel="Resend OTP"
-                    style={seconds === 0 ? styles.webPointer : undefined}
-                  >
-                    <Text
-                      style={[
-                        styles.resend,
-                        { color: isDark ? "#538DFF" : "#1769FF" },
-                        seconds > 0 && styles.disabled,
-                      ]}
-                    >
-                      {seconds > 0
-                        ? `Resend in 00:${String(seconds).padStart(2, "0")}`
-                        : "Resend OTP"}
-                    </Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.otpRow}>
-                  {code.map((digit, index) => (
-                    <TextInput
-                      key={index}
-                      ref={(input) => {
-                        inputs.current[index] = input;
-                      }}
-                      value={digit}
-                      onChangeText={(value) => updateCode(value, index)}
-                      onKeyPress={(event) => handleKeyPress(event, index)}
-                      onFocus={() => setFocusedIndex(index)}
-                      onBlur={() => setFocusedIndex(null)}
-                      selectionColor="#00E4E8"
-                      keyboardType="number-pad"
-                      inputMode="numeric"
-                      textContentType="oneTimeCode"
-                      autoComplete="sms-otp"
-                      maxLength={index === 0 ? OTP_LENGTH : 1}
-                      selectTextOnFocus
-                      autoCorrect={false}
-                      style={[
-                        styles.otpInput,
-                        {
-                          color: theme.text,
-                          borderColor: error
-                            ? "#FF3B30"
-                            : focusedIndex === index
-                              ? "#00E4E8"
-                              : theme.border,
-                          backgroundColor: isDark
-                            ? theme.backgroundElement
-                            : "#FFFFFF",
-                        },
-                        Platform.OS === "web" &&
-                          ({ outlineStyle: "none" } as any),
-                      ]}
-                      textAlign="center"
-                      accessibilityLabel={`OTP digit ${index + 1}`}
-                    />
-                  ))}
-                </View>
-
-                <View style={styles.sentContainer}>
-                  <View style={styles.sentRow}>
-                    <Text style={[styles.sent, { color: theme.textSecondary }]}>
-                      We have sent OTP to {phone || "00000 00000"}
+            <SafeAreaView
+              style={styles.contentSafeArea}
+              edges={["bottom", "left", "right"]}
+            >
+              <View style={styles.content}>
+                <View style={styles.formTopSection}>
+                  <View style={styles.headingRow}>
+                    <Text style={[styles.heading, { color: theme.text }]}>
+                      Enter OTP to Verify
                     </Text>
                     <Pressable
-                      onPress={handleBack}
+                      onPress={resend}
+                      disabled={seconds > 0}
                       accessibilityRole="button"
-                      accessibilityLabel="Edit phone number"
-                      hitSlop={8}
-                      style={[
-                        styles.editButton,
-                        Platform.OS === "web" && ({ cursor: "pointer" } as any),
-                      ]}
+                      accessibilityLabel="Resend OTP"
+                      style={seconds === 0 ? styles.webPointer : undefined}
                     >
-                      <Ionicons
-                        name="pencil"
-                        size={14}
-                        color={theme.textSecondary}
-                      />
+                      <Text
+                        style={[
+                          styles.resend,
+                          { color: isDark ? "#538DFF" : "#1769FF" },
+                          seconds > 0 && styles.disabled,
+                        ]}
+                      >
+                        {seconds > 0
+                          ? `Resend in 00:${String(seconds).padStart(2, "0")}`
+                          : "Resend OTP"}
+                      </Text>
                     </Pressable>
                   </View>
 
-                  {!!error && (
-                    <Animated.View
-                      style={[
-                        styles.errorWrapper,
-                        { transform: [{ translateX: shakeAnim }] },
-                      ]}
-                    >
-                      <Text style={styles.errorText}>{error}</Text>
-                    </Animated.View>
-                  )}
+                  <View style={styles.otpRow}>
+                    {code.map((digit, index) => (
+                      <TextInput
+                        key={index}
+                        ref={(input) => {
+                          inputs.current[index] = input;
+                        }}
+                        value={digit}
+                        onChangeText={(value) => updateCode(value, index)}
+                        onKeyPress={(event) => handleKeyPress(event, index)}
+                        onFocus={() => handleInputFocus(index)}
+                        onBlur={() => setFocusedIndex(null)}
+                        selectionColor="#00E4E8"
+                        cursorColor="#00E4E8"
+                        keyboardType="number-pad"
+                        inputMode="numeric"
+                        textContentType="oneTimeCode"
+                        autoComplete="sms-otp"
+                        maxLength={OTP_LENGTH}
+                        selectTextOnFocus
+                        autoCorrect={false}
+                        allowFontScaling={false}
+                        style={[
+                          styles.otpInput,
+                          {
+                            color: theme.text,
+                            borderColor: error
+                              ? "#FF3B30"
+                              : focusedIndex === index
+                                ? "#00E4E8"
+                                : theme.border,
+                            backgroundColor: isDark
+                              ? theme.backgroundElement
+                              : "#FFFFFF",
+                          },
+                          Platform.OS === "web" &&
+                            ({ outlineStyle: "none" } as any),
+                        ]}
+                        textAlign="center"
+                        accessibilityLabel={`OTP digit ${index + 1}`}
+                      />
+                    ))}
+                  </View>
+
+                  <View style={styles.sentContainer}>
+                    <View style={styles.sentRow}>
+                      <Text style={[styles.sent, { color: theme.textSecondary }]}>
+                        We have sent OTP to {phone || "00000 00000"}
+                      </Text>
+                      <Pressable
+                        onPress={handleBack}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit phone number"
+                        hitSlop={8}
+                        style={[
+                          styles.editButton,
+                          Platform.OS === "web" && ({ cursor: "pointer" } as any),
+                        ]}
+                      >
+                        <Ionicons
+                          name="pencil"
+                          size={14}
+                          color={theme.textSecondary}
+                        />
+                      </Pressable>
+                    </View>
+
+                    {!!error && (
+                      <Animated.View
+                        style={[
+                          styles.errorWrapper,
+                          { transform: [{ translateX: shakeAnim }] },
+                        ]}
+                      >
+                        <Text style={styles.errorText}>{error}</Text>
+                      </Animated.View>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.bottomButtonSection}>
+                  <PrimaryButton
+                    onPress={handleVerify}
+                    style={[
+                      styles.verifyButton,
+                      {
+                        backgroundColor: complete
+                          ? theme.primaryButton
+                          : "#BDFFF9",
+                      },
+                    ]}
+                  >
+                    Verify
+                  </PrimaryButton>
+                  <LegalFooter />
                 </View>
               </View>
-
-              <View style={styles.bottomButtonSection}>
-                <PrimaryButton
-                  onPress={handleVerify}
-                  style={[
-                    styles.verifyButton,
-                    {
-                      backgroundColor: complete
-                        ? theme.primaryButton
-                        : "#BDFFF9",
-                    },
-                  ]}
-                >
-                  Verify
-                </PrimaryButton>
-                <LegalFooter />
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
-      </ScrollView>
+            </SafeAreaView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, width: "100%" },
+  keyboardContainer: {
+    flex: 1,
+    width: "100%",
+  },
   scrollContent: {
     flexGrow: 1,
     alignItems: "center",
@@ -424,6 +504,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     textAlign: "center",
     padding: 0,
+    paddingVertical: 0,
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   sentContainer: {
     width: "100%",

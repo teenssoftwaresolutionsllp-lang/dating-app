@@ -37,7 +37,7 @@ export default function LifestyleHabitsScreen() {
   const isDark = theme.text === "#ffffff";
   const [selectedDrinking, setSelectedDrinking] = useState<string | null>(null);
   const [selectedSmoking, setSelectedSmoking] = useState<string | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'drinking' | 'smoking' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [shakeAnim] = useState(() => new Animated.Value(0));
@@ -84,8 +84,13 @@ export default function LifestyleHabitsScreen() {
   };
 
   const handleNext = async () => {
-    if (!selectedDrinking || !selectedSmoking) {
-      setError(true);
+    if (!selectedDrinking) {
+      setError('drinking');
+      triggerShake();
+      return;
+    }
+    if (!selectedSmoking) {
+      setError('smoking');
       triggerShake();
       return;
     }
@@ -145,7 +150,7 @@ export default function LifestyleHabitsScreen() {
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               Drinking Habits
             </Text>
-            {error && !selectedDrinking && (
+            {error === 'drinking' && (
               <Animated.Text
                 style={[
                   styles.errorMessage,
@@ -167,7 +172,7 @@ export default function LifestyleHabitsScreen() {
                   key={option}
                   onPress={() => {
                     setSelectedDrinking(option);
-                    if (error) setError(false);
+                    if (error === 'drinking') setError(null);
                   }}
                   style={[
                     styles.radioContainer,
@@ -220,7 +225,7 @@ export default function LifestyleHabitsScreen() {
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               Smoking Habits
             </Text>
-            {error && !selectedSmoking && (
+            {error === 'smoking' && (
               <Animated.Text
                 style={[
                   styles.errorMessage,
@@ -242,7 +247,7 @@ export default function LifestyleHabitsScreen() {
                   key={option}
                   onPress={() => {
                     setSelectedSmoking(option);
-                    if (error) setError(false);
+                    if (error === 'smoking') setError(null);
                   }}
                   style={[
                     styles.radioContainer,

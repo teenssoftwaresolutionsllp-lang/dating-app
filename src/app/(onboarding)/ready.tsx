@@ -766,18 +766,10 @@ export default function ProfileReadyScreen() {
                   hitSlop={8}
                   style={styles.editBioBtn}
                 >
-                  <Ionicons
-                    name={isEditingBio ? "close" : "create-outline"}
-                    size={15}
-                    color="#0D7A74"
-                  />
+                  {/* <Ionicons name={isEditingBio ? 'close' : 'create-outline'} size={15} color="#0D7A74" />
                   <Text style={styles.editBioBtnText}>
-                    {isEditingBio
-                      ? "Cancel"
-                      : profile.about?.trim()
-                        ? "Edit"
-                        : "Add Bio"}
-                  </Text>
+                    {isEditingBio ? 'Cancel' : (profile.about?.trim() ? 'Edit' : 'Add Bio')}
+                  </Text> */}
                 </TouchableOpacity>
               </View>
 

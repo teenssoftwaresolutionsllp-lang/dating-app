@@ -66,8 +66,6 @@ export default function LocationScreen() {
     null,
   );
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-
-  const [initialHeight] = useState(() => Dimensions.get("window").height);
   const [locationShakeAnim] = useState(() => new Animated.Value(0));
 
   const cityOptions = popularLocations.length
@@ -214,18 +212,8 @@ export default function LocationScreen() {
   );
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safeArea,
-        { height: initialHeight, minHeight: initialHeight },
-      ]}
-    >
-      <View
-        style={[
-          styles.centerContainer,
-          { height: initialHeight, minHeight: initialHeight },
-        ]}
-      >
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
         <OnboardingHeader progress={0.2} />
 
         <View style={styles.keyboardView}>

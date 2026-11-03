@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -23,10 +24,47 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [initialHeight] = useState(() => Dimensions.get('window').height);
   const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const scrollToInput = () => {
+    const scrollY = Math.round(initialHeight * 0.28);
+    scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
+  };
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e?.endCoordinates?.height || 0;
+      setKeyboardHeight(height);
+      setIsKeyboardVisible(true);
+      scrollToInput();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [initialHeight]);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    requestAnimationFrame(scrollToInput);
+    setTimeout(scrollToInput, 100);
+  };
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
@@ -63,7 +101,13 @@ export default function LoginScreen() {
   };
 
   const handlePhoneChange = (text: string) => {
-    const cleaned = text.replace(/\D/g, '').slice(0, 10);
+    let digits = text.replace(/\D/g, '');
+    if (digits.length === 12 && digits.startsWith('91')) {
+      digits = digits.slice(2);
+    } else if (digits.length === 11 && digits.startsWith('0')) {
+      digits = digits.slice(1);
+    }
+    const cleaned = digits.slice(0, 10);
     setPhone(cleaned);
     if (error) {
       setError('');
@@ -89,93 +133,107 @@ export default function LoginScreen() {
         <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
       </Pressable>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={false}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardContainer}
       >
-        <View style={[styles.responsiveWrapper, { height: initialHeight }]}>
-          <RelationshipArtwork variant="welcome" />
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isKeyboardVisible && { paddingBottom: Math.max(keyboardHeight, 160) },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={isKeyboardVisible || Platform.OS === 'web'}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.responsiveWrapper, { minHeight: initialHeight }]}>
+            <RelationshipArtwork variant="welcome" />
 
-          <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
-            <View style={styles.content}>
-              <View style={styles.formTopSection}>
-                <Text style={[styles.title, { color: theme.text }]}>Welcome ,</Text>
-                <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                  Login to Connect with your People.
-                </Text>
+            <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
+              <View style={styles.content}>
+                <View style={styles.formTopSection}>
+                  <Text style={[styles.title, { color: theme.text }]}>Welcome ,</Text>
+                  <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                    Login to Connect with your People.
+                  </Text>
 
-                <View style={styles.phoneInputContainer}>
-                  <View
-                    style={[
-                      styles.phoneInput,
-                      {
-                        borderColor: error ? '#FF3B30' : isFocused ? '#00E4E8' : theme.border,
-                        backgroundColor: theme.background,
-                      },
-                    ]}
-                  >
-                    <Text
+                  <View style={styles.phoneInputContainer}>
+                    <View
                       style={[
-                        styles.countryCode,
+                        styles.phoneInput,
                         {
-                          color: theme.text,
-                          borderRightColor: error ? '#FF3B30' : isFocused ? '#00E4E8' : theme.border,
+                          borderColor: error ? '#FF3B30' : isFocused ? '#00E4E8' : theme.border,
+                          backgroundColor: theme.background,
                         },
                       ]}
                     >
-                      +91
-                    </Text>
-                    <TextInput
-                      value={phone}
-                      onChangeText={handlePhoneChange}
-                      onFocus={() => setIsFocused(true)}
-                      onBlur={() => setIsFocused(false)}
-                      selectionColor="#00E4E8"
-                      keyboardType="phone-pad"
-                      maxLength={10}
-                      placeholder="00000 00000"
-                      placeholderTextColor={theme.textSecondary}
-                      style={[
-                        styles.input,
-                        { color: theme.text },
-                        Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
-                      ]}
-                    />
-                  </View>
+                      <Text
+                        style={[
+                          styles.countryCode,
+                          {
+                            color: theme.text,
+                            borderRightColor: error ? '#FF3B30' : isFocused ? '#00E4E8' : theme.border,
+                          },
+                        ]}
+                      >
+                        +91
+                      </Text>
+                      <TextInput
+                        value={phone}
+                        onChangeText={handlePhoneChange}
+                        onFocus={handleFocus}
+                        onBlur={() => setIsFocused(false)}
+                        selectionColor="#00E4E8"
+                        cursorColor="#00E4E8"
+                        keyboardType="phone-pad"
+                        inputMode="tel"
+                        textContentType="telephoneNumber"
+                        autoComplete="tel"
+                        maxLength={10}
+                        placeholder="00000 00000"
+                        placeholderTextColor={theme.textSecondary}
+                        allowFontScaling={false}
+                        style={[
+                          styles.input,
+                          { color: theme.text },
+                          Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
+                        ]}
+                      />
+                    </View>
 
-                  {!!error && (
-                    <Animated.View style={[styles.errorWrapper, { transform: [{ translateX: shakeAnim }] }]}>
-                      <Text style={styles.errorText}>{error}</Text>
-                    </Animated.View>
-                  )}
+                    {!!error && (
+                      <Animated.View style={[styles.errorWrapper, { transform: [{ translateX: shakeAnim }] }]}>
+                        <Text style={styles.errorText}>{error}</Text>
+                      </Animated.View>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.bottomButtonSection}>
+                  <PrimaryButton
+                    onPress={handleLogin}
+                    style={[
+                      styles.loginButton,
+                      {
+                        backgroundColor:
+                          phone.length === 10
+                            ? theme.primaryButton
+                            : '#BDFFF9',
+                      },
+                    ]}
+                  >
+                    Login
+                  </PrimaryButton>
+
+                  <LegalFooter />
                 </View>
               </View>
-
-              <View style={styles.bottomButtonSection}>
-                <PrimaryButton
-                  onPress={handleLogin}
-                  style={[
-                    styles.loginButton,
-                    {
-                      backgroundColor:
-                        phone.length === 10
-                          ? theme.primaryButton
-                          : '#BDFFF9',
-                    },
-                  ]}
-                >
-                  Login
-                </PrimaryButton>
-
-                <LegalFooter />
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
-      </ScrollView>
+            </SafeAreaView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -282,12 +340,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingHorizontal: 22,
     borderRightWidth: 1,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   input: {
     flex: 1,
     fontFamily: 'DM_Sans_400Regular',
     fontSize: 14,
     paddingHorizontal: 14,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   errorWrapper: {
     position: 'absolute',

@@ -49,8 +49,6 @@ export default function ProfessionScreen() {
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
-
-  const [initialHeight] = useState(() => Dimensions.get('window').height);
   const isProfessionValid = Boolean(selectedProfession || searchQuery.trim().length > 0);
 
   const [shakeAnim] = useState(() => new Animated.Value(0));
@@ -130,8 +128,8 @@ export default function ProfessionScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
-      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
         <OnboardingHeader progress={0.45} />
 
         <View style={styles.keyboardView}>
