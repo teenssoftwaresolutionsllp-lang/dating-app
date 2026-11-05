@@ -373,7 +373,7 @@ export default function DatingProfileScreen() {
     setIsAnimating(true);
 
     const targetId = currentProfile.userId || currentProfile.id;
-    if (targetId) {
+    if (targetId && !currentProfile.alreadyLiked) {
       swipeUser(targetId, 'dislike').catch((e) => {
         console.warn('Backend sync warning on swipe dislike:', e);
       });
