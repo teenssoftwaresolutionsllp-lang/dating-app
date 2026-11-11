@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: 54,
     paddingTop: 12,
     backgroundColor: "#FFFFFF",
   },

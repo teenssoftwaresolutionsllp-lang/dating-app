@@ -27,7 +27,7 @@ export default function WelcomeScreen() {
     })();
 
     return () => {
-      active = false;
+      active = false; 
     };
   }, []);
 
@@ -71,17 +71,17 @@ export default function WelcomeScreen() {
           <View style={styles.spacer} />
 
           {/* Bottom Action Button */}
-          <View style={styles.bottomSection}>
+          <View style={styles.bottomSection}>            
             <Pressable
               onPress={handleGetStart}
-              style={({ pressed }) => [
-                styles.getStartButton,
-                pressed && styles.buttonPressed,
-                Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Get Start"
-            >
+            style={({ pressed }) => [
+              styles.getStartButton,
+              pressed && styles.buttonPressed,
+              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Get Start"
+          >
               <Text style={styles.getStartButtonText}>Get Start</Text>
             </Pressable>
           </View>
@@ -145,15 +145,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomSection: {
-    paddingBottom: 16,
     width: '100%',
     alignItems: 'center',
-    bottom:30,
+    paddingBottom: 54,
   },
   getStartButton: {
     backgroundColor: '#00F5FF',
-    height: 52,
-    borderRadius: 26,
+    height: 48,
+    borderRadius: 24,
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
@@ -162,7 +161,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-   
+
   },
   buttonPressed: {
     opacity: 0.88,

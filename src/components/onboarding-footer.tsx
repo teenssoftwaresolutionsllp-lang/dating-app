@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: 54,
     paddingTop: 12,
     gap: 14,
     width: '100%',
@@ -64,7 +64,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#00E4E8',
     alignItems: 'center',
     justifyContent: 'center',
-    bottom:30,
   },
   nextButton: {
     flex: 1,
@@ -73,7 +72,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#00E4E8',
     alignItems: 'center',
     justifyContent: 'center',
-    bottom:30,
   },
   nextButtonFull: {
     width: '100%',

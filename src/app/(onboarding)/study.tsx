@@ -274,23 +274,15 @@ export default function StudyScreen() {
     }
   };
 
-  const fixedHeightStyle = isOtherSelected
-    ? {
-        height: initialHeight,
-        minHeight: initialHeight,
-      }
-    : null;
-
   return (
     <SafeAreaView
       style={[
         styles.safeArea,
         { backgroundColor: theme.background },
-        fixedHeightStyle,
       ]}
       edges={['top', 'bottom', 'left', 'right']}
     >
-      <View style={[styles.responsiveContainer, fixedHeightStyle]}>
+      <View style={styles.responsiveContainer}>
         {/* Progress Bar */}
         <OnboardingHeader progress={0.4} />
 

@@ -25,8 +25,6 @@ export default function CompanyScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [initialHeight] = useState(() => Dimensions.get('window').height);
   const isCompanyValid = Boolean(companyName.trim().length > 0);
 
   const [shakeAnim] = useState(() => new Animated.Value(0));
@@ -103,8 +101,8 @@ export default function CompanyScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { height: initialHeight, minHeight: initialHeight }]}>
-      <View style={[styles.centerContainer, { height: initialHeight, minHeight: initialHeight }]}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
         <OnboardingHeader progress={0.5} />
 
         <View style={styles.keyboardView}>

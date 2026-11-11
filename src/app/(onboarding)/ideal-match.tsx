@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Animated,
   Modal,
   PanResponder,
   Platform,
@@ -10,21 +11,14 @@ import {
   Text,
   TouchableWithoutFeedback,
   View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/hooks/use-theme";
-import { OnboardingHeader } from "@/components/onboarding-header";
-import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredPartnerPreferences } from "@/constants/userProfile";
-import {
-  getInterestsCatalog,
-  updateDatingPreferences,
-  type CatalogItem,
-} from "@/services/profileApi";
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/hooks/use-theme';
+import { OnboardingHeader } from '@/components/onboarding-header';
+import { OnboardingFooter } from '@/components/onboarding-footer';
+import { updateStoredPartnerPreferences } from '@/constants/userProfile';
+import { updateDatingPreferences,  getCurrentProfile, CatalogItem, getInterestsCatalog, } from '@/services/profileApi';
 
 export default function IdealMatchScreen() {
   const theme = useTheme();
@@ -65,13 +59,60 @@ export default function IdealMatchScreen() {
 
   const interestsList = interestsCatalog.map((interest) => interest.name);
 
+  const [error, setError] = useState<'distance' | 'religion' | 'interests' | null>(null);
+  const [shakeAnim] = useState(() => new Animated.Value(0));
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: -8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 8,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 3,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const toggleInterest = (interest: string) => {
+    let nextInterests: string[];
     if (selectedInterests.includes(interest)) {
-      setSelectedInterests(
-        selectedInterests.filter((item) => item !== interest),
-      );
+      nextInterests = selectedInterests.filter((item) => item !== interest);
     } else {
-      setSelectedInterests([...selectedInterests, interest]);
+      nextInterests = [...selectedInterests, interest];
+    }
+    setSelectedInterests(nextInterests);
+    if (error === 'interests' && nextInterests.length > 0) {
+      setError(null);
     }
   };
 
@@ -104,46 +145,64 @@ export default function IdealMatchScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleNext = async () => {
-    if (!isComplete || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const distanceNum = selectedDistance
-        ? parseInt(selectedDistance.replace(/\D/g, ""), 10) || 50
-        : 50;
-      const preferredInterestIds = selectedInterests
-        .map(
-          (name) =>
-            interestsCatalog.find(
-              (interest) => interest.name.toLowerCase() === name.toLowerCase(),
-            )?.id,
-        )
-        .filter((id): id is number => typeof id === "number");
-
-      updateStoredPartnerPreferences({
-        minAge: 18,
-        maxAge: maxAge || 35,
-        maxDistanceKm: distanceNum,
-        religionPreferences: selectedReligion
-          ? [selectedReligion]
-          : ["Open to all"],
-        preferredInterests: selectedInterests,
-      });
-
-      await updateDatingPreferences({
-        maxAge: maxAge || 35,
-        minAge: 18,
-        maxDistanceKm: distanceNum,
-        religionPreferences: selectedReligion ? [selectedReligion] : undefined,
-        preferredInterestIds,
-      }).catch((e) => {
-        console.warn("Backend sync warning on dating preferences update:", e);
-      });
-
-      router.push("/(onboarding)/ready" as any);
-    } finally {
-      setIsSubmitting(false);
+    if (!selectedDistance) {
+      setError('distance');
+      triggerShake();
+      return;
     }
-  };
+    if (!selectedReligion) {
+      setError('religion');
+      triggerShake();
+      return;
+    }
+    if (selectedInterests.length === 0) {
+      setError('interests');
+      triggerShake();
+      return;
+    }
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
+  try {
+    const distanceNum = selectedDistance
+      ? parseInt(selectedDistance.replace(/\D/g, ''), 10) || 50
+      : 50;
+
+    updateStoredPartnerPreferences({
+      minAge: 18,
+      maxAge: maxAge || 35,
+      maxDistanceKm: distanceNum,
+      religionPreferences: selectedReligion
+        ? [selectedReligion]
+        : ['Open to all'],
+      preferredInterests: selectedInterests,
+    });
+
+    await updateDatingPreferences({
+      maxAge: maxAge || 35,
+      minAge: 18,
+      maxDistanceKm: distanceNum,
+      religionPreferences: selectedReligion
+        ? [selectedReligion]
+        : undefined,
+    });
+
+    // Get gender from database
+    const profile = await getCurrentProfile();
+
+    if (profile?.gender?.toLowerCase() === 'male') {
+      router.push('/(onboarding)/subscription' as any);
+    } else {
+      router.push('/(onboarding)/ready' as any);
+    }
+
+  } catch (error) {
+    console.error('Error completing ideal match:', error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -235,21 +294,33 @@ export default function IdealMatchScreen() {
 
           {/* 2. Distance Section */}
           <View style={styles.section}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.text, marginBottom: 18 },
-              ]}
-            >
-              Distance
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Distance
+              </Text>
+              {error === 'distance' && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose your distance preference
+                </Animated.Text>
+              )}
+            </View>
             <View style={styles.distanceList}>
               {distanceOptions.map((dist) => {
                 const isSelected = selectedDistance === dist;
                 return (
                   <Pressable
                     key={dist}
-                    onPress={() => setSelectedDistance(dist)}
+                    onPress={() => {
+                      setSelectedDistance(dist);
+                      if (error === 'distance') setError(null);
+                    }}
                     style={[
                       styles.radioContainer,
                       Platform.OS === "web" && ({ cursor: "pointer" } as any),
@@ -287,22 +358,34 @@ export default function IdealMatchScreen() {
 
           {/* 3. Partner Religion / Community Section */}
           <View style={styles.section}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.text, marginBottom: 14 },
-              ]}
-            >
-              Partner Religion / Community
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Partner Religion / Community
+              </Text>
+              {error === 'religion' && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please choose your religion / community
+                </Animated.Text>
+              )}
+            </View>
             <Pressable
               onPress={() => setReligionModalVisible(true)}
               style={[
                 styles.selectBox,
                 {
-                  borderColor: selectedReligion
-                    ? theme.primaryButton
-                    : isDark
+                  borderColor:
+                    error === 'religion'
+                      ? '#FF3B30'
+                      : selectedReligion
+                      ? theme.primaryButton
+                      : isDark
                       ? "#3E4044"
                       : "#B9B9B9",
                   backgroundColor: isDark ? theme.backgroundElement : "#FFFFFF",
@@ -328,7 +411,11 @@ export default function IdealMatchScreen() {
                 name="chevron-down"
                 size={20}
                 color={
-                  selectedReligion ? theme.primaryButton : theme.textSecondary
+                  error === 'religion'
+                    ? '#FF3B30'
+                    : selectedReligion
+                    ? theme.primaryButton
+                    : theme.textSecondary
                 }
               />
             </Pressable>
@@ -336,14 +423,23 @@ export default function IdealMatchScreen() {
 
           {/* 4. Partner Interests Section */}
           <View style={styles.section}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.text, marginBottom: 16 },
-              ]}
-            >
-              Partner Interests
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Partner Interests
+              </Text>
+              {error === 'interests' && (
+                <Animated.Text
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{ translateX: shakeAnim }],
+                    },
+                  ]}
+                >
+                  Please select at least one interest
+                </Animated.Text>
+              )}
+            </View>
             <View style={styles.chipsContainer}>
               {interestsList.map((interest) => {
                 const isSelected = selectedInterests.includes(interest);
@@ -456,6 +552,7 @@ export default function IdealMatchScreen() {
                         key={item}
                         onPress={() => {
                           setSelectedReligion(item);
+                          if (error === 'religion') setError(null);
                           setReligionModalVisible(false);
                         }}
                         style={[
@@ -687,5 +784,18 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 15,
+  },
+  sectionHeader: {
+    position: "relative",
+    marginBottom: 18,
+  },
+  errorMessage: {
+    position: "absolute",
+    bottom: -18,
+    left: 0,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#FF3B30",
+    fontFamily: "DM_Sans_500Medium",
   },
 });

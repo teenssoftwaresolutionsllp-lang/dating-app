@@ -30,85 +30,94 @@ import {
   type DiscoveryCard,
 } from '@/services/matchApi';
 
-// Rosette Ribbon Badge Component (Bottom Right of Photo Card as shown in Figma Image 1)
-export function RosetteBadge({ percentage = 100 }: { percentage?: number }) {
-  let ribbonColor = '#10B981';
-  let strokeColor = '#059669';
-  let textColor = '#047857';
-  let innerBg = '#D1FAE5';
+// Circular Trust Score Badge Component (Bottom Right of Photo Card matching reference images)
+export function CircularTrustBadge({ percentage = 100 }: { percentage?: number }) {
+  const size = 44;
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  let bgFill = '#DBFDDE';
+  let strokeColor = '#00FF19';
+  let textColor = '#064E1D';
 
   if (percentage >= 100) {
-    ribbonColor = '#10B981';
-    strokeColor = '#059669';
-    textColor = '#047857';
-    innerBg = '#D1FAE5';
+    bgFill = '#DBFDDE';
+    strokeColor = '#00FF19';
+    textColor = '#064E1D';
   } else if (percentage >= 75) {
-    ribbonColor = '#00BCD4';
-    strokeColor = '#00838F';
-    textColor = '#0077B6';
-    innerBg = '#E0F7FA';
+    bgFill = '#E1F5FC';
+    strokeColor = '#21C4FF';
+    textColor = '#024158';
   } else if (percentage >= 50) {
-    ribbonColor = '#F59E0B';
-    strokeColor = '#D97706';
-    textColor = '#B45309';
-    innerBg = '#FEF3C7';
+    bgFill = '#FFF8DA';
+    strokeColor = '#FFD621';
+    textColor = '#514303';
   } else {
-    ribbonColor = '#EF4444';
-    strokeColor = '#DC2626';
-    textColor = '#B91C1C';
-    innerBg = '#FEE2E2';
+    bgFill = '#FED8D8';
+    strokeColor = '#FF1414';
+    textColor = '#3A0203';
   }
 
+  const validPct = Math.max(0, Math.min(100, percentage));
+  const strokeLength = (validPct / 100) * circumference;
+  const strokeOffset = validPct >= 100 ? 0 : strokeLength - circumference;
+
   return (
-    <View style={badgeStyles.rosetteContainer}>
-      <Svg width={46} height={56} viewBox="0 0 44 54" fill="none">
-        {/* Left Ribbon Tail */}
-        <Path
-          d="M13 34L9 50L16 45L21 50L19 34"
-          fill={ribbonColor}
+    <View style={badgeStyles.badgeContainer}>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {/* Background Filled Circle */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill={bgFill}
+        />
+        {/* Progress Arc Stroke */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
           stroke={strokeColor}
-          strokeWidth={1.2}
-          strokeLinejoin="round"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${strokeLength} ${circumference}`}
+          strokeDashoffset={strokeOffset}
         />
-        {/* Right Ribbon Tail */}
-        <Path
-          d="M25 34L23 50L28 45L35 50L31 34"
-          fill={ribbonColor}
-          stroke={strokeColor}
-          strokeWidth={1.2}
-          strokeLinejoin="round"
-        />
-        {/* Rosette Scalloped Outer Seal */}
-        <Path
-          d="M22 3C23.3 3 24.3 1.8 25.6 2.2C26.9 2.6 27.3 3.9 28.6 4.6C29.9 5.2 31.2 4.8 32.3 5.8C33.4 6.8 33 8.1 33.6 9.4C34.3 10.7 35.6 11.1 36 12.4C36.4 13.7 35.1 14.6 35.1 15.9C35.1 17.2 36.4 18.1 36 19.4C35.6 20.7 34.3 21.1 33.6 22.4C33 23.7 33.4 25 32.3 26C31.2 27 29.9 26.6 28.6 27.2C27.3 27.9 26.9 29.2 25.6 29.6C24.3 30 23.3 28.8 22 28.8C20.7 28.8 19.7 30 18.4 29.6C17.1 29.2 16.7 27.9 15.4 27.2C14.1 26.6 12.8 27 11.7 26C10.6 25 11 23.7 10.4 22.4C9.7 21.1 8.4 20.7 8 19.4C7.6 18.1 8.9 17.2 8.9 15.9C8.9 14.6 7.6 13.7 8 12.4C8.4 11.1 9.7 10.7 10.4 9.4C11 8.1 10.6 6.8 11.7 5.8C12.8 4.8 14.1 5.2 15.4 4.6C16.7 3.9 17.1 2.6 18.4 2.2C19.7 1.8 20.7 3 22 3Z"
-          fill="rgba(255, 255, 255, 0.95)"
-          stroke={ribbonColor}
-          strokeWidth={1.8}
-        />
-        {/* Inner Circle Accent */}
-        <Circle cx="22" cy="16" r="10" stroke={strokeColor} strokeWidth={1.2} fill={innerBg} />
-        {/* Score Text */}
+        {/* Centered Percentage Text */}
         <SvgText
-          x="22"
-          y="19"
-          fontSize="9"
-          fontWeight="bold"
-          fill={textColor}
+          x={center}
+          y={center + 4}
           textAnchor="middle"
+          fill={textColor}
+          fontSize={validPct >= 100 ? 11 : 12}
+          fontWeight="800"
+          fontFamily="DM_Sans_700Bold"
         >
-          {`${percentage}%`}
+          {`${Math.round(validPct)}%`}
         </SvgText>
       </Svg>
     </View>
   );
 }
 
+// Preserve RosetteBadge export for compatibility
+export const RosetteBadge = CircularTrustBadge;
+
 const badgeStyles = StyleSheet.create({
-  rosetteContainer: {
-    width: 46,
-    height: 56,
+  badgeContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 4,
   },
 });
 
@@ -221,6 +230,9 @@ function getMatchVibeIcon(vibe: string): keyof typeof Ionicons.glyphMap {
 type ProfileCard = {
   id: string;
   userId: string;
+  alreadyLiked: boolean;
+  theyLikedYou: boolean;
+  isMatched: boolean;
   name: string | null;
   age: number | null;
   height: string | null;
@@ -269,6 +281,9 @@ export default function DatingProfileScreen() {
           .map((card) => ({
             id: card.userId,
             userId: card.userId,
+            alreadyLiked: card.alreadyLiked,
+            theyLikedYou: card.theyLikedYou,
+            isMatched: card.isMatched,
             name: card.name,
             age: card.age,
             height: card.formattedHeight || card.heightFt,
@@ -378,7 +393,7 @@ export default function DatingProfileScreen() {
     setIsAnimating(true);
 
     const targetId = currentProfile.userId || currentProfile.id;
-    if (targetId) {
+    if (targetId && !currentProfile.alreadyLiked) {
       swipeUser(targetId, 'dislike').catch((e) => {
         console.warn('Backend sync warning on swipe dislike:', e);
       });
@@ -407,15 +422,29 @@ export default function DatingProfileScreen() {
 
   // Like (❤️): show "Liked" toast notification, slide complete screen RIGHT and smoothly move to the next profile
   const handleToggleLike = () => {
-    if (isAnimating || !currentProfile) return;
+    if (isAnimating || !currentProfile || currentProfile.alreadyLiked) return;
     setIsAnimating(true);
     setIsLiked(true);
     setShowLikedToast(true);
 
     const targetId = currentProfile.userId || currentProfile.id;
     if (targetId) {
+      setCards((currentCards) =>
+        currentCards.map((card) =>
+          card.userId === targetId
+            ? { ...card, alreadyLiked: true }
+            : card,
+        ),
+      );
       swipeUser(targetId, 'like')
         .then((res) => {
+          setCards((currentCards) =>
+            currentCards.map((card) =>
+              card.userId === targetId
+                ? { ...card, isMatched: res.isMatch }
+                : card,
+            ),
+          );
           if (res && res.isMatch) {
             setMatchModalData({
               name: currentProfile.name,
@@ -426,6 +455,13 @@ export default function DatingProfileScreen() {
           }
         })
         .catch((e) => {
+          setCards((currentCards) =>
+            currentCards.map((card) =>
+              card.userId === targetId
+                ? { ...card, alreadyLiked: false, isMatched: false }
+                : card,
+            ),
+          );
           console.warn('Backend sync warning on swipe like:', e);
         });
     }
@@ -673,12 +709,10 @@ export default function DatingProfileScreen() {
                     ))}
                   </View>
 
-                  {/* Rosette Ribbon Trust Score Badge (Bottom Right of Photo Card) */}
-                  {currentProfile.trustScore?.score != null && (
-                    <View style={styles.hundredPercentBadgeOverlay}>
-                      <RosetteBadge percentage={currentProfile.trustScore.score} />
-                    </View>
-                  )}
+                  {/* Circular Trust Score Badge (Bottom Right of Photo Card) */}
+                  <View style={styles.hundredPercentBadgeOverlay}>
+                    <CircularTrustBadge percentage={currentProfile.trustScore?.score ?? 100} />
+                  </View>
                 </View>
 
                 {/* Profile Basic Details */}
@@ -854,6 +888,24 @@ export default function DatingProfileScreen() {
             </ScrollView>
 
             {/* Floating Action Buttons Overlay (Positioned close to footer with Chat slightly higher matching reference image) */}
+            {(currentProfile.isMatched ||
+              currentProfile.theyLikedYou ||
+              currentProfile.alreadyLiked) && (
+              <View style={styles.alreadyLikedBadge}>
+                <Ionicons
+                  name={currentProfile.isMatched ? 'heart' : 'checkmark-circle'}
+                  size={16}
+                  color="#168A62"
+                />
+                <Text style={styles.alreadyLikedLabel}>
+                  {currentProfile.isMatched
+                    ? "It's a match!"
+                    : currentProfile.theyLikedYou
+                      ? 'They liked you'
+                      : 'You already liked this profile'}
+                </Text>
+              </View>
+            )}
             <View style={styles.floatingActionRow}>
               {/* Dislike / Red X Button (#FFC5C5 outer ring, #EB1B1B inner circle, white X) */}
               <View style={styles.actionBtnRedOuter}>
@@ -881,12 +933,29 @@ export default function DatingProfileScreen() {
               <View style={styles.actionBtnPinkOutermost}>
                 <View style={styles.actionBtnPinkMiddle}>
                   <TouchableOpacity
-                    style={[styles.actionBtnPinkInner, isLiked && styles.actionBtnPinkLiked]}
+                    style={[
+                      styles.actionBtnPinkInner,
+                      isLiked && styles.actionBtnPinkLiked,
+                      (currentProfile.alreadyLiked || currentProfile.isMatched) &&
+                        styles.actionBtnPinkDisabled,
+                    ]}
                     activeOpacity={0.85}
+                    disabled={currentProfile.alreadyLiked || currentProfile.isMatched}
+                    accessibilityState={{
+                      disabled: currentProfile.alreadyLiked || currentProfile.isMatched,
+                    }}
                     onPress={handleToggleLike}
                   >
                     <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
-                      <Ionicons name="heart" size={22} color="#FF1FC7" />
+                      <Ionicons
+                        name="heart"
+                        size={22}
+                        color={
+                          currentProfile.alreadyLiked || currentProfile.isMatched
+                            ? '#9CA3AF'
+                            : '#FF1FC7'
+                        }
+                      />
                     </Animated.View>
                   </TouchableOpacity>
                 </View>
@@ -1686,6 +1755,26 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 999,
   },
+  alreadyLikedBadge: {
+    position: 'absolute',
+    bottom: 70,
+    zIndex: 999,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#E8F7F0',
+    borderWidth: 1,
+    borderColor: '#B8E5D0',
+  },
+  alreadyLikedLabel: {
+    color: '#137A57',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   actionBtnRedOuter: {
     width: 56,
     height: 56,
@@ -1745,6 +1834,10 @@ const styles = StyleSheet.create({
   },
   actionBtnPinkLiked: {
     transform: [{ scale: 1.08 }],
+  },
+  actionBtnPinkDisabled: {
+    backgroundColor: '#E5E7EB',
+    opacity: 0.7,
   },
   bottomTabBar: {
     height: 64,

@@ -1,30 +1,25 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, View, Pressable } from 'react-native';
-import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { OptionButton } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 export default function LanguageSelectionScreen() {
   const theme = useTheme();
-   const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.container}>
         <Pressable 
-                onPress={() => {
-                //   if (router.canGoBack()) {
-                //     router.back();
-                //   } else {
-                    router.replace('/verified-profiles' as any);
-                  // }
-                }} 
-                style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
-                accessibilityRole="button"
-              >
-                <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
-              </Pressable>
+          onPress={() => {
+            router.replace('/verified-profiles' as any);
+          }} 
+          style={[styles.backButton, { top: 8, left: 16 }]}
+          accessibilityRole="button"
+        >
+          <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
+        </Pressable>
         <View style={styles.content}>
           <Text style={[styles.title, { color: theme.text }]}>Set Your Display Language</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>

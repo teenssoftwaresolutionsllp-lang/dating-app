@@ -16,6 +16,10 @@ import {
   getPeopleCategories,
   type PeopleCategoriesResponse,
 } from "@/services/matchApi";
+import {
+  PeopleProfileModal,
+  type PeopleProfilePreview,
+} from "@/components/PeopleProfileModal";
 
 interface PeopleScreenProps {
   showTabBar?: boolean;
@@ -29,6 +33,26 @@ export default function PeopleScreen({
   const [categories, setCategories] =
     React.useState<PeopleCategoriesResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [selectedProfile, setSelectedProfile] =
+    React.useState<PeopleProfilePreview | null>(null);
+
+  const openProfile = (
+    user: {
+      id: string;
+      name: string;
+      age: number;
+      image?: { uri: string };
+    },
+    subtitle?: string,
+  ) => {
+    setSelectedProfile({
+      id: user.id,
+      name: user.name,
+      age: user.age,
+      image: user.image?.uri ?? null,
+      subtitle,
+    });
+  };
 
   React.useEffect(() => {
     getPeopleCategories()
@@ -136,7 +160,7 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.activeUserItem}
                 activeOpacity={0.8}
-                onPress={() => navigateToViewAll("active", "Active")}
+                onPress={() => openProfile(user, "Active now")}
               >
                 <View style={styles.avatarBorderRing}>
                   <Image source={user.image} style={styles.activeAvatarImage} />
@@ -170,7 +194,9 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.cardItem}
                 activeOpacity={0.85}
-                onPress={() => navigateToViewAll("near_you", "People Near You")}
+                onPress={() =>
+                  openProfile(user, user.location || undefined)
+                }
               >
                 <View style={styles.cardImageContainer}>
                   <Image source={user.image} style={styles.cardImage} />
@@ -212,9 +238,7 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.cardItem}
                 activeOpacity={0.85}
-                onPress={() =>
-                  navigateToViewAll("you_may_like", "You May Like")
-                }
+                onPress={() => openProfile(user, user.profession)}
               >
                 <View style={styles.cardImageContainer}>
                   <Image source={user.image} style={styles.cardImage} />
@@ -259,9 +283,7 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.circleUserItem}
                 activeOpacity={0.85}
-                onPress={() =>
-                  navigateToViewAll("similar_interest", "Similar Interest")
-                }
+                onPress={() => openProfile(user, user.interest)}
               >
                 <View style={styles.circleAvatarWrapper}>
                   <Image source={user.image} style={styles.circleAvatarImage} />
@@ -300,9 +322,7 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.circleUserItem}
                 activeOpacity={0.85}
-                onPress={() =>
-                  navigateToViewAll("same_religion", "Same Religion")
-                }
+                onPress={() => openProfile(user, user.religion)}
               >
                 <View style={styles.circleAvatarWrapper}>
                   <Image source={user.image} style={styles.circleAvatarImage} />
@@ -341,9 +361,7 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.circleUserItem}
                 activeOpacity={0.85}
-                onPress={() =>
-                  navigateToViewAll("recently_active", "Recently Active")
-                }
+                onPress={() => openProfile(user, user.timeAgo)}
               >
                 <View style={styles.circleAvatarWrapper}>
                   <Image source={user.image} style={styles.circleAvatarImage} />
@@ -356,6 +374,11 @@ export default function PeopleScreen({
             ))}
           </ScrollView>
         </ScrollView>
+
+        <PeopleProfileModal
+          profile={selectedProfile}
+          onClose={() => setSelectedProfile(null)}
+        />
 
         {showTabBar && <CustomTabBar />}
       </View>

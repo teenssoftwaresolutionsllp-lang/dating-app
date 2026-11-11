@@ -24,6 +24,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="religion" />
       <Stack.Screen name="looking-for" />
       <Stack.Screen name="ideal-match" />
+      <Stack.Screen name="subscription" />
       <Stack.Screen name="ready" />
     </Stack>
   );
