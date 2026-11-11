@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+dist_test/
+web-build/
+.git/
+.vscode/
+.claude/
+android/
+ios/

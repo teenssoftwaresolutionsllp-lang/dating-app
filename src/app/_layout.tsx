@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -12,6 +12,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Platform, View, StyleSheet } from 'react-native';
 import '@/global.css';
+
+import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
+import * as Notifications from 'expo-notifications';
+import { authStorage } from '@/services/authStorage';
+import { registerForPushNotifications } from '@/services/notificationService';
 
 if (Platform.OS !== 'web') {
   void SplashScreen.preventAutoHideAsync();
@@ -27,9 +32,36 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().catch(() => {});
+      SplashScreen.hideAsync().catch(() => { });
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    // Register device push token if user is authenticated
+    authStorage.getToken().then((token) => {
+      if (token) {
+        void registerForPushNotifications();
+      }
+    });
+
+    // Listen for notification responses when user taps incoming call push notification
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.type === 'INCOMING_CALL' && data.callId) {
+        console.log('[PushNotification] User tapped incoming call push notification:', data);
+      } else if (data?.type === 'NEW_MESSAGE') {
+        router.push('/(tab)/chats' as any);
+      } else if (data?.type === 'NEW_MATCH') {
+        router.push('/(tab)/matches' as any);
+      }
+    });
+
+    return () => {
+      responseSub.remove();
+    };
+  }, []);
 
   if (!fontsLoaded && !fontError && Platform.OS !== 'web') {
     return null;
@@ -39,6 +71,7 @@ export default function RootLayout() {
     <>
       <Stack screenOptions={{ headerShown: false }} />
       {Platform.OS !== 'web' && <AnimatedSplashOverlay />}
+      <IncomingCallOverlay />
     </>
   );
 

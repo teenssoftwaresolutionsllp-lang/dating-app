@@ -1,9 +1,14 @@
 import React, { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import { Stack, usePathname, router } from 'expo-router';
+import { registerForPushNotifications } from '@/services/notificationService';
 
 export default function TabLayout() {
   const pathname = usePathname();
+
+  useEffect(() => {
+    void registerForPushNotifications();
+  }, []);
 
   useEffect(() => {
     const onBackPress = () => {

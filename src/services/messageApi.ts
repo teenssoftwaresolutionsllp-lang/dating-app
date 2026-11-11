@@ -31,7 +31,13 @@ export interface SingleChatMessage {
   senderId: string;
   receiverId: string;
   content: string | null;
-  messageType: 'text' | 'image' | 'audio' | 'system';
+  messageType: 'text' | 'image' | 'audio' | 'system' | 'call';
+  metadata?: {
+    callId?: string;
+    callType?: 'audio' | 'video';
+    status?: 'initiated' | 'ringing' | 'accepted' | 'rejected' | 'missed' | 'ended';
+    durationSeconds?: number;
+  } | null;
   mediaUrl?: string | null;
   createdAt: string;
   isOwn: boolean;
