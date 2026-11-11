@@ -8,7 +8,11 @@
     "scheme": "datingapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Dating App to access your camera for video calls.",
+        "NSMicrophoneUsageDescription": "Allow Dating App to access your microphone for voice calls."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,19 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "package": "com.lavanya1272.datingapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -35,8 +51,32 @@
       ],
       "expo-font",
       "expo-image",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FF2D55"
+        }
+      ],
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "buildArchs": [
+              "arm64-v8a"
+            ],
+            "packagingOptions": {
+              "pickFirst": [
+                "**/libaosl.so",
+                "**/libc++_shared.so"
+              ]
+            }
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -44,9 +84,11 @@
     },
     "extra": {
       "router": {},
+      "apiUrl": "https://ringtones-undertake-canvas-animal.trycloudflare.com",
       "eas": {
-        "projectId": "640ee2a2-12f1-43b6-a6cc-ab7de7bdd97d"
+        "projectId": "542b02bb-b7c8-44cf-8b0b-72f530a18494"
       }
-    }
+    },
+    "owner": "galilavanya"
   }
 }

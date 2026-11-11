@@ -26,6 +26,7 @@ import {
 } from "@/components/onboarding";
 import { useTheme } from "@/hooks/use-theme";
 import { resendOtp, verifyOtp } from "@/utils/api";
+import { registerForPushNotifications } from "@/services/notificationService";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
@@ -184,6 +185,7 @@ export default function OtpScreen() {
 
     try {
       const response = await verifyOtp(digits, enteredOtp, "+91");
+      void registerForPushNotifications();
       router.replace(
         response.data.isNewUser
           ? "/(onboarding)/set-profile"

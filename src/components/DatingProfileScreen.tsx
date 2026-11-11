@@ -22,6 +22,7 @@ import { CustomTabBar } from './CustomTabBar';
 import { formatApiImageUrl } from '@/services/api';
 import {
   getDiscoveryFeed,
+  resetDiscoveryFeed,
   swipeUser,
   blockUser,
   reportUser,
@@ -258,36 +259,40 @@ export default function DatingProfileScreen() {
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [safetyActionStatus, setSafetyActionStatus] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const loadProfiles = React.useCallback(() => {
+    setIsLoading(true);
+    setFeedError(null);
     getDiscoveryFeed()
       .then((feed) => {
         const mapped = feed
           .filter((card) => card.photos.some((photo) => photo.url))
           .map((card) => ({
-          id: card.userId,
-          userId: card.userId,
-          name: card.name,
-          age: card.age,
-          height: card.formattedHeight || card.heightFt,
-          isOnline: card.isOnline,
-          location: card.city ? `Lives in ${card.city}` : card.location,
-          about: card.bio,
-          interests: card.interests || [],
-          education: card.education?.qualification || card.education?.educationLevel || null,
-          profession: card.education?.profession || null,
-          trustScore: card.trustScore,
-          foodPreference: card.foodPreference || null,
-          drinking: card.drinking || null,
-          smoking: card.smoking || null,
-          lookingFor: card.lookingFor?.[0] || null,
-          religion: card.religion || null,
-          relationshipStatus: card.relationshipStatus,
-          nature: card.nature || [],
-          images: card.photos
-            .filter((photo) => Boolean(photo.url))
-            .map((photo) => ({ uri: formatApiImageUrl(photo.url) })),
-        }));
+            id: card.userId,
+            userId: card.userId,
+            name: card.name,
+            age: card.age,
+            height: card.formattedHeight || card.heightFt,
+            isOnline: card.isOnline,
+            location: card.city ? `Lives in ${card.city}` : card.location,
+            about: card.bio,
+            interests: card.interests || [],
+            education: card.education?.qualification || card.education?.educationLevel || null,
+            profession: card.education?.profession || null,
+            trustScore: card.trustScore,
+            foodPreference: card.foodPreference || null,
+            drinking: card.drinking || null,
+            smoking: card.smoking || null,
+            lookingFor: card.lookingFor?.[0] || null,
+            religion: card.religion || null,
+            relationshipStatus: card.relationshipStatus,
+            nature: card.nature || [],
+            images: card.photos
+              .filter((photo) => Boolean(photo.url))
+              .map((photo) => ({ uri: formatApiImageUrl(photo.url) })),
+          }));
         setCards(mapped);
+        setCurrentProfileIndex(0);
+        setCurrentImageIndex(0);
       })
       .catch((error: unknown) => {
         console.warn('Failed to load discovery feed:', error);
@@ -297,6 +302,21 @@ export default function DatingProfileScreen() {
       })
       .finally(() => setIsLoading(false));
   }, []);
+
+  const handleResetSwipes = async () => {
+    try {
+      setIsLoading(true);
+      await resetDiscoveryFeed();
+    } catch (e) {
+      console.warn('Reset swipes warning:', e);
+    } finally {
+      loadProfiles();
+    }
+  };
+
+  React.useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
 
   const currentProfile = cards.length > 0
     ? cards[currentProfileIndex % cards.length]
@@ -951,20 +971,31 @@ export default function DatingProfileScreen() {
           </>
           ) : (
             <View style={styles.emptyFeedContainer}>
+              <Ionicons name="sparkles-outline" size={44} color="#FF6584" style={{ marginBottom: 12 }} />
               <Text style={styles.emptyFeedTitle}>
                 {isLoading
                   ? 'Loading profiles…'
                   : feedError
                     ? 'Unable to load profiles'
-                    : 'No profiles available'}
+                    : 'No more new profiles'}
               </Text>
               {!isLoading && !feedError && (
                 <Text style={styles.emptyFeedMessage}>
-                  Profiles with uploaded photos will appear here when available.
+                  You've swiped through all available candidates. Tap below to reload and explore profiles again!
                 </Text>
               )}
               {!isLoading && feedError && (
                 <Text style={styles.emptyFeedMessage}>{feedError}</Text>
+              )}
+              {!isLoading && (
+                <TouchableOpacity
+                  style={styles.refreshProfilesBtn}
+                  onPress={handleResetSwipes}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="refresh-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.refreshProfilesBtnText}>Refresh & Explore Again</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -1860,5 +1891,25 @@ const styles = StyleSheet.create({
     color: '#059669',
     paddingVertical: 20,
     textAlign: 'center',
+  },
+
+  refreshProfilesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6584',
+    paddingVertical: 13,
+    paddingHorizontal: 22,
+    borderRadius: 24,
+    shadowColor: '#FF6584',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  refreshProfilesBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
