@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { CustomTabBar } from './CustomTabBar';
+import { useTranslation } from 'react-i18next';
 import { formatApiImageUrl } from '@/services/api';
 import {
   getDiscoveryFeed,
@@ -254,6 +255,7 @@ type ProfileCard = {
 
 export default function DatingProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
@@ -594,7 +596,7 @@ export default function DatingProfileScreen() {
             <View style={styles.likedToast}>
               <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.likedToastText}>
-                {currentProfile.name ? `Liked ${currentProfile.name}'s profile!` : 'Liked profile!'}
+                {currentProfile.name ? t('matches.likedToast', { name: currentProfile.name }) : t('matches.likedToastDefault')}
               </Text>
             </View>
           )}
@@ -729,7 +731,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.aboutMeCard}>
                     {currentProfile.about && (
                       <>
-                        <Text style={styles.aboutMeTitle}>About Me</Text>
+                        <Text style={styles.aboutMeTitle}>{t('matches.aboutMe')}</Text>
                         <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
                       </>
                     )}
@@ -772,7 +774,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="restaurant-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Food Preferences</Text>
+                      <Text style={styles.attributeTitle}>{t('matches.foodPreferences')}</Text>
                     </View>
                     <Text style={styles.attributeValue}>{currentProfile.foodPreference}</Text>
                   </View>
@@ -782,7 +784,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="wine-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Drink</Text>
+                      <Text style={styles.attributeTitle}>{t('matches.drink')}</Text>
                     </View>
                     <Text style={styles.attributeValue}>{currentProfile.drinking}</Text>
                   </View>
@@ -792,7 +794,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="cloud-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Smoke</Text>
+                      <Text style={styles.attributeTitle}>{t('matches.smoke')}</Text>
                     </View>
                     <Text style={styles.attributeValue}>{currentProfile.smoking}</Text>
                   </View>
@@ -802,7 +804,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="heart-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Looking for</Text>
+                      <Text style={styles.attributeTitle}>{t('matches.lookingFor')}</Text>
                     </View>
                     <Text style={styles.attributeValue} numberOfLines={1}>
                       {currentProfile.lookingFor}
@@ -814,7 +816,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="flower-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Religion</Text>
+                      <Text style={styles.attributeTitle}>{t('matches.religion')}</Text>
                     </View>
                     <Text style={styles.attributeValue}>{currentProfile.religion}</Text>
                   </View>
@@ -824,7 +826,7 @@ export default function DatingProfileScreen() {
                   <View style={styles.attributeBox}>
                     <View style={styles.attributeHeaderRow}>
                       <Ionicons name="person-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>Relationship Status</Text>
+                      <Text style={styles.attributeTitle}>{t('matches.relationshipStatus')}</Text>
                     </View>
                     <Text style={styles.attributeValue}>{currentProfile.relationshipStatus}</Text>
                   </View>
@@ -835,7 +837,7 @@ export default function DatingProfileScreen() {
                 {/* Nature Section (Dynamically rendered from candidate's real nature traits) */}
                 {currentProfile.nature.length > 0 && (
                 <View style={styles.myVibesSection}>
-                  <Text style={styles.myVibesTitle}>Nature</Text>
+                  <Text style={styles.myVibesTitle}>{t('matches.nature')}</Text>
                   <View style={styles.myVibesRow}>
                     {currentProfile.nature.slice(0, 5)
                       .map((trait: string, idx: number) => (
@@ -859,7 +861,7 @@ export default function DatingProfileScreen() {
                   onPress={() => setShowSafetyModal(true)}
                 >
                   <Ionicons name="alert-circle-outline" size={16} color="#FF4D4D" />
-                  <Text style={styles.reportButtonText}>Report & block profile</Text>
+                  <Text style={styles.reportButtonText}>{t('matches.reportBlock')}</Text>
                 </TouchableOpacity>
               </Animated.View>
 
@@ -879,10 +881,10 @@ export default function DatingProfileScreen() {
                 />
                 <Text style={styles.alreadyLikedLabel}>
                   {currentProfile.isMatched
-                    ? "It's a match!"
+                    ? t('matches.itIsAMatch')
                     : currentProfile.theyLikedYou
-                      ? 'They liked you'
-                      : 'You already liked this profile'}
+                      ? t('matches.theyLikedYou')
+                      : t('matches.alreadyLiked')}
                 </Text>
               </View>
             )}
@@ -946,11 +948,11 @@ export default function DatingProfileScreen() {
         {matchModalData && (
           <View style={styles.matchModalOverlay}>
             <View style={styles.matchModalCard}>
-              <Text style={styles.matchModalTitle}>🎉 It&apos;s a Match!</Text>
+              <Text style={styles.matchModalTitle}>{t('matches.itsAMatch')}</Text>
               <Text style={styles.matchModalSubtitle}>
                 {matchModalData.name
-                  ? `You and ${matchModalData.name} liked each other.`
-                  : 'You both liked each other.'}
+                  ? t('matches.matchModalSub', { name: matchModalData.name })
+                  : t('matches.matchModalSubDefault')}
               </Text>
               <Image source={matchModalData.photo} style={styles.matchModalAvatar} />
               
@@ -959,7 +961,7 @@ export default function DatingProfileScreen() {
                 onPress={handleStartChatWithMatch}
                 activeOpacity={0.85}
               >
-                <Text style={styles.matchModalPrimaryBtnText}>Send Message</Text>
+                <Text style={styles.matchModalPrimaryBtnText}>{t('matches.sendMessage')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -967,7 +969,7 @@ export default function DatingProfileScreen() {
                 onPress={() => setMatchModalData(null)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.matchModalSecondaryBtnText}>Keep Swiping</Text>
+                <Text style={styles.matchModalSecondaryBtnText}>{t('matches.keepSwiping')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -977,7 +979,7 @@ export default function DatingProfileScreen() {
         {showSafetyModal && (
           <View style={styles.matchModalOverlay}>
             <View style={styles.safetyModalCard}>
-              <Text style={styles.safetyModalTitle}>Safety & Moderation</Text>
+              <Text style={styles.safetyModalTitle}>{t('matches.safetyTitle')}</Text>
               {safetyActionStatus ? (
                 <Text style={styles.safetyActionFeedback}>{safetyActionStatus}</Text>
               ) : (
@@ -993,7 +995,7 @@ export default function DatingProfileScreen() {
                     activeOpacity={0.8}
                   >
                     <Ionicons name="flag-outline" size={18} color="#EF4444" />
-                    <Text style={styles.safetyActionBtnText}>Report Inappropriate / Fake Profile</Text>
+                    <Text style={styles.safetyActionBtnText}>{t('matches.reportFake')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1002,7 +1004,7 @@ export default function DatingProfileScreen() {
                     activeOpacity={0.8}
                   >
                     <Ionicons name="ban-outline" size={18} color="#DC2626" />
-                    <Text style={styles.safetyActionBtnText}>Block Profile Immediately</Text>
+                    <Text style={styles.safetyActionBtnText}>{t('matches.blockProfile')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1010,7 +1012,7 @@ export default function DatingProfileScreen() {
                     onPress={() => setShowSafetyModal(false)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.safetyCancelBtnText}>Cancel</Text>
+                    <Text style={styles.safetyCancelBtnText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1022,14 +1024,14 @@ export default function DatingProfileScreen() {
             <View style={styles.emptyFeedContainer}>
               <Text style={styles.emptyFeedTitle}>
                 {isLoading
-                  ? 'Loading profiles…'
+                  ? t('matches.loadingProfiles')
                   : feedError
-                    ? 'Unable to load profiles'
-                    : 'No profiles available'}
+                    ? t('matches.unableToLoad')
+                    : t('matches.noProfilesAvailable')}
               </Text>
               {!isLoading && !feedError && (
                 <Text style={styles.emptyFeedMessage}>
-                  Profiles with uploaded photos will appear here when available.
+                  {t('matches.profilesAppearHere')}
                 </Text>
               )}
               {!isLoading && feedError && (

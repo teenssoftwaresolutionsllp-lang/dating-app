@@ -12,9 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 import {
   getLanguagesCatalog,
   updateLanguages,
@@ -34,10 +38,19 @@ const DEFAULT_LANGUAGES = [
 
 export default function ChooseLanguagesScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
 
+  const initialDraft = getOnboardingProfileDraft();
+  const initialSelectedLanguages = initialDraft.languages
+    ? initialDraft.languages
+        .split(",")
+        .map((lang) => lang.trim())
+        .filter(Boolean)
+    : [];
+
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(initialSelectedLanguages);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [languageError, setLanguageError] = useState(false);
 
@@ -102,10 +115,14 @@ export default function ChooseLanguagesScreen() {
   const toggleLanguage = (lang: string) => {
     if (selected.includes(lang)) {
       if (selected.length > 1) {
-        setSelected(selected.filter((item) => item !== lang));
+        const updated = selected.filter((item) => item !== lang);
+        setSelected(updated);
+        updateOnboardingProfileDraft({ languages: updated.join(", ") });
       }
     } else {
-      setSelected([...selected, lang]);
+      const updated = [...selected, lang];
+      setSelected(updated);
+      updateOnboardingProfileDraft({ languages: updated.join(", ") });
       if (languageError) {
         setLanguageError(false);
       }
@@ -121,7 +138,7 @@ export default function ChooseLanguagesScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ languages: selected.join(", ") });
+      updateOnboardingProfileDraft({ languages: selected.join(", ") });
       const languageIds = selected
         .map(
           (name) =>
@@ -166,10 +183,10 @@ export default function ChooseLanguagesScreen() {
         >
           <View style={styles.headerSection}>
             <Text style={[styles.title, { color: theme.text }]}>
-              Choose your languages
+              {t('onboarding.steps.languages.title')}
             </Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              Select the languages you speak or prefer to chat in.
+              {t('onboarding.steps.languages.subtitle')}
             </Text>
 
             {languageError && (
@@ -181,7 +198,7 @@ export default function ChooseLanguagesScreen() {
                   },
                 ]}
               >
-                Please choose a language
+                {t('onboarding.steps.languages.errorSelect')}
               </Animated.Text>
             )}
           </View>

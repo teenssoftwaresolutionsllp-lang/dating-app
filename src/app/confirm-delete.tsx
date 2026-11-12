@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { WarningTriangleGraphic } from "@/components/SettingsIcons";
 import { authStorage } from "@/services/authStorage";
 import {
@@ -30,6 +31,7 @@ const isOtpCooldownError = (error: unknown) => {
 
 export default function ConfirmDeleteScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [isRequesting, setIsRequesting] = useState(true);
@@ -53,14 +55,14 @@ export default function ConfirmDeleteScreen() {
       .catch((requestError: unknown) => {
         if (!isActive) return;
         if (isOtpCooldownError(requestError)) {
-          setError("A code was recently sent. Enter the latest code below.");
+          setError(t("confirmDelete.cooldownError"));
           setResendSeconds(30);
           return;
         }
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "Could not send the confirmation code. Please try again.",
+            : t("confirmDelete.generalError"),
         );
       })
       .finally(() => {
@@ -70,7 +72,7 @@ export default function ConfirmDeleteScreen() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -91,7 +93,7 @@ export default function ConfirmDeleteScreen() {
   const handleConfirmDelete = async () => {
     if (isSubmitting) return;
     if (!/^\d{4}$/.test(otp)) {
-      setError("Enter the 4-digit code sent to your account phone number.");
+      setError(t("confirmDelete.codeRequiredError"));
       return;
     }
 
@@ -105,7 +107,7 @@ export default function ConfirmDeleteScreen() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Could not confirm account deletion. Please try again.",
+          : t("confirmDelete.generalError"),
       );
     } finally {
       setIsSubmitting(false);
@@ -122,14 +124,14 @@ export default function ConfirmDeleteScreen() {
       setResendSeconds(result?.resendCooldown ?? 30);
     } catch (requestError) {
       if (isOtpCooldownError(requestError)) {
-        setError("A code was recently sent. Enter the latest code below.");
+        setError(t("confirmDelete.cooldownError"));
         setResendSeconds(30);
         return;
       }
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Could not resend the code. Please try again.",
+          : t("confirmDelete.generalError"),
       );
     } finally {
       setIsResending(false);
@@ -150,7 +152,7 @@ export default function ConfirmDeleteScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Confirm Delete</Text>
+          <Text style={styles.headerTitle}>{t("confirmDelete.title")}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -164,12 +166,11 @@ export default function ConfirmDeleteScreen() {
             </View>
 
             {/* Title */}
-            <Text style={styles.dialogTitle}>Are you sure? ?</Text>
+            <Text style={styles.dialogTitle}>{t("confirmDelete.areYouSure")}</Text>
 
             {/* Subtitle */}
             <Text style={styles.dialogDesc}>
-              Enter the 4-digit code sent to your account phone number. This
-              permanently deletes your account and its data.
+              {t("confirmDelete.dialogDesc")}
             </Text>
 
             <TextInput
@@ -183,7 +184,7 @@ export default function ConfirmDeleteScreen() {
               keyboardType="number-pad"
               inputMode="numeric"
               maxLength={4}
-              placeholder="4-digit code"
+              placeholder={t("confirmDelete.codePlaceholder")}
               placeholderTextColor="#9CA3AF"
               textAlign="center"
             />
@@ -202,10 +203,10 @@ export default function ConfirmDeleteScreen() {
                 ]}
               >
                 {isRequesting || isResending
-                  ? "Sending code..."
+                  ? t("confirmDelete.sendingCode")
                   : resendSeconds > 0
-                    ? `Resend code in ${resendSeconds}s`
-                    : "Resend code"}
+                    ? t("confirmDelete.resendIn", { seconds: resendSeconds })
+                    : t("confirmDelete.resendCode")}
               </Text>
             </TouchableOpacity>
 
@@ -219,10 +220,10 @@ export default function ConfirmDeleteScreen() {
               >
                 <Text style={styles.deleteBtnText}>
                   {isRequesting
-                    ? "Sending code..."
+                    ? t("confirmDelete.sendingCode")
                     : isSubmitting
-                      ? "Deleting..."
-                      : "Confirm Delete"}
+                      ? t("confirmDelete.deletingBtn")
+                      : t("confirmDelete.confirmDeleteBtn")}
                 </Text>
               </TouchableOpacity>
 
@@ -231,7 +232,7 @@ export default function ConfirmDeleteScreen() {
                 activeOpacity={0.7}
                 onPress={handleBack}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t("confirmDelete.cancelBtn")}</Text>
               </TouchableOpacity>
             </View>
           </View>

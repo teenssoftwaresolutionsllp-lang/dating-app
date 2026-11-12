@@ -15,11 +15,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
 import { sendOtp } from '@/utils/api';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -83,7 +85,7 @@ export default function LoginScreen() {
     if (isSubmitting) return;
     const digits = phone.replace(/\D/g, '');
     if (digits.length !== 10) {
-      setError('Please enter a valid number');
+      setError(t('auth.login.phoneInvalid'));
       triggerShake();
       return;
     }
@@ -93,7 +95,7 @@ export default function LoginScreen() {
       await sendOtp(digits, '+91');
       router.push({ pathname: '/otp' as any, params: { phone: digits } });
     } catch (err: any) {
-      setError(err?.message || 'Failed to send OTP. Please try again.');
+      setError(err?.message || t('auth.login.sendFailed'));
       triggerShake();
     } finally {
       setIsSubmitting(false);
@@ -129,6 +131,7 @@ export default function LoginScreen() {
         }} 
         style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
         accessibilityRole="button"
+        accessibilityLabel={t('common.goBack')}
       >
         <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
       </Pressable>
@@ -154,9 +157,9 @@ export default function LoginScreen() {
             <SafeAreaView style={styles.contentSafeArea} edges={['bottom', 'left', 'right']}>
               <View style={styles.content}>
                 <View style={styles.formTopSection}>
-                  <Text style={[styles.title, { color: theme.text }]}>Welcome ,</Text>
+                  <Text style={[styles.title, { color: theme.text }]}>{t('auth.login.welcome')}</Text>
                   <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                    Login to Connect with your People.
+                    {t('auth.login.subtitle')}
                   </Text>
 
                   <View style={styles.phoneInputContainer}>
@@ -192,7 +195,7 @@ export default function LoginScreen() {
                         textContentType="telephoneNumber"
                         autoComplete="tel"
                         maxLength={10}
-                        placeholder="00000 00000"
+                        placeholder={t('auth.login.phonePlaceholder')}
                         placeholderTextColor={theme.textSecondary}
                         allowFontScaling={false}
                         style={[
@@ -224,7 +227,7 @@ export default function LoginScreen() {
                       },
                     ]}
                   >
-                    Login
+                    {t('auth.login.loginButton')}
                   </PrimaryButton>
 
                   <LegalFooter />

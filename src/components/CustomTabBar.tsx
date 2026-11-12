@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { router, useFocusEffect, usePathname } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { getLikesReceived } from '@/services/matchApi';
 
 function MatchesTabIcon({ color, size = 22 }: { color: string; size?: number }) {
@@ -121,7 +122,19 @@ function isTabActive(tabId: string, pathname: string | null | undefined): boolea
 
 export const CustomTabBar: React.FC = () => {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const [likesCount, setLikesCount] = useState(0);
+
+  const getTabLabel = (id: string): string => {
+    switch (id) {
+      case 'matches': return t('tabs.matches');
+      case 'likes': return t('tabs.likes');
+      case 'people': return t('tabs.people');
+      case 'chats': return t('tabs.chats');
+      case 'me': return t('tabs.me');
+      default: return id;
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -144,6 +157,7 @@ export const CustomTabBar: React.FC = () => {
       {TABS.map((tab) => {
         const isActive = isTabActive(tab.id, pathname);
         const color = isActive ? '#0D7A74' : '#78B0A8';
+        const label = getTabLabel(tab.id);
 
         return (
           <TouchableOpacity
@@ -153,7 +167,7 @@ export const CustomTabBar: React.FC = () => {
             accessibilityLabel={
               tab.id === 'likes' && likesCount > 0
                 ? `Likes, ${likesCount} ${likesCount === 1 ? 'person' : 'people'} liked your profile`
-                : tab.label
+                : label
             }
             onPress={() => {
               if (!isActive) {
@@ -171,7 +185,7 @@ export const CustomTabBar: React.FC = () => {
               )}
             </View>
             <Text style={[styles.tabLabel, { color, fontWeight: isActive ? '700' : '500' }]}>
-              {tab.label}
+              {label}
             </Text>
           </TouchableOpacity>
         );

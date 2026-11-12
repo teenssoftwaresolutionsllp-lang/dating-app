@@ -12,9 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 import {
   getInterestsCatalog,
   updateInterests,
@@ -41,10 +45,14 @@ const DEFAULT_INTERESTS = [
 
 export default function InterestsScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
 
+  const initialDraft = getOnboardingProfileDraft();
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(
+    Array.isArray(initialDraft.interests) ? initialDraft.interests : [],
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
@@ -104,12 +112,13 @@ export default function InterestsScreen() {
 
   const toggleInterest = (interest: string) => {
     if (selectedInterests.includes(interest)) {
-      setSelectedInterests(
-        selectedInterests.filter((item) => item !== interest),
-      );
+      const updated = selectedInterests.filter((item) => item !== interest);
+      setSelectedInterests(updated);
+      updateOnboardingProfileDraft({ interests: updated });
     } else {
       const updated = [...selectedInterests, interest];
       setSelectedInterests(updated);
+      updateOnboardingProfileDraft({ interests: updated });
       if (error && updated.length >= 3) {
         setError(false);
       }
@@ -125,7 +134,7 @@ export default function InterestsScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ interests: selectedInterests });
+      updateOnboardingProfileDraft({ interests: selectedInterests });
       const interestIds = selectedInterests
         .map(
           (name) =>
@@ -174,17 +183,16 @@ export default function InterestsScreen() {
         >
           {/* Header */}
           <Text style={[styles.title, { color: theme.text }]}>
-            What are you into?
+            {t('onboarding.steps.interests.title')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better
-            matches.
+            {t('onboarding.steps.interests.subtitle')}
           </Text>
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Your Interests
+              {t('onboarding.steps.interests.sectionTitle')}
             </Text>
             {error && (
               <Animated.Text
@@ -195,7 +203,7 @@ export default function InterestsScreen() {
                   },
                 ]}
               >
-                Please select at least 3 interests
+                {t('onboarding.steps.interests.errorMin')}
               </Animated.Text>
             )}
           </View>

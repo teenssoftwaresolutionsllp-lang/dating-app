@@ -14,15 +14,20 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateEducation } from '@/services/profileApi';
 
 export default function StudyScreen() {
   const { qualification } = useLocalSearchParams<{ qualification?: string }>();
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
 
@@ -70,13 +75,27 @@ export default function StudyScreen() {
     ],
   };
 
-  const currentQualification = qualification;
+  const initialDraft = getOnboardingProfileDraft();
+  const currentQualification = qualification || initialDraft.qualification;
   const options = currentQualification
     ? studyOptionsMap[currentQualification]
     : undefined;
 
-  const [selected, setSelected] = useState<string | null>(null);
-  const [otherText, setOtherText] = useState('');
+  const matchesSavedStudy = Boolean(
+    currentQualification &&
+    initialDraft.study &&
+    initialDraft.education?.startsWith(`${currentQualification} - `) &&
+    options?.includes(initialDraft.study),
+  );
+
+  const [selected, setSelected] = useState<string | null>(
+    matchesSavedStudy ? initialDraft.study! : null,
+  );
+  const [otherText, setOtherText] = useState(
+    matchesSavedStudy && initialDraft.studyOtherText
+      ? initialDraft.studyOtherText
+      : '',
+  );
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [error, setError] = useState(false);
 
@@ -196,14 +215,14 @@ export default function StudyScreen() {
 
     const didShowSub = Platform.OS === 'ios'
       ? Keyboard.addListener('keyboardDidShow', (e) => {
-          const height = e.endCoordinates.height;
-          const screenY = e.endCoordinates.screenY;
-          keyboardHeightRef.current = height;
-          keyboardTopRef.current = screenY;
-          if (selected === 'Other' || selected?.endsWith('Other')) {
-            scrollInputIntoView(height, screenY);
-          }
-        })
+        const height = e.endCoordinates.height;
+        const screenY = e.endCoordinates.screenY;
+        keyboardHeightRef.current = height;
+        keyboardTopRef.current = screenY;
+        if (selected === 'Other' || selected?.endsWith('Other')) {
+          scrollInputIntoView(height, screenY);
+        }
+      })
       : null;
 
     const hideSub = Keyboard.addListener(hideEvent, () => {
@@ -226,6 +245,16 @@ export default function StudyScreen() {
       setError(false);
     }
     const isOther = option === 'Other' || option.endsWith('Other');
+    if (currentQualification) {
+      const nextOtherText = isOther ? otherText : '';
+      const finalStudy = isOther ? nextOtherText.trim() || option : option;
+      updateOnboardingProfileDraft({
+        qualification: currentQualification,
+        study: option,
+        studyOtherText: nextOtherText,
+        education: `${currentQualification} - ${finalStudy}`,
+      });
+    }
     if (isOther) {
       requestAnimationFrame(() => {
         otherInputRef.current?.focus();
@@ -252,7 +281,10 @@ export default function StudyScreen() {
       return;
     }
     const finalStudy = isOtherSelected ? otherText.trim() : selected;
-    updateStoredUserProfile({
+    updateOnboardingProfileDraft({
+      qualification: currentQualification,
+      study: selected,
+      studyOtherText: isOtherSelected ? otherText.trim() : '',
       education: `${currentQualification} - ${finalStudy}`,
     });
     await updateEducation({
@@ -305,15 +337,15 @@ export default function StudyScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Header */}
-            <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{t('onboarding.steps.career.mainTitle')}</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              Add your education and work details to complete your profile.
+              {t('onboarding.steps.career.mainSubtitle')}
             </Text>
 
             {/* Section Title */}
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                What did you study?
+                {t('onboarding.steps.career.studyTitle')}
               </Text>
 
               {error && (
@@ -326,8 +358,8 @@ export default function StudyScreen() {
                   ]}
                 >
                   {!currentQualification || !options
-                    ? 'Qualification data is unavailable. Please select it again.'
-                    : 'Please choose any one option'}
+                    ? t('onboarding.steps.career.studyError')
+                    : t('onboarding.steps.foodPreference.errorSelect')}
                 </Animated.Text>
               )}
             </View>
@@ -394,7 +426,17 @@ export default function StudyScreen() {
                             { color: theme.text },
                           ]}
                           value={otherText}
-                          onChangeText={setOtherText}
+                          onChangeText={(text) => {
+                            setOtherText(text);
+                            if (currentQualification) {
+                              updateOnboardingProfileDraft({
+                                qualification: currentQualification,
+                                study: selected || 'Other',
+                                studyOtherText: text,
+                                education: `${currentQualification} - ${text.trim() || 'Other'}`,
+                              });
+                            }
+                          }}
                           onFocus={() => {
                             setIsInputFocused(true);
                             setTimeout(() => {
@@ -402,7 +444,7 @@ export default function StudyScreen() {
                             }, 100);
                           }}
                           onBlur={() => setIsInputFocused(false)}
-                          placeholder="Enter your field of study"
+                          placeholder={t('onboarding.steps.career.studyPlaceholder')}
                           placeholderTextColor={theme.textSecondary || '#9CA3AF'}
                           selectionColor={theme.primaryButton}
                           returnKeyType="done"

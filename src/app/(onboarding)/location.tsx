@@ -16,7 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 import {
   autocompleteLocation,
   getPopularLocations,
@@ -25,6 +28,7 @@ import {
   type LocationSuggestion,
 } from "@/services/profileApi";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import {
   HyderabadIcon,
   DelhiIcon,
@@ -50,8 +54,21 @@ const CITIES = [
 export default function LocationScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const { t } = useTranslation();
+
+  const initialDraft = getOnboardingProfileDraft();
+  const fallbackCity = initialDraft.location
+    ? initialDraft.location.replace(/,\s*India$/i, "").trim()
+    : "";
+  const initialCity =
+    "locationCity" in initialDraft
+      ? (initialDraft.locationCity ?? null)
+      : fallbackCity || null;
+
+  const [searchQuery, setSearchQuery] = useState(
+    initialDraft.locationSearchQuery ?? "",
+  );
+  const [selectedCity, setSelectedCity] = useState<string | null>(initialCity);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [locationError, setLocationError] = useState(false);
@@ -63,27 +80,27 @@ export default function LocationScreen() {
   >([]);
   const [autocompleteLoading, setAutocompleteLoading] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null,
+    initialDraft.locationId ?? null,
   );
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(
+    initialDraft.locationPlaceId ?? null,
+  );
   const [locationShakeAnim] = useState(() => new Animated.Value(0));
 
   const cityOptions = popularLocations.length
     ? popularLocations.map((location, index) => ({
-        ...location,
-        id: location.locationId,
-        Icon: CITIES[index % CITIES.length].Icon,
-      }))
+      ...location,
+      id: location.locationId,
+      Icon: CITIES[index % CITIES.length].Icon,
+    }))
     : CITIES.map((city) => ({
-        id: city.id,
-        locationId: null,
-        name: city.name,
-        Icon: city.Icon,
-      }));
+      id: city.id,
+      locationId: null,
+      name: city.name,
+      Icon: city.Icon,
+    }));
 
-  const isLocationValid = Boolean(selectedLocationId || selectedPlaceId);
-
-  const triggerLocationShake = () => {
+  const isLocationValid = Boolean(selectedCity); const triggerLocationShake = () => {
     locationShakeAnim.setValue(0);
     Animated.sequence([
       Animated.timing(locationShakeAnim, {
@@ -173,23 +190,31 @@ export default function LocationScreen() {
   }, [searchQuery, selectedCity, selectedLocationId, selectedPlaceId]);
 
   const handleNext = async () => {
-    if (!isLocationValid) {
+    if (!selectedCity) {
       setLocationError(true);
       triggerLocationShake();
       return;
     }
+
     if (isSubmitting) return;
+
     setIsSubmitting(true);
+
     try {
-      const chosenName = selectedCity || searchQuery.trim();
-      if (chosenName) {
-        if (selectedLocationId) {
-          await savePopularLocation(selectedLocationId);
-        } else if (selectedPlaceId) {
-          await saveGoogleLocation(selectedPlaceId);
-        }
-        updateStoredUserProfile({ location: `${chosenName}, India` });
+      if (selectedLocationId) {
+        await savePopularLocation(selectedLocationId);
+      } else if (selectedPlaceId) {
+        await saveGoogleLocation(selectedPlaceId);
       }
+
+      updateOnboardingProfileDraft({
+        location: `${selectedCity}, India`,
+        locationCity: selectedCity,
+        locationSearchQuery: searchQuery,
+        locationId: selectedLocationId,
+        locationPlaceId: selectedPlaceId,
+      });
+
       router.push("/(onboarding)/relationship" as any);
     } catch (error) {
       console.warn("Location selection could not be saved:", error);
@@ -223,11 +248,9 @@ export default function LocationScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Header Title & Subtitle matching Screenshot 2 */}
-            <Text style={styles.title}>Set your location</Text>
+            <Text style={styles.title}>{t('onboarding.steps.location.title')}</Text>
             <Text style={styles.subtitle}>
-              {
-                "Choose where you'd like to meet people and find better matches."
-              }
+              {t('onboarding.steps.location.subtitle')}
             </Text>
 
             {/* Capsule Search Bar matching Screenshot 2 */}
@@ -236,7 +259,7 @@ export default function LocationScreen() {
                 style={[
                   styles.searchContainer,
                   (isFocused || searchQuery.trim().length > 0) &&
-                    styles.searchContainerActive,
+                  styles.searchContainerActive,
                   locationError && styles.searchContainerError,
                 ]}
               >
@@ -259,6 +282,12 @@ export default function LocationScreen() {
                     setSelectedPlaceId(null);
                     setAutocompleteResults([]);
                     setAutocompleteLoading(false);
+                    updateOnboardingProfileDraft({
+                      locationSearchQuery: text,
+                      locationCity: null,
+                      locationId: null,
+                      locationPlaceId: null,
+                    });
                     if (locationError && text.trim().length > 0) {
                       setLocationError(false);
                     }
@@ -266,7 +295,7 @@ export default function LocationScreen() {
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   selectionColor="#00E4E8"
-                  placeholder="Search for Near by location"
+                  placeholder={t('onboarding.steps.location.searchPlaceholder')}
                   placeholderTextColor={locationError ? "#9CA3AF" : "#9CA3AF"}
                   returnKeyType="done"
                   onSubmitEditing={handleNext}
@@ -279,7 +308,7 @@ export default function LocationScreen() {
                   <View style={styles.autocompleteList}>
                     {autocompleteLoading ? (
                       <Text style={styles.noLocationResults}>
-                        Searching locations...
+                        {t('onboarding.steps.location.searching')}
                       </Text>
                     ) : autocompleteResults.length > 0 ? (
                       autocompleteResults.slice(0, 5).map((suggestion) => (
@@ -287,16 +316,21 @@ export default function LocationScreen() {
                           key={suggestion.placeId}
                           style={styles.autocompleteItem}
                           onPress={() => {
-                            const label =
-                              suggestion.mainText || suggestion.text;
+                            const label = suggestion.mainText || suggestion.text;
+
                             setSearchQuery(label);
                             setSelectedCity(label);
                             setSelectedLocationId(null);
                             setSelectedPlaceId(suggestion.placeId);
                             setAutocompleteResults([]);
-                            if (locationError) {
-                              setLocationError(false);
-                            }
+                            setLocationError(false);
+                            updateOnboardingProfileDraft({
+                              location: `${label}, India`,
+                              locationCity: label,
+                              locationSearchQuery: label,
+                              locationId: null,
+                              locationPlaceId: suggestion.placeId,
+                            });
                           }}
                         >
                           <Text style={styles.autocompleteText}>
@@ -311,7 +345,7 @@ export default function LocationScreen() {
                       ))
                     ) : (
                       <Text style={styles.noLocationResults}>
-                        No matching locations
+                        {t('onboarding.steps.location.noResults')}
                       </Text>
                     )}
                   </View>
@@ -325,7 +359,7 @@ export default function LocationScreen() {
                     },
                   ]}
                 >
-                  Select your location
+                  {t('onboarding.steps.location.locationError')}
                 </Animated.Text>
               )}
             </View>
@@ -347,11 +381,16 @@ export default function LocationScreen() {
                         setSelectedCity(city.name);
                         setSelectedLocationId(city.locationId ?? null);
                         setSelectedPlaceId(null);
+                        setSearchQuery("");
                         setAutocompleteResults([]);
-                        setSearchQuery(city.name);
-                        if (locationError) {
-                          setLocationError(false);
-                        }
+                        setLocationError(false);
+                        updateOnboardingProfileDraft({
+                          location: `${city.name}, India`,
+                          locationCity: city.name,
+                          locationSearchQuery: "",
+                          locationId: city.locationId ?? null,
+                          locationPlaceId: null,
+                        });
                       }}
                       activeOpacity={0.8}
                     >
@@ -384,8 +423,8 @@ export default function LocationScreen() {
             backgroundColor: isLocationValid ? theme.primaryButton : "#BDFFF9",
           }}
         />
-      </View>
-    </SafeAreaView>
+      </View >
+    </SafeAreaView >
   );
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface OnboardingFooterProps {
   showBack?: boolean;
@@ -15,10 +16,12 @@ export function   OnboardingFooter({
   showBack = false,
   onBack,
   onNext,
-  nextText = 'Next',
+  nextText,
   disabled = false,
   nextButtonStyle,
 }: OnboardingFooterProps) {
+  const { t } = useTranslation();
+  const label = nextText || t('common.next');
   return (
     <View style={styles.container}>
       {showBack && (
@@ -26,6 +29,7 @@ export function   OnboardingFooter({
           style={styles.backButton}
           onPress={onBack}
           activeOpacity={0.8}
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={24} color="#000000" />
         </TouchableOpacity>
@@ -41,7 +45,7 @@ export function   OnboardingFooter({
         disabled={disabled}
         activeOpacity={0.8}
       >
-        <Text style={styles.nextText}>{nextText}</Text>
+        <Text style={styles.nextText}>{label}</Text>
       </TouchableOpacity>
     </View>
   );
