@@ -172,6 +172,13 @@ export async function getDiscoveryFeed(
   );
 }
 
+// 1b. Reset Discovery Feed (Clear swipe history to start fresh)
+export async function resetDiscoveryFeed(): Promise<void> {
+  await apiRequest("/api/v1/matches/reset-feed", {
+    method: "POST",
+  });
+}
+
 // 2. People Categories
 export async function getPeopleCategories(): Promise<PeopleCategoriesResponse | null> {
   try {

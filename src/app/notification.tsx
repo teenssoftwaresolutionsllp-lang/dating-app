@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SubscriptionIcon } from '@/components/SettingsIcons';
+import {
+  getNotificationSettings,
+  saveNotificationSettings,
+  DEFAULT_NOTIFICATION_SETTINGS,
+} from '@/utils/notificationPersistence';
 
 interface NotificationSettingItem {
   id: string;
@@ -62,16 +67,16 @@ export default function NotificationScreen() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  // State for each toggle (all enabled by default matching Image 2)
-  const [toggleState, setToggleState] = useState<Record<string, boolean>>({
-    push: true,
-    matches: true,
-    messages: true,
-    likes: true,
-    profileViews: true,
-    reminders: true,
-    promotions: true,
-  });
+  // State for each toggle (defaults initialized, updated from persistent storage)
+  const [toggleState, setToggleState] = useState<Record<string, boolean>>(
+    DEFAULT_NOTIFICATION_SETTINGS
+  );
+
+  useEffect(() => {
+    getNotificationSettings().then((saved) => {
+      setToggleState(saved);
+    });
+  }, []);
 
   const handleToggle = (id: string, value: boolean) => {
     setToggleState((prev) => {
@@ -79,16 +84,20 @@ export default function NotificationScreen() {
         return prev;
       }
 
+      let next: Record<string, boolean>;
       if (id === 'push') {
-        return Object.fromEntries(
+        next = Object.fromEntries(
           Object.keys(prev).map((settingId) => [settingId, value]),
         );
+      } else {
+        next = {
+          ...prev,
+          [id]: value,
+        };
       }
 
-      return {
-        ...prev,
-        [id]: value,
-      };
+      void saveNotificationSettings(next as any);
+      return next;
     });
   };
 

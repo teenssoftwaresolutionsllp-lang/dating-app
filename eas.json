@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "version": ">= 24.13.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "cache": {
+        "disabled": false
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "cache": {
+        "disabled": false
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ringtones-undertake-canvas-animal.trycloudflare.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "cache": {
+        "disabled": false
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

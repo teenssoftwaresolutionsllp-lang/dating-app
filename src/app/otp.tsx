@@ -27,6 +27,7 @@ import {
 } from "@/components/onboarding";
 import { useTheme } from "@/hooks/use-theme";
 import { resendOtp, verifyOtp } from "@/utils/api";
+import { registerForPushNotifications } from "@/services/notificationService";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -252,7 +253,8 @@ export default function OtpScreen() {
     const enteredOtp = code.join("");
 
     try {
-      const response = await verifyOtp(digits, enteredOtp, "+91", language);
+      const response = await verifyOtp(digits, enteredOtp, "+91");
+      void registerForPushNotifications();
       if (response.data?.user?.preferredLanguage) {
         await applyUserLanguage(response.data.user.preferredLanguage);
       }

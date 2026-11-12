@@ -11,39 +11,36 @@ import {
 } from "./authPersistence";
 
 export const getBaseUrl = (): string => {
-  // 1. On Web, localhost is direct and guaranteed to connect
+  // 1. Explicit environment variable (highest priority)
+  if (process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.trim().length > 0) {
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, "");
+  }
+
+  // 2. Explicit app.json extra config
+  const extraUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (extraUrl && typeof extraUrl === "string" && extraUrl.trim().length > 0) {
+    return extraUrl.replace(/\/+$/, "");
+  }
+
+  // 3. On Web, standard localhost
   if (Platform.OS === "web") {
     return "http://localhost:5000";
   }
 
-  // 2. Dynamic Expo host IP detection for physical devices (iOS / Android via Expo Go)
+  // 4. Dynamic Expo host IP detection (Expo Go development only)
   const hostUri =
     Constants.expoConfig?.hostUri ||
     (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
     (Constants as any).manifest?.debuggerHost;
-  if (hostUri) {
+  if (hostUri && !hostUri.includes("expo.dev") && !hostUri.includes("exp.host")) {
     const ip = hostUri.split(":")[0];
     if (ip && ip !== "localhost" && ip !== "127.0.0.1") {
       return `http://${ip}:5000`;
     }
   }
 
-  // 3. Check explicit EXPO_PUBLIC_API_URL or extra config
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, "");
-  }
-  const extraUrl = Constants.expoConfig?.extra?.apiUrl;
-  if (extraUrl && typeof extraUrl === "string") {
-    return extraUrl.replace(/\/+$/, "");
-  }
-
-  // 4. Android Emulator fallback
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:5000";
-  }
-
-  // 5. Default fallback
-  return "http://192.168.1.30:5000";
+  // 5. Default physical device fallback
+  return "http://192.168.1.24:5000";
 };
 
 function extractErrorMessage(errData: any, fallbackMessage: string): string {
@@ -106,9 +103,10 @@ export async function apiRequest<T>(
       ...options,
       headers,
     });
-  } catch {
+  } catch (fetchErr: any) {
+    console.error(`[API Error] Failed to connect to ${url}:`, fetchErr);
     throw new Error(
-      "Unable to connect to the server. Please check your network connection.",
+      `Unable to connect to server at ${url}. (${fetchErr?.message || "Network request failed"})`,
     );
   }
 

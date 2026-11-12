@@ -10,6 +10,8 @@ import {
   Image,
   TextInput,
   ImageSourcePropType,
+  Alert,
+  Modal,
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +27,9 @@ import {
   likeConversation,
   sendMessage,
 } from '@/services/messageApi';
+import { callApi, type IncomingCallData, type CallHistoryItem } from '@/services/callApi';
+import { authStorage } from '@/services/authStorage';
+import { rtmChatService } from '@/services/rtmChatService';
 
 interface ChatScreenProps {
   showTabBar?: boolean;
@@ -38,7 +43,19 @@ interface SelectedConversation {
   isOnline: boolean;
   isMatched: boolean;
   messagesRemaining: number | null;
-  messages: { id: string; sender: 'user' | 'contact'; text: string; time: string }[];
+  messages: {
+    id: string;
+    sender: 'user' | 'contact';
+    text: string;
+    time: string;
+    messageType?: 'text' | 'image' | 'audio' | 'system' | 'call';
+    metadata?: {
+      callId?: string;
+      callType?: 'audio' | 'video';
+      status?: 'initiated' | 'ringing' | 'accepted' | 'rejected' | 'missed' | 'ended';
+      durationSeconds?: number;
+    } | null;
+  }[];
 }
 
 interface ChatListItem extends ChatMessage {
@@ -73,7 +90,8 @@ export default function ChatScreen({
   const [activeTab, setActiveTab] = useState<'messages' | 'calls'>('messages');
   const [searchQuery, setSearchQuery] = useState('');
   const [chats, setChats] = useState<ChatListItem[]>([]);
-  const [calls] = useState<CallLog[]>(CALL_LOGS);
+  const [calls, setCalls] = useState<CallHistoryItem[]>([]);
+  const [isLoadingCalls, setIsLoadingCalls] = useState(false);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [chatsError, setChatsError] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] =
@@ -82,10 +100,74 @@ export default function ChatScreen({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isLikingPartner, setIsLikingPartner] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
-  const [selectedCall, setSelectedCall] = useState<CallLog | null>(null);
+  const [selectedCall, setSelectedCall] = useState<CallHistoryItem | null>(null);
   const [inputText, setInputText] = useState('');
+  const [isCalling, setIsCalling] = useState(false);
   const messagesScrollRef = useRef<ScrollView>(null);
   const lastOpenedPartnerId = useRef<string | null>(null);
+
+  const handleStartCall = async (
+    type: 'audio' | 'video',
+    targetPartnerId?: string,
+    targetPartnerName?: string,
+    targetPartnerAvatar?: string | null
+  ) => {
+    const partnerId = targetPartnerId || selectedConversation?.partnerId;
+    if (!partnerId || isCalling) return;
+    try {
+      setIsCalling(true);
+      const res = await callApi.initiateCall(partnerId, type);
+
+      // Broadcast instant RTM incoming call event (<100ms delivery to recipient)
+      const myId = await authStorage.getUserId();
+      void rtmChatService.publishRealtimeMessage(partnerId, {
+        id: `call_${res.callId}`,
+        senderId: myId || '',
+        receiverId: partnerId,
+        content: `Incoming ${type} call`,
+        messageType: 'call',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          event: 'INCOMING_CALL',
+          callId: res.callId,
+          channelName: res.channelName,
+          callType: type,
+          callerName: res.callerName || 'Match',
+          callerAvatar: res.callerAvatar || null,
+        },
+      });
+      router.push({
+        pathname: '/call/[callId]',
+        params: {
+          callId: res.callId,
+          channelName: res.channelName,
+          token: res.token,
+          appId: res.appId,
+          uid: String(res.uid),
+          callType: type,
+          matchName:
+            targetPartnerName ||
+            selectedConversation?.name ||
+            res.receiverName ||
+            'Match',
+          matchAvatar:
+            targetPartnerAvatar ||
+            (typeof selectedConversation?.avatar === 'object' &&
+              selectedConversation.avatar &&
+              'uri' in selectedConversation.avatar
+              ? (selectedConversation.avatar as any).uri
+              : typeof requestedPartnerPhoto === 'string'
+                ? requestedPartnerPhoto
+                : res.receiverAvatar ?? undefined),
+          isCaller: 'true',
+        },
+      });
+    } catch (err: any) {
+      Alert.alert('Call Failed', err?.message || 'Could not initiate call');
+    } finally {
+      setIsCalling(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -124,9 +206,9 @@ export default function ChatScreen({
         lastMessage: conversation.lastMessage?.content || 'Say hello',
         timestamp: conversation.lastMessage?.createdAt
           ? new Date(conversation.lastMessage.createdAt).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
+            hour: '2-digit',
+            minute: '2-digit',
+          })
           : '',
         unreadCount:
           conversation.unreadCount > 0 ? conversation.unreadCount : undefined,
@@ -136,45 +218,64 @@ export default function ChatScreen({
       })),
     );
     setChatsError(null);
+    conversations.forEach((conv) => {
+      void rtmChatService.subscribeToConversation(conv.partner.id);
+    });
+  }, []);
+
+  const loadCalls = useCallback(async () => {
+    try {
+      setIsLoadingCalls(true);
+      const items = await callApi.getCallHistory();
+      setCalls(items);
+    } catch (err) {
+      console.warn('Failed to load call history:', err);
+    } finally {
+      setIsLoadingCalls(false);
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      const refreshChats = async () => {
+      const refreshData = async () => {
         try {
-          await loadChats();
+          await Promise.all([loadChats(), loadCalls()]);
         } catch (error) {
           if (isActive) {
             setChatsError(
               error instanceof Error ? error.message : 'Unable to load chats.',
             );
-            console.warn('Failed to load chats:', error);
+            console.warn('Failed to load chats or calls:', error);
           }
         } finally {
-          if (isActive) setIsLoadingChats(false);
+          if (isActive) {
+            setIsLoadingChats(false);
+            setIsLoadingCalls(false);
+          }
         }
       };
 
-      void refreshChats();
-      const interval = setInterval(() => void refreshChats(), 5000);
+      void refreshData();
+      const interval = setInterval(() => void refreshData(), 5000);
       return () => {
         isActive = false;
         clearInterval(interval);
       };
-    }, [loadChats]),
+    }, [loadChats, loadCalls]),
   );
 
   const filteredChats = chats.filter(
     (chat) =>
       chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const filteredCalls = calls.filter(
     (call) =>
-      call.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      call.label.toLowerCase().includes(searchQuery.toLowerCase())
+      call.partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      call.callType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      call.status.toLowerCase().includes(searchQuery.toLowerCase()),
   );
   const activePartnerId = selectedConversation?.partnerId;
   useEffect(() => {
@@ -188,26 +289,28 @@ export default function ChatScreen({
         setSelectedConversation((current) =>
           current?.partnerId === activePartnerId
             ? {
-                ...current,
-                messages: history.items
-                  .slice()
-                  .sort(
-                    (left, right) =>
-                      new Date(left.createdAt).getTime() -
-                      new Date(right.createdAt).getTime(),
-                  )
-                  .map((message) => ({
-                    id: message.id,
-                    sender: message.isOwn ? 'user' : 'contact',
-                    text: message.content || '',
-                    time: new Date(message.createdAt).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }),
-                  })),
-                isMatched: history.isMatched,
-                messagesRemaining: history.messagesRemaining,
-              }
+              ...current,
+              messages: history.items
+                .slice()
+                .sort(
+                  (left, right) =>
+                    new Date(left.createdAt).getTime() -
+                    new Date(right.createdAt).getTime(),
+                )
+                .map((message) => ({
+                  id: message.id,
+                  sender: message.isOwn ? 'user' : 'contact',
+                  text: message.content || '',
+                  time: new Date(message.createdAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                  messageType: message.messageType,
+                  metadata: message.metadata,
+                })),
+              isMatched: history.isMatched,
+              messagesRemaining: history.messagesRemaining,
+            }
             : current,
         );
         setMessageError(null);
@@ -231,6 +334,78 @@ export default function ChatScreen({
       isActive = false;
       clearInterval(interval);
     };
+  }, [activePartnerId]);
+
+  // Setup Agora RTM real-time instant chat listener
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
+
+    const setupRtm = async () => {
+      try {
+        const myId = await authStorage.getUserId();
+        if (!myId || !isMounted) return;
+        await rtmChatService.init(myId);
+
+        if (!isMounted) return;
+        unsubscribe = rtmChatService.onMessage((incomingMsg) => {
+          // If the message is from the active partner, append to chat immediately
+          setSelectedConversation((current) => {
+            if (!current || current.partnerId !== incomingMsg.senderId) return current;
+            if (current.messages.some((m) => m.id === incomingMsg.id)) return current;
+            return {
+              ...current,
+              messages: [
+                ...current.messages,
+                {
+                  id: incomingMsg.id,
+                  sender: 'contact',
+                  text: incomingMsg.content || '',
+                  time: new Date(incomingMsg.createdAt || Date.now()).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                  messageType: (incomingMsg.messageType as any) || 'text',
+                  metadata: incomingMsg.metadata,
+                },
+              ],
+            };
+          });
+
+          // Also update the chat list preview instantly
+          setChats((prevChats) =>
+            prevChats.map((c) =>
+              c.partnerId === incomingMsg.senderId
+                ? {
+                    ...c,
+                    lastMessage: incomingMsg.content || 'New message',
+                    timestamp: new Date().toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                    unreadCount: (c.unreadCount || 0) + 1,
+                  }
+                : c
+            )
+          );
+        });
+      } catch (err) {
+        console.warn('[Chats] RTM setup error:', err);
+      }
+    };
+
+    void setupRtm();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // Subscribe to Agora RTM conversation channel whenever partner changes
+  useEffect(() => {
+    if (!activePartnerId) return;
+    void rtmChatService.subscribeToConversation(activePartnerId);
   }, [activePartnerId]);
 
   // Handle open individual chat detail screen
@@ -302,26 +477,46 @@ export default function ChatScreen({
         receiverId: selectedConversation.partnerId,
         content: text.trim(),
       });
+      // Broadcast over Agora RTM for sub-second delivery
+      void rtmChatService.publishRealtimeMessage(
+        selectedConversation.partnerId,
+        result.message,
+      );
       setSelectedConversation((current) =>
         current?.partnerId === selectedConversation.partnerId
           ? {
-              ...current,
-              isMatched: result.isMatched,
-              messagesRemaining: result.messagesRemaining,
-              messages: [
-                ...current.messages,
-                {
-                  id: result.message.id,
-                  sender: 'user',
-                  text: result.message.content || '',
-                  time: new Date(result.message.createdAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
-                },
-              ],
-            }
+            ...current,
+            isMatched: result.isMatched,
+            messagesRemaining: result.messagesRemaining,
+            messages: [
+              ...current.messages,
+              {
+                id: result.message.id,
+                sender: 'user',
+                text: result.message.content || '',
+                time: new Date(result.message.createdAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              },
+            ],
+          }
           : current,
+      );
+      // Update the chat preview in the list view immediately
+      setChats((prevChats) =>
+        prevChats.map((c) =>
+          c.partnerId === selectedConversation.partnerId
+            ? {
+                ...c,
+                lastMessage: result.message.content || text.trim(),
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              }
+            : c,
+        ),
       );
       setInputText('');
     } catch (error) {
@@ -361,8 +556,8 @@ export default function ChatScreen({
   );
   const preMatchLimitReached = Boolean(
     selectedConversation &&
-      !selectedConversation.isMatched &&
-      selectedConversation.messagesRemaining === 0,
+    !selectedConversation.isMatched &&
+    selectedConversation.messagesRemaining === 0,
   );
 
   // RENDER DETAILED CHAT VIEW (WITH BACK NAVIGATION)
@@ -391,18 +586,22 @@ export default function ChatScreen({
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
-                style={styles.headerActionBtn}
+                style={[styles.headerActionBtn, isCalling && { opacity: 0.5 }]}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Audio Call"
+                onPress={() => void handleStartCall('audio')}
+                disabled={isCalling}
               >
                 <Ionicons name="call-outline" size={22} color="#111827" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.headerActionBtn}
+                style={[styles.headerActionBtn, isCalling && { opacity: 0.5 }]}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Video Call"
+                onPress={() => void handleStartCall('video')}
+                disabled={isCalling}
               >
                 <Ionicons name="videocam-outline" size={24} color="#111827" />
               </TouchableOpacity>
@@ -445,32 +644,141 @@ export default function ChatScreen({
                 {t('chats.connectedSayHello')}
               </Text>
             ) : null}
-            {selectedConversation.messages.map((msg) => (
-              <View
-                key={msg.id}
-                style={[
-                  styles.chatBubble,
-                  msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubbleContact,
-                ]}
-              >
-                <Text
+            {selectedConversation.messages.map((msg) => {
+              if (msg.messageType === 'call') {
+                const isVideo = msg.metadata?.callType === 'video';
+                const status = msg.metadata?.status;
+                const isMissed = status === 'missed' || status === 'rejected';
+                const isOutgoing = msg.sender === 'user';
+
+                let callTitle = isVideo ? 'Video Call' : 'Voice Call';
+                if (status === 'missed') {
+                  callTitle = isOutgoing
+                    ? `${isVideo ? 'Video' : 'Voice'} Call (Unanswered)`
+                    : `Missed ${isVideo ? 'Video' : 'Voice'} Call`;
+                } else if (status === 'rejected') {
+                  callTitle = isOutgoing
+                    ? `${isVideo ? 'Video' : 'Voice'} Call (Declined)`
+                    : 'Declined Call';
+                }
+
+                const durationSec = msg.metadata?.durationSeconds || 0;
+                let durationText = '';
+                if (status === 'ended' && durationSec > 0) {
+                  const mins = Math.floor(durationSec / 60);
+                  const secs = durationSec % 60;
+                  durationText = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={msg.id}
+                    activeOpacity={0.8}
+                    onPress={() => void handleStartCall(isVideo ? 'video' : 'audio')}
+                    style={[
+                      styles.callMessageBubble,
+                      msg.sender === 'user'
+                        ? styles.callMessageBubbleUser
+                        : styles.callMessageBubbleContact,
+                    ]}
+                  >
+                    <View style={styles.callMessageContent}>
+                      <View
+                        style={[
+                          styles.callMessageIconCircle,
+                          isMissed
+                            ? styles.callMessageIconCircleMissed
+                            : styles.callMessageIconCircleSuccess,
+                        ]}
+                      >
+                        <Ionicons
+                          name={isVideo ? 'videocam' : 'call'}
+                          size={18}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            styles.callMessageTitle,
+                            isMissed && !isOutgoing && styles.callMessageTitleMissed,
+                            msg.sender === 'user' && styles.callMessageTitleUser,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {callTitle}
+                        </Text>
+                        <View style={styles.callMessageSubRow}>
+                          <Ionicons
+                            name={
+                              isMissed
+                                ? 'arrow-down'
+                                : isOutgoing
+                                  ? 'arrow-up'
+                                  : 'arrow-down'
+                            }
+                            size={12}
+                            color={
+                              isMissed
+                                ? isOutgoing
+                                  ? '#9CA3AF'
+                                  : '#EF4444'
+                                : msg.sender === 'user'
+                                  ? '#FFFFFF'
+                                  : '#10B981'
+                            }
+                            style={{ marginRight: 3 }}
+                          />
+                          <Text
+                            style={[
+                              styles.callMessageSubText,
+                              msg.sender === 'user' && styles.callMessageSubTextUser,
+                            ]}
+                          >
+                            {durationText ? `${durationText} • ` : ''}Tap to call back
+                          </Text>
+                        </View>
+                      </View>
+                      <Text
+                        style={[
+                          styles.callMessageTime,
+                          msg.sender === 'user' && styles.callMessageTimeUser,
+                        ]}
+                      >
+                        {msg.time}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+
+              return (
+                <View
+                  key={msg.id}
                   style={[
-                    styles.chatBubbleText,
-                    msg.sender === 'user' ? styles.chatBubbleTextUser : styles.chatBubbleTextContact,
+                    styles.chatBubble,
+                    msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubbleContact,
                   ]}
                 >
-                  {msg.text}
-                </Text>
-                <Text
-                  style={[
-                    styles.chatBubbleTime,
-                    msg.sender === 'user' ? styles.chatBubbleTimeUser : styles.chatBubbleTimeContact,
-                  ]}
-                >
-                  {msg.time}
-                </Text>
-              </View>
-            ))}
+                  <Text
+                    style={[
+                      styles.chatBubbleText,
+                      msg.sender === 'user' ? styles.chatBubbleTextUser : styles.chatBubbleTextContact,
+                    ]}
+                  >
+                    {msg.text}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.chatBubbleTime,
+                      msg.sender === 'user' ? styles.chatBubbleTimeUser : styles.chatBubbleTimeContact,
+                    ]}
+                  >
+                    {msg.time}
+                  </Text>
+                </View>
+              );
+            })}
           </ScrollView>
 
           {/* Quick Reply Chips */}
@@ -543,6 +851,27 @@ export default function ChatScreen({
 
   // RENDER DETAILED CALL LOG VIEW (WITH BACK NAVIGATION)
   if (selectedCall) {
+    const isVideo = selectedCall.callType === 'video';
+    const isMissed = selectedCall.status === 'missed' || selectedCall.status === 'rejected';
+    const avatarSource = selectedCall.partnerAvatar
+      ? { uri: formatApiImageUrl(selectedCall.partnerAvatar) }
+      : ASSET_IMAGES.userProfile;
+
+    const callDate = new Date(selectedCall.createdAt);
+    const dateDisplay = `${callDate.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })} at ${callDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    const durationSec = selectedCall.durationSeconds || 0;
+    let durationDisplay = isMissed ? 'Missed call' : '0 sec';
+    if (!isMissed && durationSec > 0) {
+      const mins = Math.floor(durationSec / 60);
+      const secs = durationSec % 60;
+      durationDisplay = mins > 0 ? `${mins} min ${secs} sec` : `${secs} sec`;
+    }
+
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.mainContainer}>
@@ -558,16 +887,40 @@ export default function ChatScreen({
           </View>
 
           <View style={styles.callDetailCard}>
-            <Image source={selectedCall.avatar} style={styles.callDetailAvatar} />
-            <Text style={styles.callDetailName}>{selectedCall.name}</Text>
-            <Text style={styles.callDetailSub}>{selectedCall.label} • {selectedCall.duration}</Text>
-            <Text style={styles.callDetailTime}>{selectedCall.timestamp}</Text>
+            <Image source={avatarSource} style={styles.callDetailAvatar} />
+            <Text style={styles.callDetailName}>{selectedCall.partnerName}</Text>
+            <Text style={styles.callDetailSub}>
+              {isVideo ? 'Video call' : 'Audio call'} • {durationDisplay}
+            </Text>
+            <Text style={styles.callDetailTime}>{dateDisplay}</Text>
 
             <View style={styles.callActionRow}>
-              <TouchableOpacity style={styles.callActionCircleBtn} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.callActionCircleBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  void handleStartCall(
+                    'audio',
+                    selectedCall.partnerId,
+                    selectedCall.partnerName,
+                    selectedCall.partnerAvatar
+                  )
+                }
+              >
                 <Ionicons name="call" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.callActionCircleBtn, { backgroundColor: '#0EA5E9' }]} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={[styles.callActionCircleBtn, { backgroundColor: '#0EA5E9' }]}
+                activeOpacity={0.8}
+                onPress={() =>
+                  void handleStartCall(
+                    'video',
+                    selectedCall.partnerId,
+                    selectedCall.partnerName,
+                    selectedCall.partnerAvatar
+                  )
+                }
+              >
                 <Ionicons name="videocam" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -701,7 +1054,7 @@ export default function ChatScreen({
             ))}
           </ScrollView>
         ) : (
-          /* TAB 2: CALLS LIST VIEW (chatcalls 34) */
+          /* TAB 2: CALLS LIST VIEW */
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
@@ -711,40 +1064,126 @@ export default function ChatScreen({
               <Text style={styles.recentTitle}>Recent</Text>
             </View>
 
-            {/* Calls List Items */}
-            {filteredCalls.map((call) => (
-              <TouchableOpacity
-                key={call.id}
-                style={styles.chatRow}
-                activeOpacity={0.7}
-                onPress={() => setSelectedCall(call)}
-              >
-                {/* Avatar */}
-                <View style={styles.avatarWrapper}>
-                  <Image source={call.avatar} style={styles.avatarImage} />
-                </View>
+            {isLoadingCalls && calls.length === 0 ? (
+              <ActivityIndicator color="#0D7A74" style={{ marginTop: 24 }} />
+            ) : filteredCalls.length === 0 ? (
+              <View style={{ alignItems: 'center', marginTop: 40, paddingHorizontal: 20 }}>
+                <Ionicons name="call-outline" size={48} color="#D1D5DB" />
+                <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: '#6B7280' }}>
+                  No calls yet
+                </Text>
+                <Text style={{ marginTop: 4, fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>
+                  When you make or receive audio and video calls, they will appear here.
+                </Text>
+              </View>
+            ) : (
+              filteredCalls.map((call) => {
+                const isVideo = call.callType === 'video';
+                const isOutgoing = call.direction === 'outgoing';
+                const isMissed = call.status === 'missed' || call.status === 'rejected';
 
-                {/* Call info */}
-                <View style={styles.chatContent}>
-                  <Text style={styles.nameText}>{call.name}</Text>
-                  <View style={styles.callTypeRow}>
-                    <Ionicons
-                      name={call.type === 'video' ? 'videocam-outline' : 'call-outline'}
-                      size={15}
-                      color="#2CB67D"
-                      style={{ marginRight: 5 }}
-                    />
-                    <Text style={styles.callTypeText}>{call.label}</Text>
-                  </View>
-                </View>
+                const callDate = new Date(call.createdAt);
+                const now = new Date();
+                const isToday = callDate.toDateString() === now.toDateString();
+                const timeStr = callDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateDisplay = isToday
+                  ? `Today, ${timeStr}`
+                  : `${callDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
 
-                {/* Right Meta: Timestamp & Duration */}
-                <View style={styles.metaContainer}>
-                  <Text style={styles.timeText}>{call.timestamp}</Text>
-                  <Text style={styles.durationText}>{call.duration}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                const durationSec = call.durationSeconds || 0;
+                let durationDisplay = isMissed ? 'Missed' : '';
+                if (!isMissed && durationSec > 0) {
+                  const mins = Math.floor(durationSec / 60);
+                  const secs = durationSec % 60;
+                  durationDisplay = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                }
+
+                const avatarSource = call.partnerAvatar
+                  ? { uri: formatApiImageUrl(call.partnerAvatar) }
+                  : ASSET_IMAGES.userProfile;
+
+                return (
+                  <TouchableOpacity
+                    key={call.id}
+                    style={styles.chatRow}
+                    activeOpacity={0.7}
+                    onPress={() => setSelectedCall(call)}
+                  >
+                    {/* Avatar */}
+                    <View style={styles.avatarWrapper}>
+                      <Image source={avatarSource} style={styles.avatarImage} />
+                    </View>
+
+                    {/* Call info */}
+                    <View style={styles.chatContent}>
+                      <Text style={styles.nameText}>{call.partnerName}</Text>
+                      <View style={styles.callTypeRow}>
+                        <Ionicons
+                          name={isOutgoing ? 'arrow-up' : 'arrow-down'}
+                          size={13}
+                          color={isMissed ? '#EF4444' : '#10B981'}
+                          style={{ marginRight: 4 }}
+                        />
+                        <Ionicons
+                          name={isVideo ? 'videocam-outline' : 'call-outline'}
+                          size={14}
+                          color="#6B7280"
+                          style={{ marginRight: 4 }}
+                        />
+                        <Text
+                          style={[
+                            styles.callTypeText,
+                            isMissed && { color: '#EF4444' },
+                          ]}
+                        >
+                          {isVideo ? 'Video' : 'Voice'} call
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Right Meta: Timestamp & Duration */}
+                    <View style={styles.metaContainer}>
+                      <Text style={styles.timeText}>{dateDisplay}</Text>
+                      {durationDisplay ? (
+                        <Text
+                          style={[
+                            styles.durationText,
+                            isMissed && { color: '#EF4444', fontWeight: '600' },
+                          ]}
+                        >
+                          {durationDisplay}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    {/* Quick Call-back Action Button */}
+                    <TouchableOpacity
+                      style={{
+                        marginLeft: 10,
+                        padding: 8,
+                        borderRadius: 20,
+                        backgroundColor: '#F3F4F6',
+                      }}
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        void handleStartCall(
+                          isVideo ? 'video' : 'audio',
+                          call.partnerId,
+                          call.partnerName,
+                          call.partnerAvatar
+                        )
+                      }
+                    >
+                      <Ionicons
+                        name={isVideo ? 'videocam' : 'call'}
+                        size={18}
+                        color="#0D7A74"
+                      />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </ScrollView>
         )}
 
@@ -1102,6 +1541,80 @@ const styles = StyleSheet.create({
   chatBubbleTimeUser: {
     color: 'rgba(255, 255, 255, 0.8)',
   },
+  /* Call Message Bubbles (WhatsApp style) */
+  callMessageBubble: {
+    maxWidth: '82%',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  callMessageBubbleContact: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderBottomLeftRadius: 4,
+  },
+  callMessageBubbleUser: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#0CBEC6',
+    borderBottomRightRadius: 4,
+  },
+  callMessageContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  callMessageIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  callMessageIconCircleSuccess: {
+    backgroundColor: '#10B981',
+  },
+  callMessageIconCircleMissed: {
+    backgroundColor: '#EF4444',
+  },
+  callMessageTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  callMessageTitleUser: {
+    color: '#FFFFFF',
+  },
+  callMessageTitleMissed: {
+    color: '#DC2626',
+  },
+  callMessageSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  callMessageSubText: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  callMessageSubTextUser: {
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  callMessageTime: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    alignSelf: 'flex-end',
+    marginLeft: 6,
+  },
+  callMessageTimeUser: {
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
   quickPromptsContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -1193,5 +1706,62 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
+  },
+  incomingModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  incomingModalContent: {
+    backgroundColor: '#1E293B',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '85%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  incomingAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#EC4899',
+    marginBottom: 16,
+  },
+  incomingCallerName: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  incomingCallSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 28,
+  },
+  incomingActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  incomingDeclineBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  incomingAcceptBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
