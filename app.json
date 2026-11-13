@@ -32,7 +32,7 @@
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.lavanya1272.datingapp",
+      "package": "com.lavanyagali.datingapp",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -84,11 +84,11 @@
     },
     "extra": {
       "router": {},
-      "apiUrl": "https://savings-lamb-freely-stay.trycloudflare.com",
+      "apiUrl": "https://jet-del-acting-sales.trycloudflare.com",
       "eas": {
-        "projectId": "542b02bb-b7c8-44cf-8b0b-72f530a18494"
+        "projectId": "a5128713-816b-4d3f-afe6-d6fe58c553d0"
       }
     },
-    "owner": "galilavanya"
+    "owner": "lavanyagali"
   }
 }
