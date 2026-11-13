@@ -4,13 +4,26 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View, ScrollView } fro
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from 'react-i18next';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateDatingPreferences } from '@/services/profileApi';
+
+const LOOKING_FOR_KEY_MAP: Record<string, string> = {
+  'Something casual': 'onboarding.steps.lookingFor.casual',
+  'A serious relationship': 'onboarding.steps.lookingFor.serious',
+  'Long – term relationship': 'onboarding.steps.lookingFor.longTerm',
+  'Marriage': 'onboarding.steps.lookingFor.marriage',
+  'Still figuring it out': 'onboarding.steps.lookingFor.figuringOut',
+};
 
 export default function LookingForScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   const options = [
     'Something casual',
@@ -20,7 +33,12 @@ export default function LookingForScreen() {
     'Still figuring it out',
   ];
 
-  const [selected, setSelected] = useState<string | null>(null);
+  const initialDraft = getOnboardingProfileDraft();
+  const [selected, setSelected] = useState<string | null>(
+    Array.isArray(initialDraft.lookingFor) && initialDraft.lookingFor[0]
+      ? initialDraft.lookingFor[0]
+      : null,
+  );
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,7 +94,7 @@ export default function LookingForScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ lookingFor: [selected] });
+      updateOnboardingProfileDraft({ lookingFor: [selected] });
       await updateDatingPreferences({
         relationshipIntentions: [selected],
       }).catch((e) => {
@@ -107,15 +125,15 @@ export default function LookingForScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>What are you into?</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('onboarding.steps.lookingFor.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better matches.
+            {t('onboarding.steps.lookingFor.subtitle')}
           </Text>
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              What are you looking for?
+              {t('onboarding.steps.lookingFor.sectionTitle')}
             </Text>
             {error && (
               <Animated.Text
@@ -126,7 +144,7 @@ export default function LookingForScreen() {
                   },
                 ]}
               >
-                Please choose any one option
+                {t('onboarding.steps.lookingFor.errorSelect')}
               </Animated.Text>
             )}
           </View>
@@ -140,6 +158,7 @@ export default function LookingForScreen() {
                   key={option}
                   onPress={() => {
                     setSelected(option);
+                    updateOnboardingProfileDraft({ lookingFor: [option] });
                     if (error) {
                       setError(false);
                     }
@@ -167,7 +186,7 @@ export default function LookingForScreen() {
 
                   {/* Option Text */}
                   <Text style={[styles.optionText, { color: theme.text }]}>
-                    {option}
+                    {LOOKING_FOR_KEY_MAP[option] ? t(LOOKING_FOR_KEY_MAP[option]) : option}
                   </Text>
                 </Pressable>
               );

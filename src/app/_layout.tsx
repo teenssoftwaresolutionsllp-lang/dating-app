@@ -11,6 +11,8 @@ import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Platform, View, StyleSheet } from 'react-native';
+import '@/i18n';
+import { LanguageProvider } from '@/context/LanguageContext';
 import '@/global.css';
 
 import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
@@ -77,15 +79,17 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider style={styles.provider}>
-      {Platform.OS === 'web' ? (
-        <View style={styles.webOuterContainer}>
-          <View style={styles.webAppContainer}>
-            {content}
+      <LanguageProvider>
+        {Platform.OS === 'web' ? (
+          <View style={styles.webOuterContainer}>
+            <View style={styles.webAppContainer}>
+              {content}
+            </View>
           </View>
-        </View>
-      ) : (
-        content
-      )}
+        ) : (
+          content
+        )}
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

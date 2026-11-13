@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SubscriptionIcon } from '@/components/SettingsIcons';
 import {
   getNotificationSettings,
@@ -64,6 +65,7 @@ const NOTIFICATION_ITEMS: NotificationSettingItem[] = [
 
 export default function NotificationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   // State for each toggle (defaults initialized, updated from persistent storage)
   const [toggleState, setToggleState] = useState<Record<string, boolean>>(
@@ -121,7 +123,7 @@ export default function NotificationScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notification</Text>
+          <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -133,6 +135,9 @@ export default function NotificationScreen() {
           {NOTIFICATION_ITEMS.map((item) => {
             const isEnabled = !!toggleState[item.id];
             const isDisabled = item.id !== 'push' && !toggleState.push;
+            const itemTitleKey = item.id === 'matches' ? 'newMatches' : item.id;
+            const title = t(`notifications.${itemTitleKey}`, { defaultValue: item.title });
+            const subtitle = t(`notifications.${itemTitleKey}Subtitle`, { defaultValue: item.subtitle });
             return (
               <View key={item.id} style={styles.cardItem}>
                 <View style={styles.cardLeft}>
@@ -140,8 +145,8 @@ export default function NotificationScreen() {
                     <SubscriptionIcon size={24} color="#0D7A74" />
                   </View>
                   <View style={styles.textContainer}>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
-                    <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
+                    <Text style={styles.itemTitle}>{title}</Text>
+                    <Text style={styles.itemSubtitle}>{subtitle}</Text>
                   </View>
                 </View>
 

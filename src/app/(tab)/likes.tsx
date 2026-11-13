@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { HeaderStatusBar } from "@/components/HeaderStatusBar";
 import { CustomTabBar } from "@/components/CustomTabBar";
 import { formatApiImageUrl } from "@/services/api";
@@ -25,6 +26,7 @@ import {
 } from "@/components/PeopleProfileModal";
 
 export default function LikesScreen() {
+  const { t } = useTranslation();
   const [likesSubTab, setLikesSubTab] = useState<"likedYou" | "youLiked">(
     "likedYou",
   );
@@ -90,7 +92,7 @@ export default function LikesScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <HeaderStatusBar title="Likes" />
+        <HeaderStatusBar title={t('likes.title')} />
 
         {/* Sub Tabs Navigation (Liked You / You Liked) */}
         <View style={styles.likesSubTabBar}>
@@ -105,7 +107,7 @@ export default function LikesScreen() {
                 likesSubTab === "likedYou" && styles.activeLikesSubTabText,
               ]}
             >
-              Liked You
+              {t('likes.likedYou')}
             </Text>
             {likesSubTab === "likedYou" && (
               <View style={styles.activeUnderline} />
@@ -123,7 +125,7 @@ export default function LikesScreen() {
                 likesSubTab === "youLiked" && styles.activeLikesSubTabText,
               ]}
             >
-              You Liked
+              {t('likes.youLiked')}
             </Text>
             {likesSubTab === "youLiked" && (
               <View style={styles.activeUnderline} />
@@ -136,7 +138,7 @@ export default function LikesScreen() {
           <View key="liked-you-page" style={{ flex: 1 }}>
             <View style={styles.sectionHeaderContainer}>
               <Text style={styles.headerSubtitle}>
-                People who liked your profile
+                {t('likes.likedYouSubtitle')}
               </Text>
             </View>
             <ScrollView
@@ -145,9 +147,9 @@ export default function LikesScreen() {
               showsVerticalScrollIndicator={false}
             >
               {isLoading ? (
-                <Text style={styles.emptyText}>Loading likes...</Text>
+                <Text style={styles.emptyText}>{t('likes.loadingLikes')}</Text>
               ) : liveLikesReceived.length === 0 ? (
-                <Text style={styles.emptyText}>No likes yet</Text>
+                <Text style={styles.emptyText}>{t('likes.noLikesYet')}</Text>
               ) : (
                 <View style={styles.grid}>
                   {liveLikesReceived.map((item, idx) => {
@@ -200,7 +202,7 @@ export default function LikesScreen() {
         ) : (
           <View key="you-liked-page" style={{ flex: 1 }}>
             <View style={styles.sectionHeaderContainer}>
-              <Text style={styles.headerSubtitle}>Profiles you have liked</Text>
+              <Text style={styles.headerSubtitle}>{t('likes.youLikedSubtitle')}</Text>
             </View>
             <ScrollView
               key="scroll-you-liked"
@@ -208,10 +210,10 @@ export default function LikesScreen() {
               showsVerticalScrollIndicator={false}
             >
               {isLoading ? (
-                <Text style={styles.emptyText}>Loading likes...</Text>
+                <Text style={styles.emptyText}>{t('likes.loadingLikes')}</Text>
               ) : liveSentLikes.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  You haven&apos;t liked anyone yet
+                  {t('likes.havenLikedAnyone')}
                 </Text>
               ) : (
                 <View style={styles.grid}>

@@ -12,9 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 import { updateCurrentProfile } from "@/services/profileApi";
 
 interface NatureOption {
@@ -36,10 +40,31 @@ export const NATURE_OPTIONS: NatureOption[] = [
   { id: "Creative", label: "Creative", iconName: "color-palette" },
 ];
 
+const NATURE_KEY_MAP: Record<string, string> = {
+  Caring: 'onboarding.steps.nature.caring',
+  'Fun & Funny': 'onboarding.steps.nature.funFunny',
+  Peaceful: 'onboarding.steps.nature.peaceful',
+  'Deep Talks': 'onboarding.steps.nature.deepTalks',
+  Romantic: 'onboarding.steps.nature.romantic',
+  Adventurous: 'onboarding.steps.nature.adventurous',
+  Classy: 'onboarding.steps.nature.classy',
+  Chill: 'onboarding.steps.nature.chill',
+  Positive: 'onboarding.steps.nature.positive',
+  Creative: 'onboarding.steps.nature.creative',
+};
+
 export default function NatureScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
-  const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
+  const initialDraft = getOnboardingProfileDraft();
+  const initialTraits =
+    Array.isArray(initialDraft.nature) && initialDraft.nature.length > 0
+      ? initialDraft.nature
+      : Array.isArray(initialDraft.vibes) && initialDraft.vibes.length > 0
+        ? initialDraft.vibes
+        : [];
+  const [selectedTraits, setSelectedTraits] = useState<string[]>(initialTraits);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
@@ -88,11 +113,14 @@ export default function NatureScreen() {
 
   const toggleTrait = (traitId: string) => {
     if (selectedTraits.includes(traitId)) {
-      setSelectedTraits(selectedTraits.filter((t) => t !== traitId));
+      const updated = selectedTraits.filter((t) => t !== traitId);
+      setSelectedTraits(updated);
+      updateOnboardingProfileDraft({ nature: updated, vibes: updated });
     } else {
       if (selectedTraits.length < 5) {
         const updated = [...selectedTraits, traitId];
         setSelectedTraits(updated);
+        updateOnboardingProfileDraft({ nature: updated, vibes: updated });
         if (error) setError(false);
       } else {
         triggerShake();
@@ -109,7 +137,7 @@ export default function NatureScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({
+      updateOnboardingProfileDraft({
         nature: selectedTraits,
         vibes: selectedTraits,
       });
@@ -150,23 +178,22 @@ export default function NatureScreen() {
         >
           {/* Header Title & Subtitle */}
           <Text style={[styles.title, { color: theme.text }]}>
-            What are you into?
+            {t('onboarding.steps.nature.title')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better
-            matches.
+            {t('onboarding.steps.nature.subtitle')}
           </Text>
 
           {/* Section Header with dynamic count & Shake Error */}
           <View style={styles.sectionHeader}>
             <View style={styles.titleCountRow}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Your Nature
+                {t('onboarding.steps.nature.sectionTitle')}
               </Text>
               <Text
                 style={[styles.counterText, { color: theme.textSecondary }]}
               >
-                {selectedTraits.length} / 5 selected
+                {t('onboarding.steps.nature.selectedCount', { count: selectedTraits.length })}
               </Text>
             </View>
             {error && (
@@ -178,7 +205,7 @@ export default function NatureScreen() {
                   },
                 ]}
               >
-                Please select at least 1 nature trait
+                {t('onboarding.steps.nature.errorMin')}
               </Animated.Text>
             )}
           </View>
@@ -227,7 +254,7 @@ export default function NatureScreen() {
                       },
                     ]}
                   >
-                    {item.label}
+                    {NATURE_KEY_MAP[item.id] ? t(NATURE_KEY_MAP[item.id]) : item.label}
                   </Text>
                   <Ionicons
                     name={isSelected ? "checkmark" : "add"}

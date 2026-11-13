@@ -12,9 +12,14 @@ import { useRouter } from 'expo-router';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { getStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  getStoredUserProfile,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateEducation } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from 'react-i18next';
 
 const INCOME_OPTIONS = [
   'Below ₹2 Lakh',
@@ -28,7 +33,11 @@ const INCOME_OPTIONS = [
 export default function IncomeScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [selectedIncome, setSelectedIncome] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedIncome, setSelectedIncome] = useState<string | null>(
+    initialDraft.incomeRange || null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
@@ -84,6 +93,7 @@ export default function IncomeScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      updateOnboardingProfileDraft({ incomeRange: selectedIncome });
       const profile = getStoredUserProfile();
       const eduParts = (profile.education || 'Bachelors').split('-');
       const eduLevel = eduParts[0]?.trim() || 'Bachelors';
@@ -122,14 +132,14 @@ export default function IncomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Title & Subtitle */}
-          <Text style={styles.title}>Education & Career</Text>
+          <Text style={styles.title}>{t('onboarding.steps.career.mainTitle')}</Text>
           <Text style={styles.subtitle}>
-            Add your education and work details to complete your profile.
+            {t('onboarding.steps.career.mainSubtitle')}
           </Text>
 
           {/* Question Heading */}
           <View style={styles.sectionHeaderContainer}>
-            <Text style={styles.sectionTitle}>What is your annual income?</Text>
+            <Text style={styles.sectionTitle}>{t('onboarding.steps.career.incomeTitle')}</Text>
 
             {error && (
               <Animated.Text
@@ -140,7 +150,7 @@ export default function IncomeScreen() {
                   },
                 ]}
               >
-                Select your income
+                {t('onboarding.steps.career.incomeError')}
               </Animated.Text>
             )}
           </View>
@@ -155,6 +165,7 @@ export default function IncomeScreen() {
                   style={styles.radioOptionRow}
                   onPress={() => {
                     setSelectedIncome(option);
+                    updateOnboardingProfileDraft({ incomeRange: option });
                     if (error) {
                       setError(false);
                     }

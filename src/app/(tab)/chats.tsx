@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
+import { useTranslation } from 'react-i18next';
 import { ASSET_IMAGES, CALL_LOGS, ChatMessage, CallLog } from '@/constants/datingData';
 import { formatApiImageUrl } from '@/services/api';
 import {
@@ -67,6 +68,7 @@ export default function ChatScreen({
   showTabBar = true,
   showHeaderBar = true,
 }: ChatScreenProps = {}) {
+  const { t } = useTranslation();
   const {
     partnerId: routePartnerId,
     partnerName: routePartnerName,
@@ -576,10 +578,10 @@ export default function ChatScreen({
             <View style={styles.detailHeaderInfo}>
               <Text style={styles.detailHeaderName}>{selectedConversation.name}</Text>
               <View style={styles.onlineStatusRow}>
-                {selectedConversation.isOnline && <View style={styles.greenDot} />}
-                <Text style={styles.onlineStatusText}>
-                  {selectedConversation.isOnline ? 'Active now' : 'Offline'}
-                </Text>
+                  {selectedConversation.isOnline && <View style={styles.greenDot} />}
+                  <Text style={styles.onlineStatusText}>
+                    {selectedConversation.isOnline ? t('chats.activeNow') : t('chats.offline')}
+                  </Text>
               </View>
             </View>
             <View style={styles.headerActions}>
@@ -619,10 +621,10 @@ export default function ChatScreen({
             {!selectedConversation.isMatched && hasIncomingMessage ? (
               <View style={styles.likePrompt}>
                 <Text style={styles.likePromptTitle}>
-                  Do you like {selectedConversation.name}?
+                  {t('chats.likePromptTitle', { name: selectedConversation.name })}
                 </Text>
                 <Text style={styles.likePromptBody}>
-                  Like them to make a match and unlock unlimited messages.
+                  {t('chats.likePromptBody')}
                 </Text>
                 <TouchableOpacity
                   style={styles.likePromptButton}
@@ -631,7 +633,7 @@ export default function ChatScreen({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="heart" size={16} color="#FFFFFF" />
-                  <Text style={styles.likePromptButtonText}>Like &amp; match</Text>
+                  <Text style={styles.likePromptButtonText}>{t('chats.likeAndMatch')}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -639,7 +641,7 @@ export default function ChatScreen({
               <ActivityIndicator color="#0D7A74" />
             ) : selectedConversation.messages.length === 0 ? (
               <Text style={styles.emptyConversationText}>
-                You’re connected. Say hello to start your conversation.
+                {t('chats.connectedSayHello')}
               </Text>
             ) : null}
             {selectedConversation.messages.map((msg) => {
@@ -784,21 +786,21 @@ export default function ChatScreen({
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               <TouchableOpacity
                 style={styles.quickPromptChip}
-                onPress={() => handleSendMessage('Hey there! 👋')}
+                onPress={() => handleSendMessage(t('chats.quickHey'))}
               >
-                <Text style={styles.quickPromptText}>Hey there! 👋</Text>
+                <Text style={styles.quickPromptText}>{t('chats.quickHey')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.quickPromptChip}
-                onPress={() => handleSendMessage('Coffee this weekend? ☕')}
+                onPress={() => handleSendMessage(t('chats.quickCoffee'))}
               >
-                <Text style={styles.quickPromptText}>Coffee this weekend? ☕</Text>
+                <Text style={styles.quickPromptText}>{t('chats.quickCoffee')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.quickPromptChip}
-                onPress={() => handleSendMessage('Free for a quick call? 📞')}
+                onPress={() => handleSendMessage(t('chats.quickCall'))}
               >
-                <Text style={styles.quickPromptText}>Free for a call? 📞</Text>
+                <Text style={styles.quickPromptText}>{t('chats.quickCall')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -810,21 +812,21 @@ export default function ChatScreen({
           {/* Input Bar */}
           {preMatchLimitReached ? (
             <Text style={styles.messageLimitText}>
-              You’ve sent your two messages. Wait for {selectedConversation.name}
-              {' '}to reply or like you to unlock unlimited chat.
+              {t('chats.limitReached', { name: selectedConversation.name })}
             </Text>
           ) : (
             <>
               {!selectedConversation.isMatched ? (
                 <Text style={styles.messageLimitText}>
-                  {selectedConversation.messagesRemaining ?? 2} introductory
-                  {' '}message{selectedConversation.messagesRemaining === 1 ? '' : 's'} left
+                  {selectedConversation.messagesRemaining === 1
+                    ? t('chats.introMessagesLeft', { count: 1 })
+                    : t('chats.introMessagesLeftPlural', { count: selectedConversation.messagesRemaining ?? 2 })}
                 </Text>
               ) : null}
               <View style={styles.chatInputBar}>
                 <TextInput
                   style={styles.chatTextInput}
-                  placeholder={`Message ${selectedConversation.name}...`}
+                  placeholder={t('chats.messagePlaceholder', { name: selectedConversation.name })}
                   placeholderTextColor="#9CA3AF"
                   value={inputText}
                   onChangeText={setInputText}
@@ -933,7 +935,7 @@ export default function ChatScreen({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.mainContainer}>
         {/* Header Title */}
-        {showHeaderBar && <HeaderStatusBar title="Chat" />}
+        {showHeaderBar && <HeaderStatusBar title={t('chats.title')} />}
 
         {/* Sub-header Navigation Tabs (Messages | Calls) */}
         <View style={styles.subTabBar}>
@@ -948,7 +950,7 @@ export default function ChatScreen({
                 activeTab === 'messages' && styles.activeSubTabText,
               ]}
             >
-              Messages
+              {t('chats.messagesTab')}
             </Text>
             {activeTab === 'messages' && <View style={styles.activeIndicator} />}
           </TouchableOpacity>
@@ -964,7 +966,7 @@ export default function ChatScreen({
                 activeTab === 'calls' && styles.activeSubTabText,
               ]}
             >
-              Calls
+              {t('chats.callsTab')}
             </Text>
             {activeTab === 'calls' && <View style={styles.activeIndicator} />}
           </TouchableOpacity>
@@ -976,7 +978,7 @@ export default function ChatScreen({
             <Ionicons name="search-outline" size={18} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search for Near by location"
+              placeholder={t('chats.searchPlaceholder')}
               placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -996,7 +998,7 @@ export default function ChatScreen({
           >
             {/* Section Header: Recent */}
             <View style={styles.recentHeader}>
-              <Text style={styles.recentTitle}>Recent</Text>
+              <Text style={styles.recentTitle}>{t('chats.recent')}</Text>
             </View>
 
             {/* Chat List Items */}
@@ -1007,8 +1009,8 @@ export default function ChatScreen({
             ) : filteredChats.length === 0 ? (
               <Text style={styles.listStatusText}>
                 {searchQuery
-                  ? 'No chats match your search.'
-                  : 'No conversations yet. When you match and start a chat, it will appear here.'}
+                  ? t('chats.noSearchResults')
+                  : t('chats.noChats')}
               </Text>
             ) : filteredChats.map((chat) => (
               <TouchableOpacity

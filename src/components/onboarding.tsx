@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,10 +59,14 @@ export function OptionButton({ children, style, ...props }: ButtonProps) {
 
 export function LegalFooter({ isArtworkFullScreen }: { isArtworkFullScreen?: boolean }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const textColor = isArtworkFullScreen ? 'rgba(255, 255, 255, 0.7)' : theme.text;
   return (
     <Text style={[styles.legal, { color: textColor }]}>
-      By Continuing, you agree with our <Text style={styles.link}>Terms</Text> & <Text style={styles.link}>Privacy Policy</Text>
+      {t('onboarding.legal.text')}
+      <Text style={styles.link}>{t('onboarding.legal.terms')}</Text>
+      {t('onboarding.legal.and')}
+      <Text style={styles.link}>{t('onboarding.legal.privacy')}</Text>
     </Text>
   );
 }

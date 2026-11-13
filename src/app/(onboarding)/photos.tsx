@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Animated,
   ActivityIndicator,
@@ -21,14 +21,30 @@ import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { useTheme } from '@/hooks/use-theme';
 import { uploadPhotos, validatePhotoApi } from '@/services/profileApi';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
+import { useTranslation } from 'react-i18next';
 
 export default function AddPhotosScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useTranslation();
+
+  const initialDraft = getOnboardingProfileDraft();
+  const initialPhotos: (string | null)[] = Array.isArray(initialDraft.photos)
+    ? [
+        initialDraft.photos[0] ?? null,
+        initialDraft.photos[1] ?? null,
+        initialDraft.photos[2] ?? null,
+        initialDraft.photos[3] ?? null,
+      ]
+    : [initialDraft.avatarUri ?? null, null, null, null];
 
   // photo state (index 0 is main profile photo, 1..3 are additional photos)
-  const [photos, setPhotos] = useState<(string | null)[]>([null, null, null, null]);
+  const [photos, setPhotos] = useState<(string | null)[]>(initialPhotos);
+  const photosRef = useRef<(string | null)[]>(initialPhotos);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -51,14 +67,21 @@ export default function AddPhotosScreen() {
     ]).start();
   };
 
+  const updatePhotoSlot = (slotIndex: number, uri: string | null) => {
+    const next = [...photosRef.current];
+    next[slotIndex] = uri;
+    photosRef.current = next;
+    setPhotos(next);
+    updateOnboardingProfileDraft({
+      photos: next,
+      ...(next[0] ? { avatarUri: next[0] } : {}),
+    });
+  };
+
   const verifyAndSetSlot = async (slotIndex: number, uri: string, webFile?: File) => {
     if (slotIndex !== 0) {
       // Remaining photos (Slots 1, 2, 3): no face/selfie requirement
-      setPhotos((prev) => {
-        const next = [...prev];
-        next[slotIndex] = uri;
-        return next;
-      });
+      updatePhotoSlot(slotIndex, uri);
       return;
     }
 
@@ -99,18 +122,10 @@ export default function AddPhotosScreen() {
       await validatePhotoApi(formData);
 
       // Successfully verified face & selfie match!
-      setPhotos((prev) => {
-        const next = [...prev];
-        next[0] = uri;
-        return next;
-      });
+      updatePhotoSlot(0, uri);
     } catch (err: any) {
       console.warn('Slot 0 selfie verification error:', err);
-      setPhotos((prev) => {
-        const next = [...prev];
-        next[0] = null;
-        return next;
-      });
+      updatePhotoSlot(0, null);
       setErrorMessage(
         err?.message ||
           'Face mismatch: Your main profile photo must match your verified selfie.'
@@ -209,11 +224,7 @@ export default function AddPhotosScreen() {
 
 
   const handleRemovePhoto = (index: number) => {
-    setPhotos((prev) => {
-      const next = [...prev];
-      next[index] = null;
-      return next;
-    });
+    updatePhotoSlot(index, null);
     if (showUploadModal) {
       setShowUploadModal(false);
       setActiveSlot(null);
@@ -224,7 +235,7 @@ export default function AddPhotosScreen() {
     const selectedPhotos = photos.filter((p): p is string => Boolean(p));
 
     if (selectedPhotos.length === 0) {
-      setErrorMessage('Please add at least 1 profile photo to continue');
+      setErrorMessage(t('onboarding.steps.photos.atLeastOne'));
       triggerShake();
       return;
     }
@@ -268,9 +279,10 @@ export default function AddPhotosScreen() {
       }
 
       const res = await uploadPhotos(formData);
-      if (selectedPhotos[0]) {
-        updateStoredUserProfile({ avatarUri: selectedPhotos[0] });
-      }
+      updateOnboardingProfileDraft({
+        photos: [...photos],
+        ...(selectedPhotos[0] ? { avatarUri: selectedPhotos[0] } : {}),
+      });
 
       router.push('/(onboarding)/interests' as any);
     } catch (err: any) {
@@ -300,9 +312,9 @@ export default function AddPhotosScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Title & Subtitle */}
-          <Text style={styles.title}>Add your photos</Text>
+          <Text style={styles.title}>{t('onboarding.steps.photos.title')}</Text>
           <Text style={styles.subtitle}>
-            Show your personality and help people get to know you. Add up to 4 photos.
+            {t('onboarding.steps.photos.subtitle')}
           </Text>
 
           {/* Photos Area */}
@@ -320,7 +332,7 @@ export default function AddPhotosScreen() {
                 <View style={styles.cardInnerContent}>
                   <ActivityIndicator size="small" color="#00B49F" />
                   <Text style={[styles.mainCardText, { marginTop: 8, color: '#00B49F' }]}>
-                    Verifying face with selfie...
+                    {t('onboarding.steps.photos.verifyingSelfie')}
                   </Text>
                 </View>
               ) : photos[0] ? (
@@ -335,7 +347,7 @@ export default function AddPhotosScreen() {
                     <Ionicons name="close" size={14} color="#FFFFFF" />
                   </TouchableOpacity>
                   <View style={styles.primaryBadge}>
-                    <Text style={styles.primaryBadgeText}>Main Profile (Selfie Matched)</Text>
+                    <Text style={styles.primaryBadgeText}>{t('onboarding.steps.photos.mainProfileMatched')}</Text>
                   </View>
                 </View>
               ) : (
@@ -344,8 +356,8 @@ export default function AddPhotosScreen() {
                     <Ionicons name="camera-outline" size={24} color="#00B49F" />
                     <Ionicons name="add" size={12} color="#00B49F" style={styles.plusOverlay} />
                   </View>
-                  <Text style={styles.mainCardText}>Add Your Main Profile Photo</Text>
-                  <Text style={styles.cardHintText}>Must match your verified selfie</Text>
+                  <Text style={styles.mainCardText}>{t('onboarding.steps.photos.mainCardText')}</Text>
+                  <Text style={styles.cardHintText}>{t('onboarding.steps.photos.cardHintText')}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -381,7 +393,7 @@ export default function AddPhotosScreen() {
                         <View style={styles.plusIconCircle}>
                           <Ionicons name="add" size={20} color="#00B49F" />
                         </View>
-                        <Text style={styles.subCardText}>{`Photo ${slotIndex}`}</Text>
+                        <Text style={styles.subCardText}>{t('onboarding.steps.photos.subPhotoTitle', { number: slotIndex })}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -407,7 +419,7 @@ export default function AddPhotosScreen() {
           <View style={styles.warningRow}>
             <Ionicons name="information-circle-outline" size={18} color="#9CA3AF" style={styles.warningIcon} />
             <Text style={styles.warningText}>
-              Real photos only. AI-generated or misleading images aren&apos;t allowed.
+              {t('onboarding.steps.photos.realPhotosOnly')}
             </Text>
           </View>
         </ScrollView>
@@ -417,7 +429,7 @@ export default function AddPhotosScreen() {
           showBack
           onBack={handleBack}
           onNext={handleNext}
-          nextText={isUploading ? 'Uploading...' : 'Next'}
+          nextText={isUploading ? t('onboarding.steps.photos.uploading') : t('common.next')}
           nextButtonStyle={{
             backgroundColor: isPhotosComplete && !isUploading
               ? theme.primaryButton
@@ -447,10 +459,10 @@ export default function AddPhotosScreen() {
               <View style={styles.modalSheetContainer}>
                 <View style={styles.grabHandle} />
                 <Text style={styles.modalTitle}>
-                  {activeSlot === 0 ? 'Main Profile Photo' : `Photo ${activeSlot}`}
+                  {activeSlot === 0 ? t('onboarding.steps.photos.modalTitleMain') : t('onboarding.steps.photos.modalTitleSub', { number: activeSlot })}
                 </Text>
                 <Text style={styles.modalSubtitle}>
-                  Choose an image to upload to your profile
+                  {t('onboarding.steps.photos.modalSubtitle')}
                 </Text>
 
                 <View style={styles.modalOptionsList}>
@@ -464,8 +476,8 @@ export default function AddPhotosScreen() {
                       <Ionicons name="images-outline" size={22} color="#0F766E" />
                     </View>
                     <View style={styles.modalOptionTextWrap}>
-                      <Text style={styles.modalOptionTitle}>Photo Library</Text>
-                      <Text style={styles.modalOptionDesc}>Choose from device photo gallery</Text>
+                      <Text style={styles.modalOptionTitle}>{t('onboarding.steps.photos.library')}</Text>
+                      <Text style={styles.modalOptionDesc}>{t('onboarding.steps.photos.libraryDesc')}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
                   </TouchableOpacity>
@@ -480,8 +492,8 @@ export default function AddPhotosScreen() {
                       <Ionicons name="camera-outline" size={22} color="#0F766E" />
                     </View>
                     <View style={styles.modalOptionTextWrap}>
-                      <Text style={styles.modalOptionTitle}>Take Photo</Text>
-                      <Text style={styles.modalOptionDesc}>Use camera to snap a new photo</Text>
+                      <Text style={styles.modalOptionTitle}>{t('onboarding.steps.photos.camera')}</Text>
+                      <Text style={styles.modalOptionDesc}>{t('onboarding.steps.photos.cameraDesc')}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
                   </TouchableOpacity>
@@ -498,9 +510,9 @@ export default function AddPhotosScreen() {
                       </View>
                       <View style={styles.modalOptionTextWrap}>
                         <Text style={[styles.modalOptionTitle, styles.modalOptionTitleDanger]}>
-                          Remove Photo
+                          {t('onboarding.steps.photos.removePhoto')}
                         </Text>
-                        <Text style={styles.modalOptionDesc}>Remove current photo from this slot</Text>
+                        <Text style={styles.modalOptionDesc}>{t('onboarding.steps.photos.removePhotoDesc')}</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color="#DC2626" />
                     </TouchableOpacity>
@@ -516,7 +528,7 @@ export default function AddPhotosScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>

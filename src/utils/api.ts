@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { router } from "expo-router";
 import { authStorage } from "@/services/authStorage";
+import { resetOnboardingDrafts } from "@/constants/userProfile";
 import {
   getAccessToken,
   getRefreshToken,
@@ -232,6 +233,7 @@ export async function verifyOtp(
   phone: string,
   otp: string,
   countryCode: string = "+91",
+  preferredLanguage?: string,
 ): Promise<VerifyOtpResponse> {
   const cleanedPhone = phone.replace(/\D/g, "");
   const cleanedOtp = otp.trim();
@@ -248,12 +250,16 @@ export async function verifyOtp(
         phone: cleanedPhone,
         countryCode,
         otp: cleanedOtp,
+        preferredLanguage,
       }),
     },
   );
 
   const tokens = response.data?.tokens;
   if (tokens?.accessToken) {
+    if (response.data?.isNewUser) {
+      resetOnboardingDrafts();
+    }
     await setUserLoggedIn(true, {
       phoneNumber: cleanedPhone,
       accessToken: tokens.accessToken,
@@ -264,6 +270,25 @@ export async function verifyOtp(
   }
 
   return response;
+}
+
+/**
+ * POST /api/v1/auth/language
+ */
+export async function updateUserLanguage(language: string): Promise<any> {
+  return apiRequest("/api/v1/auth/language", {
+    method: "POST",
+    body: JSON.stringify({ language }),
+  });
+}
+
+/**
+ * GET /api/v1/auth/profile
+ */
+export async function getCurrentUserProfile(): Promise<any> {
+  return apiRequest("/api/v1/auth/profile", {
+    method: "GET",
+  });
 }
 
 /**

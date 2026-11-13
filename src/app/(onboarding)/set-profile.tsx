@@ -20,22 +20,34 @@ import { Ionicons } from '@expo/vector-icons';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { Image } from 'expo-image';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from 'react-i18next';
 
 export default function SetProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [userName, setUserName] = useState('');
-  const [gender, setGender] = useState<'Female' | 'Male' | null>(null);
+  const { t } = useTranslation();
+  const initialDraft = getOnboardingProfileDraft();
+  const initialGender =
+    initialDraft.gender?.toLowerCase() === 'female'
+      ? 'Female'
+      : initialDraft.gender?.toLowerCase() === 'male'
+        ? 'Male'
+        : null;
+  const [userName, setUserName] = useState(initialDraft.name ?? '');
+  const [gender, setGender] = useState<'Female' | 'Male' | null>(initialGender);
   const [isFocused, setIsFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userNameError, setUserNameError] = useState(false);
   const [genderError, setGenderError] = useState(false);
   const [bioError, setBioError] = useState(false);
 
-  const [bio, setBio] = useState('');
+  const [bio, setBio] = useState(initialDraft.about ?? '');
   const [isBioFocused, setIsBioFocused] = useState(false);
   const isBioFocusedRef = useRef(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -291,10 +303,10 @@ export default function SetProfileScreen() {
     setIsSubmitting(true);
     try {
       const selectedGender = gender.toLowerCase();
-      updateStoredUserProfile({
+      updateOnboardingProfileDraft({
         name: userName.trim(),
         gender: selectedGender,
-        about: bio.trim() || undefined,
+        about: bio.trim(),
       });
       await updateCurrentProfile({
         name: userName.trim(),
@@ -340,11 +352,11 @@ export default function SetProfileScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Header Title */}
-            <Text style={styles.title}>Set Profile</Text>
+            <Text style={styles.title}>{t('onboarding.steps.setProfile.title')}</Text>
 
             {/* User Name Section */}
             <View style={styles.inputSection}>
-              <Text style={styles.label}>User Name</Text>
+              <Text style={styles.label}>{t('onboarding.steps.setProfile.nameLabel')}</Text>
               <View
                 style={[
                   styles.inputContainer,
@@ -361,13 +373,14 @@ export default function SetProfileScreen() {
                   onChangeText={(text) => {
                     const cleaned = text.replace(/\s/g, '');
                     setUserName(cleaned);
+                    updateOnboardingProfileDraft({ name: cleaned });
                     if (userNameError && cleaned.length > 0) {
                       setUserNameError(false);
                     }
                   }}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  placeholder="Enter user name"
+                  placeholder={t('onboarding.steps.setProfile.namePlaceholder')}
                   placeholderTextColor={userNameError ? '#9CA3AF' : '#9CA3AF'}
                   selectionColor="#00E4E8"
                   autoCapitalize="none"
@@ -377,7 +390,7 @@ export default function SetProfileScreen() {
                 />
               </View>
               <Text style={styles.helperText}>
-               Letters, numbers & special characters only. No spaces
+                {t('onboarding.steps.setProfile.nameHelper')}
               </Text>
               {userNameError && (
                 <Animated.Text
@@ -388,14 +401,14 @@ export default function SetProfileScreen() {
                     },
                   ]}
                 >
-                  Enter User Name
+                  {t('onboarding.steps.setProfile.nameError')}
                 </Animated.Text>
               )}
             </View>
 
             {/* You Are Section */}
             <View style={styles.genderSection}>
-              <Text style={styles.sectionTitle}>You Are</Text>
+              <Text style={styles.sectionTitle}>{t('onboarding.steps.setProfile.genderLabel')}</Text>
 
               <View style={styles.genderCardsRow}>
                 {/* Female Card */}
@@ -406,6 +419,7 @@ export default function SetProfileScreen() {
                   ]}
                   onPress={() => {
                     setGender('Female');
+                    updateOnboardingProfileDraft({ gender: 'female' });
                     if (genderError) {
                       setGenderError(false);
                     }
@@ -417,7 +431,7 @@ export default function SetProfileScreen() {
                     style={styles.genderImage}
                     contentFit="contain"
                   />
-                  <Text style={styles.genderLabel}>Female</Text>
+                  <Text style={styles.genderLabel}>{t('onboarding.steps.setProfile.female')}</Text>
                 </TouchableOpacity>
 
                 {/* Male Card */}
@@ -428,6 +442,7 @@ export default function SetProfileScreen() {
                   ]}
                   onPress={() => {
                     setGender('Male');
+                    updateOnboardingProfileDraft({ gender: 'male' });
                     if (genderError) {
                       setGenderError(false);
                     }
@@ -439,7 +454,7 @@ export default function SetProfileScreen() {
                     style={styles.genderImage}
                     contentFit="contain"
                   />
-                  <Text style={styles.genderLabel}>Male</Text>
+                  <Text style={styles.genderLabel}>{t('onboarding.steps.setProfile.male')}</Text>
                 </TouchableOpacity>
               </View>
               {genderError && (
@@ -451,7 +466,7 @@ export default function SetProfileScreen() {
                     },
                   ]}
                 >
-                  Select your gender
+                  {t('onboarding.steps.setProfile.genderError')}
                 </Animated.Text>
               )}
             
@@ -465,7 +480,7 @@ export default function SetProfileScreen() {
               }}
             >
               <View style={styles.bioTitleRow}>
-                <Text style={styles.label}>About Me (Bio)</Text>
+                <Text style={styles.label}>{t('onboarding.steps.setProfile.bioLabel')}</Text>
               </View>
               <View
                 style={[
@@ -479,13 +494,14 @@ export default function SetProfileScreen() {
                   value={bio}
                   onChangeText={(text) => {
                     setBio(text);
+                    updateOnboardingProfileDraft({ about: text });
                     if (bioError && text.trim().length > 0) {
                       setBioError(false);
                     }
                   }}
                   onFocus={handleBioFocus}
                   onBlur={handleBioBlur}
-                  placeholder="Share a few words about yourself, hobbies, or what you're looking for..."
+                  placeholder={t('onboarding.steps.setProfile.bioPlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   selectionColor="#00E4E8"
                   multiline
@@ -504,7 +520,7 @@ export default function SetProfileScreen() {
                       },
                     ]}
                   >
-                    Please enter your bio
+                    {t('onboarding.steps.setProfile.bioError')}
                   </Animated.Text>
                 ) : <View />}
                 <Text style={styles.bioCharCount}>{bio.length} / 300</Text>
