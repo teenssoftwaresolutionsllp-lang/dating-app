@@ -122,11 +122,12 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok || json.success === false) {
-    const errorMessage = extractErrorMessage(
+    const rawMessage = extractErrorMessage(
       json,
       `Request failed with status ${response.status}`,
     );
-    const error: any = new Error(errorMessage);
+    const classified = classifyError({ message: rawMessage, status: response.status });
+    const error: any = new Error(classified.userMessage);
     error.status = response.status;
     error.data = json;
     throw error;

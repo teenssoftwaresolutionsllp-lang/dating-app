@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { authStorage } from './authStorage';
+import { classifyError } from '@/utils/errorHandler';
 
 export const getBaseUrl = (): string => {
   // 1. Explicit environment variable (highest priority)
@@ -160,11 +161,13 @@ export async function uploadFormData<T>(
     };
 
     xhr.onerror = () => {
-      reject(new Error('Network request failed during file upload. Please check your connection.'));
+      const classified = classifyError('network request failed during file upload');
+      reject(new Error(classified.userMessage));
     };
 
     xhr.ontimeout = () => {
-      reject(new Error('Upload timed out. Please try again.'));
+      const classified = classifyError('timeout during file upload');
+      reject(new Error(classified.userMessage));
     };
 
     xhr.timeout = 60000;
@@ -213,10 +216,21 @@ export async function apiRequest<T>(
   }
 
   const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}${path.startsWith('/') ? path : `/${path}`}`, {
-    ...options,
-    headers: requestHeaders,
-  });
+  const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: requestHeaders,
+    });
+  } catch (fetchErr: any) {
+    if (__DEV__) {
+      console.warn(`[API Network Error] ${path}:`, fetchErr);
+    }
+    const classified = classifyError(fetchErr);
+    throw new Error(classified.userMessage);
+  }
 
   let payload: any = {};
   try {
@@ -241,7 +255,8 @@ export async function apiRequest<T>(
 
   if (!response.ok || payload.success === false) {
     const errorMsg = payload?.message || `Request failed with status ${response.status}`;
-    throw new Error(errorMsg);
+    const classified = classifyError({ message: errorMsg, status: response.status });
+    throw new Error(classified.userMessage);
   }
 
   return payload.data as T;
