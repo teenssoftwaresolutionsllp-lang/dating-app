@@ -5,13 +5,13 @@ import { authStorage } from './authStorage';
 export const getBaseUrl = (): string => {
   // 1. Explicit environment variable (highest priority)
   if (process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.trim().length > 0) {
-    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
+    return process.env.EXPO_PUBLIC_API_URL.trim().replace(/\/+$/, '');
   }
 
   // 2. Explicit app.json extra config
   const extraUrl = Constants.expoConfig?.extra?.apiUrl;
   if (extraUrl && typeof extraUrl === 'string' && extraUrl.trim().length > 0) {
-    return extraUrl.replace(/\/+$/, '');
+    return extraUrl.trim().replace(/\/+$/, '');
   }
 
   // 3. On Web, standard localhost
