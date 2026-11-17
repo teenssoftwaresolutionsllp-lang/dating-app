@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
 import { sendOtp } from '@/utils/api';
+import { classifyError } from '@/utils/errorHandler';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
@@ -93,7 +94,8 @@ export default function LoginScreen() {
       await sendOtp(digits, '+91');
       router.push({ pathname: '/otp' as any, params: { phone: digits } });
     } catch (err: any) {
-      setError(err?.message || 'Failed to send OTP. Please try again.');
+      const userMsg = classifyError(err, 'Failed to send OTP. Please try again.').userMessage;
+      setError(userMsg);
       triggerShake();
     } finally {
       setIsSubmitting(false);

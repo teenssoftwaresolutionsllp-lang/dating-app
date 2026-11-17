@@ -28,6 +28,7 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 import { resendOtp, verifyOtp } from "@/utils/api";
 import { registerForPushNotifications } from "@/services/notificationService";
+import { classifyError } from "@/utils/errorHandler";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
@@ -225,7 +226,8 @@ export default function OtpScreen() {
     try {
       await resendOtp(digits, "+91");
     } catch (err: any) {
-      setError(err?.message || "Failed to resend OTP. Please try again.");
+      const userMsg = classifyError(err, "Failed to resend OTP. Please try again.").userMessage;
+      setError(userMsg);
       triggerShake();
     }
   };
@@ -257,7 +259,8 @@ export default function OtpScreen() {
           : "/(tab)/matches",
       );
     } catch (err: any) {
-      setError(err?.message || "Invalid OTP");
+      const userMsg = classifyError(err, "Invalid OTP").userMessage;
+      setError(userMsg);
       triggerShake();
     } finally {
       setIsVerifying(false);
