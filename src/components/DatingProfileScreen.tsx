@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { CustomTabBar } from './CustomTabBar';
 import { formatApiImageUrl } from '@/services/api';
+import { viewerService } from '@/services/viewerService';
 import {
   getDiscoveryFeed,
   resetDiscoveryFeed,
@@ -270,6 +271,14 @@ export default function DatingProfileScreen() {
   } | null>(null);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [safetyActionStatus, setSafetyActionStatus] = useState<string | null>(null);
+  const [viewersCount, setViewersCount] = useState(0);
+
+  React.useEffect(() => {
+    const unsubscribe = viewerService.subscribe((count) => {
+      setViewersCount(count);
+    });
+    return unsubscribe;
+  }, []);
 
   const loadProfiles = React.useCallback(() => {
     setIsLoading(true);
@@ -627,9 +636,16 @@ export default function DatingProfileScreen() {
               onPress={() => router.push('/profile-viewers' as any)}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="View Profile Viewers"
+              accessibilityLabel={`View Profile Viewers${viewersCount > 0 ? `, ${viewersCount} new` : ''}`}
             >
               <Ionicons name="eye-outline" size={20} color="#0D7A74" />
+              {viewersCount > 0 && (
+                <View style={styles.viewersBadge}>
+                  <Text style={styles.viewersBadgeText}>
+                    {viewersCount > 99 ? '99+' : viewersCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -1402,6 +1418,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  viewersBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  viewersBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
   },
   backButton: {
     width: 36,

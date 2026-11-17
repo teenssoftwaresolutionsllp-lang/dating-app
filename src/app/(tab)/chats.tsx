@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderStatusBar } from '@/components/HeaderStatusBar';
 import { CustomTabBar } from '@/components/CustomTabBar';
+import { badgeService } from '@/services/badgeService';
 import { ASSET_IMAGES, CALL_LOGS, ChatMessage, CallLog } from '@/constants/datingData';
 import { formatApiImageUrl } from '@/services/api';
 import {

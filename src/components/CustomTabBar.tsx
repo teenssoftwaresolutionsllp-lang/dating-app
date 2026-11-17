@@ -1,8 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { router, useFocusEffect, usePathname } from 'expo-router';
-import { getLikesReceived } from '@/services/matchApi';
+import { badgeService } from '@/services/badgeService';
 
 function MatchesTabIcon({ color, size = 22 }: { color: string; size?: number }) {
   return (
@@ -122,21 +122,20 @@ function isTabActive(tabId: string, pathname: string | null | undefined): boolea
 export const CustomTabBar: React.FC = () => {
   const pathname = usePathname();
   const [likesCount, setLikesCount] = useState(0);
+  const [chatsCount, setChatsCount] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = badgeService.subscribe((counts) => {
+      setLikesCount(counts.likesCount);
+      setChatsCount(counts.chatsCount);
+    });
+    return unsubscribe;
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      let isFocused = true;
-
-      getLikesReceived().then((likes) => {
-        if (isFocused) {
-          setLikesCount(likes.length);
-        }
-      });
-
-      return () => {
-        isFocused = false;
-      };
-    }, [])
+      void badgeService.refresh();
+    }, [pathname])
   );
 
   return (
@@ -145,16 +144,19 @@ export const CustomTabBar: React.FC = () => {
         const isActive = isTabActive(tab.id, pathname);
         const color = isActive ? '#0D7A74' : '#78B0A8';
 
+        let accessibilityLabel = tab.label;
+        if (tab.id === 'likes' && likesCount > 0) {
+          accessibilityLabel = `Likes, ${likesCount} ${likesCount === 1 ? 'person' : 'people'} liked your profile`;
+        } else if (tab.id === 'chats' && chatsCount > 0) {
+          accessibilityLabel = `Chats, ${chatsCount} unread message${chatsCount === 1 ? '' : 's'}`;
+        }
+
         return (
           <TouchableOpacity
             key={tab.id}
             style={styles.tabButton}
             activeOpacity={0.7}
-            accessibilityLabel={
-              tab.id === 'likes' && likesCount > 0
-                ? `Likes, ${likesCount} ${likesCount === 1 ? 'person' : 'people'} liked your profile`
-                : tab.label
-            }
+            accessibilityLabel={accessibilityLabel}
             onPress={() => {
               if (!isActive) {
                 router.replace(tab.route as any);
@@ -166,6 +168,13 @@ export const CustomTabBar: React.FC = () => {
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
                     {likesCount > 99 ? '99+' : likesCount}
+                  </Text>
+                </View>
+              )}
+              {tab.id === 'chats' && chatsCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {chatsCount > 99 ? '99+' : chatsCount}
                   </Text>
                 </View>
               )}
