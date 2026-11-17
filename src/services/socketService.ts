@@ -18,11 +18,40 @@ export type TypingCallback = (data: {
   isTyping: boolean;
 }) => void;
 
+export type SocketLikeCallback = (data: {
+  likerId: string;
+  likerName: string;
+  likerPhoto: string | null;
+  isSuperLike: boolean;
+  createdAt: string;
+}) => void;
+
+export type SocketMatchCallback = (data: {
+  matchId: string;
+  matchedUser: {
+    id: string;
+    name: string;
+  };
+}) => void;
+
+export type SocketProfileViewCallback = (data: {
+  id: string;
+  name: string;
+  subtitle: string;
+  time: string;
+  avatar: string | null;
+  viewedAt: string;
+  unreadCount?: number;
+}) => void;
+
 class SocketService {
   private socket: Socket | null = null;
   private currentUserId: string | null = null;
   private messageListeners: Set<SocketMessageCallback> = new Set();
   private typingListeners: Set<TypingCallback> = new Set();
+  private likeListeners: Set<SocketLikeCallback> = new Set();
+  private matchListeners: Set<SocketMatchCallback> = new Set();
+  private profileViewListeners: Set<SocketProfileViewCallback> = new Set();
   private isConnecting: boolean = false;
 
   /**
@@ -121,6 +150,39 @@ class SocketService {
           }
         });
       });
+
+      // Handle real-time likes
+      this.socket.on('new_like', (data: any) => {
+        this.likeListeners.forEach((listener) => {
+          try {
+            listener(data);
+          } catch (err) {
+            console.warn('[WebSocket] Like listener error:', err);
+          }
+        });
+      });
+
+      // Handle real-time mutual matches
+      this.socket.on('new_match', (data: any) => {
+        this.matchListeners.forEach((listener) => {
+          try {
+            listener(data);
+          } catch (err) {
+            console.warn('[WebSocket] Match listener error:', err);
+          }
+        });
+      });
+
+      // Handle real-time profile views
+      this.socket.on('profile_viewed', (data: any) => {
+        this.profileViewListeners.forEach((listener) => {
+          try {
+            listener(data);
+          } catch (err) {
+            console.warn('[WebSocket] Profile view listener error:', err);
+          }
+        });
+      });
     } catch (err) {
       console.warn('[WebSocket] Initialization failed:', err);
     } finally {
@@ -200,6 +262,36 @@ class SocketService {
   }
 
   /**
+   * Listen for incoming real-time likes
+   */
+  public onLike(callback: SocketLikeCallback): () => void {
+    this.likeListeners.add(callback);
+    return () => {
+      this.likeListeners.delete(callback);
+    };
+  }
+
+  /**
+   * Listen for incoming real-time mutual matches
+   */
+  public onMatch(callback: SocketMatchCallback): () => void {
+    this.matchListeners.add(callback);
+    return () => {
+      this.matchListeners.delete(callback);
+    };
+  }
+
+  /**
+   * Listen for incoming real-time profile views
+   */
+  public onProfileView(callback: SocketProfileViewCallback): () => void {
+    this.profileViewListeners.add(callback);
+    return () => {
+      this.profileViewListeners.delete(callback);
+    };
+  }
+
+  /**
    * Disconnect and cleanup
    */
   public async logout(): Promise<void> {
@@ -210,6 +302,9 @@ class SocketService {
     this.currentUserId = null;
     this.messageListeners.clear();
     this.typingListeners.clear();
+    this.likeListeners.clear();
+    this.matchListeners.clear();
+    this.profileViewListeners.clear();
   }
 }
 

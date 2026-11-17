@@ -376,14 +376,14 @@ export default function ChatScreen({
             prevChats.map((c) =>
               c.partnerId === incomingMsg.senderId
                 ? {
-                    ...c,
-                    lastMessage: incomingMsg.content || 'New message',
-                    timestamp: new Date().toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }),
-                    unreadCount: (c.unreadCount || 0) + 1,
-                  }
+                  ...c,
+                  lastMessage: incomingMsg.content || 'New message',
+                  timestamp: new Date().toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                  unreadCount: (c.unreadCount || 0) + 1,
+                }
                 : c
             )
           );
@@ -409,6 +409,8 @@ export default function ChatScreen({
 
   // Handle open individual chat detail screen
   const openChatDetail = useCallback((chat: ChatListItem) => {
+    badgeService.setActiveConversation(chat.partnerId);
+    badgeService.decrementChats(chat.unreadCount || 1);
     setSelectedConversation({
       partnerId: chat.partnerId,
       name: chat.name,
@@ -421,6 +423,10 @@ export default function ChatScreen({
     setIsLoadingMessages(true);
     setMessageError(null);
   }, []);
+
+  useEffect(() => {
+    badgeService.setActiveConversation(selectedConversation?.partnerId || null);
+  }, [selectedConversation?.partnerId]);
 
   useEffect(() => {
     if (!requestedPartnerId) {
@@ -507,13 +513,13 @@ export default function ChatScreen({
         prevChats.map((c) =>
           c.partnerId === selectedConversation.partnerId
             ? {
-                ...c,
-                lastMessage: result.message.content || text.trim(),
-                timestamp: new Date().toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              }
+              ...c,
+              lastMessage: result.message.content || text.trim(),
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            }
             : c,
         ),
       );

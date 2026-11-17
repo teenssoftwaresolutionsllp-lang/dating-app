@@ -121,14 +121,14 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable 
+      <Pressable
         onPress={() => {
           // if (router.canGoBack()) {
           //   router.back();
           // } else {
-            router.replace('/select-language' as any);
+          router.replace('/select-language' as any);
           // }
-        }} 
+        }}
         style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
         accessibilityRole="button"
       >

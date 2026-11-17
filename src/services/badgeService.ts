@@ -1,5 +1,6 @@
 import { getLikesReceived } from './matchApi';
 import { getConversations } from './messageApi';
+import { socketService } from './socketService';
 
 export interface TabBadgeCounts {
   likesCount: number;
@@ -13,9 +14,52 @@ class BadgeService {
   private currentCounts: TabBadgeCounts = { likesCount: 0, chatsCount: 0 };
   private pollInterval: NodeJS.Timeout | null = null;
   private isFetching = false;
+  private activeConversationId: string | null = null;
 
   constructor() {
     this.startPolling();
+    this.initSocketListeners();
+  }
+
+  private initSocketListeners() {
+    // 1. Listen for instant incoming chat messages
+    socketService.onMessage((msg) => {
+      // If user is currently chatting inside this conversation, don't increment
+      if (this.activeConversationId && msg?.metadata?.conversationId === this.activeConversationId) {
+        return;
+      }
+      this.currentCounts.chatsCount += 1;
+      this.emit();
+    });
+
+    // 2. Listen for instant incoming likes (when another user likes profile)
+    socketService.onLike(() => {
+      this.currentCounts.likesCount += 1;
+      this.emit();
+    });
+
+    // 3. Listen for mutual matches
+    socketService.onMatch(() => {
+      void this.refresh();
+    });
+  }
+
+  setActiveConversation(conversationId: string | null) {
+    this.activeConversationId = conversationId;
+  }
+
+  clearLikesBadge() {
+    if (this.currentCounts.likesCount > 0) {
+      this.currentCounts.likesCount = 0;
+      this.emit();
+    }
+  }
+
+  decrementChats(amount = 1) {
+    if (this.currentCounts.chatsCount > 0) {
+      this.currentCounts.chatsCount = Math.max(0, this.currentCounts.chatsCount - amount);
+      this.emit();
+    }
   }
 
   subscribe(listener: BadgeListener): () => void {
@@ -104,3 +148,4 @@ class BadgeService {
 }
 
 export const badgeService = new BadgeService();
+

@@ -367,7 +367,7 @@ export default function OtpScreen() {
                               : "#FFFFFF",
                           },
                           Platform.OS === "web" &&
-                            ({ outlineStyle: "none" } as any),
+                          ({ outlineStyle: "none" } as any),
                         ]}
                         textAlign="center"
                         accessibilityLabel={`OTP digit ${index + 1}`}
