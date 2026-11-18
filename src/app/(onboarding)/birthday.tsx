@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -18,22 +18,74 @@ import { Image } from 'expo-image';
 import { DatePicker } from '@/components/date-picker';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { OnboardingHeader } from '@/components/onboarding-header';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from 'react-i18next';
+
+function parseSavedDob(dob?: string): {
+  day: string;
+  month: string;
+  year: string;
+  date: Date | null;
+} {
+  if (!dob) return { day: '', month: '', year: '', date: null };
+  const isoPart = dob.trim().split('T')[0];
+  const parts = isoPart.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    const yNum = parseInt(parts[0], 10);
+    const mNum = parseInt(parts[1], 10);
+    const dNum = parseInt(parts[2], 10);
+    if (
+      !isNaN(yNum) &&
+      !isNaN(mNum) &&
+      !isNaN(dNum) &&
+      mNum >= 1 &&
+      mNum <= 12 &&
+      dNum >= 1 &&
+      dNum <= 31
+    ) {
+      return {
+        day: String(dNum).padStart(2, '0'),
+        month: String(mNum).padStart(2, '0'),
+        year: String(yNum),
+        date: new Date(yNum, mNum - 1, dNum),
+      };
+    }
+  }
+  return { day: '', month: '', year: '', date: null };
+}
+
+function parseSavedHeight(height?: string): { feet: string; inches: string } {
+  if (height !== undefined) {
+    const match = height.match(/^(\d*)\s*'\s*(\d*)/);
+    if (match) {
+      return { feet: match[1], inches: match[2] };
+    }
+  }
+  return { feet: '5', inches: '6' };
+}
 
 export default function BirthdayScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useTranslation();
 
-  const [day, setDay] = useState('');
-  const [month, setMonth] = useState('');
-  const [year, setYear] = useState('');
-  const [heightFeet, setHeightFeet] = useState('5');
-  const [heightInches, setHeightInches] = useState('6');
+  const initialDraft = getOnboardingProfileDraft();
+  const initialDob = parseSavedDob(initialDraft.dateOfBirth);
+  const initialHeight = parseSavedHeight(initialDraft.height);
+
+  const [day, setDay] = useState(initialDob.day);
+  const [month, setMonth] = useState(initialDob.month);
+  const [year, setYear] = useState(initialDob.year);
+  const [heightFeet, setHeightFeet] = useState(initialHeight.feet);
+  const [heightInches, setHeightInches] = useState(initialHeight.inches);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [pickerDate, setPickerDate] = useState<Date | null>(null);
+  const [pickerDate, setPickerDate] = useState<Date | null>(initialDob.date);
   const [dobError, setDobError] = useState(false);
 
   const [dobShakeAnim] = useState(() => new Animated.Value(0));
@@ -98,10 +150,21 @@ export default function BirthdayScreen() {
     ]).start();
   };
 
+  const persistHeight = (feet: string, inches: string) => {
+    const f = parseInt(feet, 10);
+    const i = parseInt(inches, 10);
+    const totalCm =
+      !isNaN(f) && !isNaN(i) ? Math.round((f * 12 + i) * 2.54) : 0;
+    updateOnboardingProfileDraft({
+      height: `${feet}'${inches}" (${totalCm} cm)`,
+    });
+  };
+
   const handleFeetChange = (val: string) => {
     const numVal = parseInt(val, 10);
     if (val === '' || (val.length <= 2 && numVal >= 1 && numVal <= 10)) {
       setHeightFeet(val);
+      persistHeight(val, heightInches);
     }
   };
 
@@ -109,34 +172,43 @@ export default function BirthdayScreen() {
     const numVal = parseInt(val, 10);
     if (val === '' || (val.length <= 2 && numVal >= 0 && numVal <= 11)) {
       setHeightInches(val);
+      persistHeight(heightFeet, val);
     }
   };
 
   const incrementFeet = () => {
     const current = parseInt(heightFeet, 10) || 1;
     if (current < 9) {
-      setHeightFeet((current + 1).toString());
+      const next = (current + 1).toString();
+      setHeightFeet(next);
+      persistHeight(next, heightInches);
     }
   };
 
   const decrementFeet = () => {
     const current = parseInt(heightFeet, 10) || 1;
     if (current > 1) {
-      setHeightFeet((current - 1).toString());
+      const next = (current - 1).toString();
+      setHeightFeet(next);
+      persistHeight(next, heightInches);
     }
   };
 
   const incrementInches = () => {
     const current = parseInt(heightInches, 10) || 0;
     if (current < 11) {
-      setHeightInches((current + 1).toString().padStart(2, '0'));
+      const next = (current + 1).toString().padStart(2, '0');
+      setHeightInches(next);
+      persistHeight(heightFeet, next);
     }
   };
 
   const decrementInches = () => {
     const current = parseInt(heightInches, 10) || 0;
     if (current > 0) {
-      setHeightInches((current - 1).toString().padStart(2, '0'));
+      const next = (current - 1).toString().padStart(2, '0');
+      setHeightInches(next);
+      persistHeight(heightFeet, next);
     }
   };
 
@@ -156,8 +228,8 @@ export default function BirthdayScreen() {
       const y = year;
       const dobString = `${y}-${m}-${d}`;
       const totalCm = Math.round((parseInt(heightFeet, 10) * 12 + parseInt(heightInches, 10)) * 2.54);
-      
-      updateStoredUserProfile({
+
+      updateOnboardingProfileDraft({
         dateOfBirth: dobString,
         height: `${heightFeet}'${heightInches}" (${totalCm} cm)`,
       });
@@ -192,7 +264,7 @@ export default function BirthdayScreen() {
     setDay(d);
     setMonth(m);
     setYear(y);
-    updateStoredUserProfile({
+    updateOnboardingProfileDraft({
       dateOfBirth: `${y}-${m}-${d}`,
     });
     setTimeout(() => {
@@ -215,9 +287,9 @@ export default function BirthdayScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Title & Subtitle matching Screenshot 1 */}
-            <Text style={styles.title}>When is your Birthday?</Text>
+            <Text style={styles.title}>{t('onboarding.steps.birthday.title')}</Text>
             <Text style={styles.subtitle}>
-              Write your birth year to complete your profile
+              {t('onboarding.steps.birthday.subtitle')}
             </Text>
 
             {/* Birthday Party Illustration */}
@@ -236,7 +308,7 @@ export default function BirthdayScreen() {
                 onNextField={() => {
                   feetInputRef.current?.focus();
                 }}
-                placeholder="DD/MM/YY"
+                placeholder={t('onboarding.steps.birthday.dobPlaceholder')}
                 hasError={dobError}
               />
               {dobError && (
@@ -248,14 +320,14 @@ export default function BirthdayScreen() {
                     },
                   ]}
                 >
-                  Please Enter DOB
+                  {t('onboarding.steps.birthday.dobError')}
                 </Animated.Text>
               )}
             </View>
 
             {/* Height Section - Feet and Inches Spinners */}
             <View style={styles.heightSection}>
-              <Text style={styles.heightTitle}>How tall are you?</Text>
+              <Text style={styles.heightTitle}>{t('onboarding.steps.birthday.heightTitle')}</Text>
 
               {/* Feet and Inches Row */}
               <View style={styles.heightSpinnerRow}>
@@ -309,12 +381,12 @@ export default function BirthdayScreen() {
               {/* Validation Error Message */}
               {!isFeetValid && heightFeet.trim().length > 0 && (
                 <Text style={styles.errorMessage}>
-                  Feet should be between 4-10.
+                  {t('onboarding.steps.birthday.feetError')}
                 </Text>
               )}
               {!isInchesValid && heightInches.trim().length > 0 && (
                 <Text style={styles.errorMessage}>
-                  Inches should be between 0-11.
+                  {t('onboarding.steps.birthday.inchesError')}
                 </Text>
               )}
             </View>

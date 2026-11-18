@@ -10,10 +10,14 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/use-theme";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 import { updateCurrentProfile } from "@/services/profileApi";
 
 const DRINKING_OPTIONS = [
@@ -32,11 +36,27 @@ const SMOKING_OPTIONS = [
   "Non-smoker",
 ];
 
+const OPTION_KEYS: Record<string, string> = {
+  Never: "onboarding.steps.lifestyle.never",
+  Socially: "onboarding.steps.lifestyle.socially",
+  Regularly: "onboarding.steps.lifestyle.regularly",
+  Occasionally: "onboarding.steps.lifestyle.occasionally",
+  "Planning to quit": "onboarding.steps.lifestyle.planningToQuit",
+  "Non-drinker": "onboarding.steps.lifestyle.nonDrinker",
+  "Non-smoker": "onboarding.steps.lifestyle.nonSmoker",
+};
+
 export default function LifestyleHabitsScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
-  const [selectedDrinking, setSelectedDrinking] = useState<string | null>(null);
-  const [selectedSmoking, setSelectedSmoking] = useState<string | null>(null);
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedDrinking, setSelectedDrinking] = useState<string | null>(
+    initialDraft.drinking || null,
+  );
+  const [selectedSmoking, setSelectedSmoking] = useState<string | null>(
+    initialDraft.smoking || null,
+  );
   const [error, setError] = useState<'drinking' | 'smoking' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -97,7 +117,7 @@ export default function LifestyleHabitsScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({
+      updateOnboardingProfileDraft({
         drinking: selectedDrinking,
         smoking: selectedSmoking,
       });
@@ -138,17 +158,16 @@ export default function LifestyleHabitsScreen() {
         >
           {/* Header Title & Subtitle */}
           <Text style={[styles.title, { color: theme.text }]}>
-            What are you into?
+            {t("onboarding.steps.lifestyle.title")}
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better
-            matches.
+            {t("onboarding.steps.lifestyle.subtitle")}
           </Text>
 
           {/* Section 1: Drinking Habits */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Drinking Habits
+              {t("onboarding.steps.lifestyle.drinkingHeader")}
             </Text>
             {error === 'drinking' && (
               <Animated.Text
@@ -159,7 +178,7 @@ export default function LifestyleHabitsScreen() {
                   },
                 ]}
               >
-                Please choose your drinking preference
+                {t("onboarding.steps.lifestyle.drinkingError")}
               </Animated.Text>
             )}
           </View>
@@ -172,6 +191,7 @@ export default function LifestyleHabitsScreen() {
                   key={option}
                   onPress={() => {
                     setSelectedDrinking(option);
+                    updateOnboardingProfileDraft({ drinking: option });
                     if (error === 'drinking') setError(null);
                   }}
                   style={[
@@ -213,7 +233,7 @@ export default function LifestyleHabitsScreen() {
                       },
                     ]}
                   >
-                    {option}
+                    {OPTION_KEYS[option] ? t(OPTION_KEYS[option] as any) : option}
                   </Text>
                 </Pressable>
               );
@@ -223,7 +243,7 @@ export default function LifestyleHabitsScreen() {
           {/* Section 2: Smoking Habits */}
           <View style={[styles.sectionHeader, { marginTop: 32 }]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Smoking Habits
+              {t("onboarding.steps.lifestyle.smokingHeader")}
             </Text>
             {error === 'smoking' && (
               <Animated.Text
@@ -234,7 +254,7 @@ export default function LifestyleHabitsScreen() {
                   },
                 ]}
               >
-                Please choose your smoking preference
+                {t("onboarding.steps.lifestyle.smokingError")}
               </Animated.Text>
             )}
           </View>
@@ -247,6 +267,7 @@ export default function LifestyleHabitsScreen() {
                   key={option}
                   onPress={() => {
                     setSelectedSmoking(option);
+                    updateOnboardingProfileDraft({ smoking: option });
                     if (error === 'smoking') setError(null);
                   }}
                   style={[
@@ -288,7 +309,7 @@ export default function LifestyleHabitsScreen() {
                       },
                     ]}
                   >
-                    {option}
+                    {OPTION_KEYS[option] ? t(OPTION_KEYS[option] as any) : option}
                   </Text>
                 </Pressable>
               );

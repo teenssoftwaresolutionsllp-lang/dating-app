@@ -10,17 +10,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { DeleteTrashGraphic } from "@/components/SettingsIcons";
-
-const WARNINGS = [
-  "Your profile will be deleted",
-  "All chats and matches will be lost",
-  "Your data will be permanently removed",
-  "You won't be able to recover your account",
-];
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const warnings = [
+    t("deleteAccount.warning1"),
+    t("deleteAccount.warning2"),
+    t("deleteAccount.warning3"),
+    t("deleteAccount.warning4"),
+  ];
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -48,7 +50,7 @@ export default function DeleteAccountScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Delete</Text>
+          <Text style={styles.headerTitle}>{t("deleteAccount.title")}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -63,17 +65,16 @@ export default function DeleteAccountScreen() {
               <DeleteTrashGraphic size={72} color="#FF0000" />
             </View>
             <Text style={styles.mainHeading}>
-              Delete your account permanently
+              {t("deleteAccount.mainHeading")}
             </Text>
             <Text style={styles.subHeading}>
-              This action cannot be undone. All your data will be permanently
-              deleted.
+              {t("deleteAccount.subHeading")}
             </Text>
           </View>
 
           {/* Warning Checklist */}
           <View style={styles.checklistContainer}>
-            {WARNINGS.map((item, index) => (
+            {warnings.map((item, index) => (
               <View key={index} style={styles.checkItem}>
                 <View style={styles.crossCircle}>
                   <Ionicons name="close" size={14} color="#EF4444" />
@@ -91,7 +92,7 @@ export default function DeleteAccountScreen() {
             activeOpacity={0.85}
             onPress={handleDeletePress}
           >
-            <Text style={styles.deleteBtnText}>Send Deletion Code</Text>
+            <Text style={styles.deleteBtnText}>{t("deleteAccount.sendDeletionCode")}</Text>
           </TouchableOpacity>
         </View>
       </View>

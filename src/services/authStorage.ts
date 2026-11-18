@@ -5,6 +5,7 @@ import {
   updateAuthTokens,
   clearUserAuth,
 } from '@/utils/authPersistence';
+import { resetOnboardingDrafts } from '@/constants/userProfile';
 
 let inMemoryToken: string | null = null;
 let inMemoryUserId: string | null = null;
@@ -61,6 +62,7 @@ export const authStorage = {
   async clearAuth() {
     inMemoryToken = null;
     inMemoryUserId = null;
+    resetOnboardingDrafts();
     await clearUserAuth();
   },
 };

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { LargeDocShieldIcon } from '@/components/SettingsIcons';
 
 interface GuidelineItem {
@@ -41,6 +42,7 @@ const SAFETY_GUIDELINES: GuidelineItem[] = [
 
 export default function SafetyGuidelinesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -64,7 +66,7 @@ export default function SafetyGuidelinesScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Safety Guidelines</Text>
+          <Text style={styles.headerTitle}>{t('safety.title')}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -78,20 +80,30 @@ export default function SafetyGuidelinesScreen() {
             <View style={styles.iconCircleWrapper}>
               <LargeDocShieldIcon size={56} color="#4FD1C5" />
             </View>
-            <Text style={styles.mainHeading}>Your Safety is our Priority</Text>
+            <Text style={styles.mainHeading}>{t('safety.heading')}</Text>
             <Text style={styles.subHeading}>
-              Follow these guidelines to have a safe and respectful experience.
+              {t('safety.subheading')}
             </Text>
           </View>
 
           {/* Guidelines List */}
           <View style={styles.guidelinesContainer}>
-            {SAFETY_GUIDELINES.map((item, index) => (
-              <View key={index} style={styles.guidelineItem}>
-                <Text style={styles.guidelineTitle}>{item.title}</Text>
-                <Text style={styles.guidelineDescription}>{item.description}</Text>
-              </View>
-            ))}
+            {SAFETY_GUIDELINES.map((item, index) => {
+              const itemKeys = [
+                { titleKey: 'safety.beYourselfTitle', descKey: 'safety.beYourselfDesc' },
+                { titleKey: 'safety.protectPrivacyTitle', descKey: 'safety.protectPrivacyDesc' },
+                { titleKey: 'safety.reportBlockTitle', descKey: 'safety.reportBlockDesc' },
+                { titleKey: 'safety.meetSafelyTitle', descKey: 'safety.meetSafelyDesc' },
+              ];
+              const title = itemKeys[index] ? t(itemKeys[index].titleKey) : item.title;
+              const description = itemKeys[index] ? t(itemKeys[index].descKey) : item.description;
+              return (
+                <View key={index} style={styles.guidelineItem}>
+                  <Text style={styles.guidelineTitle}>{title}</Text>
+                  <Text style={styles.guidelineDescription}>{description}</Text>
+                </View>
+              );
+            })}
           </View>
         </ScrollView>
       </View>

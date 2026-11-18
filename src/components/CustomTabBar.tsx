@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { router, useFocusEffect, usePathname } from 'expo-router';
 import { badgeService } from '@/services/badgeService';
+import { useTranslation } from 'react-i18next';
 
 function MatchesTabIcon({ color, size = 22 }: { color: string; size?: number }) {
   return (
@@ -121,6 +122,7 @@ function isTabActive(tabId: string, pathname: string | null | undefined): boolea
 
 export const CustomTabBar: React.FC = () => {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const [likesCount, setLikesCount] = useState(0);
   const [chatsCount, setChatsCount] = useState(0);
 
@@ -131,6 +133,17 @@ export const CustomTabBar: React.FC = () => {
     });
     return unsubscribe;
   }, []);
+
+  const getTabLabel = (id: string): string => {
+    switch (id) {
+      case 'matches': return t('tabs.matches');
+      case 'likes': return t('tabs.likes');
+      case 'people': return t('tabs.people');
+      case 'chats': return t('tabs.chats');
+      case 'me': return t('tabs.me');
+      default: return id;
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -143,6 +156,7 @@ export const CustomTabBar: React.FC = () => {
       {TABS.map((tab) => {
         const isActive = isTabActive(tab.id, pathname);
         const color = isActive ? '#0D7A74' : '#78B0A8';
+        const label = getTabLabel(tab.id);
 
         let accessibilityLabel = tab.label;
         if (tab.id === 'likes' && likesCount > 0) {
@@ -156,7 +170,7 @@ export const CustomTabBar: React.FC = () => {
             key={tab.id}
             style={styles.tabButton}
             activeOpacity={0.7}
-            accessibilityLabel={accessibilityLabel}
+            accessibilityLabel={accessibilityLabel || label}
             onPress={() => {
               if (!isActive) {
                 router.replace(tab.route as any);
@@ -180,7 +194,7 @@ export const CustomTabBar: React.FC = () => {
               )}
             </View>
             <Text style={[styles.tabLabel, { color, fontWeight: isActive ? '700' : '500' }]}>
-              {tab.label}
+              {label}
             </Text>
           </TouchableOpacity>
         );

@@ -9,10 +9,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -26,10 +30,24 @@ const STATUS_OPTIONS = [
   'Prefer not to say',
 ];
 
+const OPTION_KEYS: Record<string, string> = {
+  Single: 'onboarding.steps.relationship.single',
+  'In a Relationship': 'onboarding.steps.relationship.inRelationship',
+  Married: 'onboarding.steps.relationship.married',
+  Separated: 'onboarding.steps.relationship.separated',
+  Divorced: 'onboarding.steps.relationship.divorced',
+  Widowed: 'onboarding.steps.relationship.widowed',
+  'Prefer not to say': 'onboarding.steps.relationship.preferNotToSay',
+};
+
 export default function RelationshipScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(
+    initialDraft.relationshipStatus || null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
@@ -85,7 +103,7 @@ export default function RelationshipScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ relationshipStatus: selectedStatus });
+      updateOnboardingProfileDraft({ relationshipStatus: selectedStatus });
       await updateCurrentProfile({ relationshipStatus: selectedStatus }).catch((e) => {
         console.warn('Backend sync warning on relationship status update:', e);
       });
@@ -113,14 +131,14 @@ export default function RelationshipScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Title & Subtitle */}
-          <Text style={styles.title}>{"What's your relationship status?"}</Text>
+          <Text style={styles.title}>{t('onboarding.steps.relationship.title')}</Text>
           <Text style={styles.subtitle}>
-            Tell us where you are in your relationship journey.
+            {t('onboarding.steps.relationship.subtitle')}
           </Text>
 
           {/* Section Heading */}
           <View style={styles.sectionHeaderContainer}>
-            <Text style={styles.sectionTitle}>Relationship Status</Text>
+            <Text style={styles.sectionTitle}>{t('onboarding.steps.relationship.sectionTitle')}</Text>
             {error && (
               <Animated.Text
                 style={[
@@ -130,7 +148,7 @@ export default function RelationshipScreen() {
                   },
                 ]}
               >
-                Please select your relationship status
+                {t('onboarding.steps.relationship.errorSelect')}
               </Animated.Text>
             )}
           </View>
@@ -145,6 +163,7 @@ export default function RelationshipScreen() {
                   style={styles.radioOptionRow}
                   onPress={() => {
                     setSelectedStatus(option);
+                    updateOnboardingProfileDraft({ relationshipStatus: option });
                     if (error) setError(false);
                   }}
                   activeOpacity={0.7}
@@ -157,7 +176,9 @@ export default function RelationshipScreen() {
                   >
                     {isSelected && <View style={styles.radioDot} />}
                   </View>
-                  <Text style={styles.optionText}>{option}</Text>
+                  <Text style={styles.optionText}>
+                    {OPTION_KEYS[option] ? t(OPTION_KEYS[option] as any) : option}
+                  </Text>
                 </TouchableOpacity>
               );
             })}

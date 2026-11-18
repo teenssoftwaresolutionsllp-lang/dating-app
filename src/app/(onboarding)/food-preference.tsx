@@ -12,9 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
-import { updateStoredUserProfile } from "@/constants/userProfile";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 import { updateCurrentProfile } from "@/services/profileApi";
 
 const FOOD_OPTIONS = [
@@ -27,10 +31,24 @@ const FOOD_OPTIONS = [
   "Foodie / Anything",
 ];
 
+const FOOD_LABEL_KEY: Record<string, string> = {
+  Vegetarian: 'onboarding.steps.foodPreference.vegetarian',
+  'Non-Vegetarian': 'onboarding.steps.foodPreference.nonVegetarian',
+  Vegan: 'onboarding.steps.foodPreference.vegan',
+  Eggetarian: 'onboarding.steps.foodPreference.eggetarian',
+  Pescatarian: 'onboarding.steps.foodPreference.pescatarian',
+  Jain: 'onboarding.steps.foodPreference.jain',
+  'Foodie / Anything': 'onboarding.steps.foodPreference.foodie',
+};
+
 export default function FoodPreferenceScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
-  const [selectedFood, setSelectedFood] = useState<string | null>(null);
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedFood, setSelectedFood] = useState<string | null>(
+    initialDraft.foodPreference || null,
+  );
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,6 +97,7 @@ export default function FoodPreferenceScreen() {
 
   const handleSelect = (option: string) => {
     setSelectedFood(option);
+    updateOnboardingProfileDraft({ foodPreference: option });
     if (error) {
       setError(false);
     }
@@ -93,7 +112,7 @@ export default function FoodPreferenceScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ foodPreference: selectedFood });
+      updateOnboardingProfileDraft({ foodPreference: selectedFood });
       await updateCurrentProfile({ foodPreference: selectedFood }).catch(
         (e: unknown) => {
           console.warn("Backend sync warning on food preference update:", e);
@@ -128,17 +147,16 @@ export default function FoodPreferenceScreen() {
         >
           {/* Header Title & Subtitle */}
           <Text style={[styles.title, { color: theme.text }]}>
-            What are you into?
+            {t('onboarding.steps.foodPreference.title')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better
-            matches.
+            {t('onboarding.steps.foodPreference.subtitle')}
           </Text>
 
           {/* Section Header with Shake Error */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Food Preference
+              {t('onboarding.steps.foodPreference.sectionTitle')}
             </Text>
             {error && (
               <Animated.Text
@@ -149,7 +167,7 @@ export default function FoodPreferenceScreen() {
                   },
                 ]}
               >
-                Please choose any one option
+                {t('onboarding.steps.foodPreference.errorSelect')}
               </Animated.Text>
             )}
           </View>
@@ -204,7 +222,7 @@ export default function FoodPreferenceScreen() {
                       },
                     ]}
                   >
-                    {option}
+                    {FOOD_LABEL_KEY[option] ? t(FOOD_LABEL_KEY[option]) : option}
                   </Text>
                 </Pressable>
               );

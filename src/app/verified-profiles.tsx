@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import slide1 from '@/assets/images/verified_profiles.jpg';
 import slide2 from '@/assets/images/verified_profiles_2.jpg';
@@ -14,6 +15,7 @@ import slide3 from '@/assets/images/verified_profiles_3.jpg';
 const SLIDES = [slide1, slide2, slide3];
 
 export default function VerifiedProfilesScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -99,20 +101,20 @@ export default function VerifiedProfilesScreen() {
         {/* Title Text Section - Only for slide 1 where text is overlaid below the shield */}
         {currentIndex === 0 && (
           <View style={[styles.headerSection, { top: textTopOffset }]}>
-            <Text style={styles.titleLine1}>Verified profiles,</Text>
+            <Text style={styles.titleLine1}>{t('onboarding.verifiedProfiles.slide1Line1')}</Text>
             <Text style={styles.titleLine2}>
-              <Text style={styles.tealText}>Real</Text>
-              <Text style={styles.blackText}> people</Text>
+              <Text style={styles.tealText}>{t('onboarding.verifiedProfiles.slide1Teal')}</Text>
+              <Text style={styles.blackText}>{t('onboarding.verifiedProfiles.slide1Black')}</Text>
             </Text>
           </View>
         )}
 
         {currentIndex === 1 && (
           <View style={[styles.headerSection, { top: 100 }]}>
-            <Text style={styles.titleLine1}>Chat, connect and</Text>
-            <Text style={styles.titleLine1}>build meaningful</Text>
+            <Text style={styles.titleLine1}>{t('onboarding.verifiedProfiles.slide2Line1')}</Text>
+            <Text style={styles.titleLine1}>{t('onboarding.verifiedProfiles.slide2Line2')}</Text>
             <Text style={styles.titleLine2}>
-              <Text style={styles.tealText}>Relationships</Text>
+              <Text style={styles.tealText}>{t('onboarding.verifiedProfiles.slide2Teal')}</Text>
             </Text>
           </View>
         )}
@@ -120,12 +122,12 @@ export default function VerifiedProfilesScreen() {
         {currentIndex === 2 && (
           <View style={[styles.headerSection, { bottom: Math.min(250, Math.round(screenHeight * 0.32)) }]}>
             <Text style={[styles.titleLine1, { textAlign: 'left' }]}>
-              Connect with
+              {t('onboarding.verifiedProfiles.slide3Line1')}
             </Text>
 
             <Text style={[styles.titleLine2]}>
-              <Text style={styles.redText}>like-minded</Text>
-              <Text style={styles.blackText}> people</Text>
+              <Text style={styles.redText}>{t('onboarding.verifiedProfiles.slide3Red')}</Text>
+              <Text style={styles.blackText}>{t('onboarding.verifiedProfiles.slide3Black')}</Text>
             </Text>
           </View>
         )}
@@ -189,9 +191,9 @@ export default function VerifiedProfilesScreen() {
               Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Next"
+            accessibilityLabel={t('onboarding.verifiedProfiles.next')}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
+            <Text style={styles.nextButtonText}>{t('onboarding.verifiedProfiles.next')}</Text>
           </Pressable>
         </View>
       </View>

@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { isUserLoggedIn } from '@/utils/authPersistence';
 
 export default function WelcomeScreen() {
+  const { t } = useTranslation();
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -60,10 +62,10 @@ export default function WelcomeScreen() {
         <SafeAreaView style={styles.overlayContainer} edges={['top', 'bottom']}>
           {/* Header Text Section */}
           <View style={styles.headerSection}>
-            <Text style={styles.titleLine1}>Find your</Text>
+            <Text style={styles.titleLine1}>{t('onboarding.findMatch.titleLine1')}</Text>
             <Text style={styles.titleLine2}>
-              <Text style={styles.pinkText}>Perfect</Text>
-              <Text style={styles.blackText}> match</Text>
+              <Text style={styles.pinkText}>{t('onboarding.findMatch.titleLine2Pink')}</Text>
+              <Text style={styles.blackText}>{t('onboarding.findMatch.titleLine2Black')}</Text>
             </Text>
           </View>
 
@@ -80,9 +82,9 @@ export default function WelcomeScreen() {
               Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Get Start"
+            accessibilityLabel={t('onboarding.findMatch.getStart')}
           >
-              <Text style={styles.getStartButtonText}>Get Start</Text>
+              <Text style={styles.getStartButtonText}>{t('onboarding.findMatch.getStart')}</Text>
             </Pressable>
           </View>
         </SafeAreaView>

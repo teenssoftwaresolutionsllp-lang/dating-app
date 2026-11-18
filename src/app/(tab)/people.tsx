@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { HeaderStatusBar } from "@/components/HeaderStatusBar";
+import { useTranslation } from "react-i18next";
 import { CustomTabBar } from "@/components/CustomTabBar";
 import { formatApiImageUrl } from "@/services/api";
 import {
@@ -30,6 +31,7 @@ export default function PeopleScreen({
   showTabBar = true,
   showHeaderBar = true,
 }: PeopleScreenProps = {}) {
+  const { t } = useTranslation();
   const [categories, setCategories] =
     React.useState<PeopleCategoriesResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -70,10 +72,10 @@ export default function PeopleScreen({
   };
 
   const emptyMessage = isLoading
-    ? "Loading people..."
+    ? t('people.loadingPeople')
     : categories
-      ? "No matching people right now"
-      : "People could not be loaded";
+      ? t('people.noMatchingPeople')
+      : t('people.noMatchingPeople');
   const renderEmptyMessage = (users: unknown[]) =>
     users.length === 0 ? (
       <Text style={styles.emptyListText}>{emptyMessage}</Text>
@@ -132,7 +134,7 @@ export default function PeopleScreen({
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.mainContainer}>
-        {showHeaderBar && <HeaderStatusBar title="People" />}
+        {showHeaderBar && <HeaderStatusBar title={t('people.title')} />}
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -140,12 +142,12 @@ export default function PeopleScreen({
         >
           {/* Section 1: Active */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Active</Text>
+            <Text style={styles.sectionTitle}>{t('people.active')}</Text>
             <TouchableOpacity
-              onPress={() => navigateToViewAll("active", "Active")}
+              onPress={() => navigateToViewAll("active", t('people.active'))}
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('people.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -160,7 +162,7 @@ export default function PeopleScreen({
                 key={user.id}
                 style={styles.activeUserItem}
                 activeOpacity={0.8}
-                onPress={() => openProfile(user, "Active now")}
+                onPress={() => openProfile(user, t('people.activeNow'))}
               >
                 <View style={styles.avatarBorderRing}>
                   <Image source={user.image} style={styles.activeAvatarImage} />
@@ -174,12 +176,12 @@ export default function PeopleScreen({
 
           {/* Section 2: People Near You */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>People Near You</Text>
+            <Text style={styles.sectionTitle}>{t('people.peopleNearYou')}</Text>
             <TouchableOpacity
-              onPress={() => navigateToViewAll("near_you", "People Near You")}
+              onPress={() => navigateToViewAll("near_you", t('people.peopleNearYou'))}
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('people.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -218,12 +220,12 @@ export default function PeopleScreen({
 
           {/* Section 3: You May Like */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>You May Like</Text>
+            <Text style={styles.sectionTitle}>{t('people.youMayLike')}</Text>
             <TouchableOpacity
-              onPress={() => navigateToViewAll("you_may_like", "You May Like")}
+              onPress={() => navigateToViewAll("you_may_like", t('people.youMayLike'))}
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('people.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -261,14 +263,14 @@ export default function PeopleScreen({
 
           {/* Section 4: Similar Interest */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Similar Interest</Text>
+            <Text style={styles.sectionTitle}>{t('people.similarInterests')}</Text>
             <TouchableOpacity
               onPress={() =>
-                navigateToViewAll("similar_interest", "Similar Interest")
+                navigateToViewAll("similar_interest", t('people.similarInterests'))
               }
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('people.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -300,14 +302,14 @@ export default function PeopleScreen({
 
           {/* Section 5: Same Religion */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Same Religion</Text>
+            <Text style={styles.sectionTitle}>{t('people.sameReligion')}</Text>
             <TouchableOpacity
               onPress={() =>
-                navigateToViewAll("same_religion", "Same Religion")
+                navigateToViewAll("same_religion", t('people.sameReligion'))
               }
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('people.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -339,14 +341,14 @@ export default function PeopleScreen({
 
           {/* Section 6: Recently Active */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recently Active</Text>
+            <Text style={styles.sectionTitle}>{t('people.recentlyActive')}</Text>
             <TouchableOpacity
               onPress={() =>
-                navigateToViewAll("recently_active", "Recently Active")
+                navigateToViewAll("recently_active", t('people.recentlyActive'))
               }
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('people.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 

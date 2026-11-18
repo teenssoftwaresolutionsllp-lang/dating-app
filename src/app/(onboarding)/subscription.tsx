@@ -14,41 +14,18 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 
 type PlanType = 'monthly' | 'yearly';
 
-interface BenefitItem {
-  id: string;
-  title: string;
-  subtitle: string;
-}
-
-const BENEFITS: BenefitItem[] = [
-  {
-    id: 'unlimited-likes',
-    title: 'Unlimited Likes',
-    subtitle: 'Like as much as you want, no limits.',
-  },
-  {
-    id: 'see-who-liked',
-    title: 'See Who Liked You',
-    subtitle: "Find out who's interested in you.",
-  },
-  {
-    id: 'advanced-filters',
-    title: 'Advanced Filters',
-    subtitle: "Find exactly what you're looking for.",
-  },
-  {
-    id: 'ad-free',
-    title: 'Ad-free Experience',
-    subtitle: 'Enjoy a smoother, distraction-free experience.',
-  },
-];
-
 export default function SubscriptionScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
@@ -56,13 +33,46 @@ export default function SubscriptionScreen() {
   // Devices with viewport < 812 (including Samsung with 3-button navigation bar) use compact scaling
   const isCompact = screenHeight < 812;
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>(
+    initialDraft.selectedPlan === 'monthly' || initialDraft.selectedPlan === 'yearly'
+      ? initialDraft.selectedPlan
+      : 'yearly',
+  );
+
+  const benefits = [
+    {
+      id: 'unlimited-likes',
+      title: t('onboarding.steps.subscription.benefit1Title'),
+      subtitle: t('onboarding.steps.subscription.benefit1Sub'),
+    },
+    {
+      id: 'see-who-liked',
+      title: t('onboarding.steps.subscription.benefit2Title'),
+      subtitle: t('onboarding.steps.subscription.benefit2Sub'),
+    },
+    {
+      id: 'advanced-filters',
+      title: t('onboarding.steps.subscription.benefit3Title'),
+      subtitle: t('onboarding.steps.subscription.benefit3Sub'),
+    },
+    {
+      id: 'ad-free',
+      title: t('onboarding.steps.subscription.benefit4Title'),
+      subtitle: t('onboarding.steps.subscription.benefit4Sub'),
+    },
+  ];
 
   const handleNext = () => {
+    updateOnboardingProfileDraft({ selectedPlan });
     router.push('/(onboarding)/ready' as any);
   };
   const handleBack = () => {
-    router.replace('/ideal-match');
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/ideal-match');
+    }
   };
 
   const responsiveHeaderHeight = isCompact ? 136 : 156;
@@ -123,16 +133,16 @@ export default function SubscriptionScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Skip subscription"
               >
-                <Text style={styles.skipText}>Skip</Text>
+                <Text style={styles.skipText}>{t('onboarding.steps.subscription.skip')}</Text>
                 <Ionicons name="chevron-forward" size={15} color="#111827" />
               </Pressable>
             </View>
 
             {/* Header Title & Subtitle */}
             <View style={styles.headerTextCol}>
-              <Text style={[styles.mainTitle, isCompact && styles.mainTitleCompact]}>Find better</Text>
-              <Text style={[styles.mainTitle, isCompact && styles.mainTitleCompact]}>Connect deeper.</Text>
-              <Text style={[styles.subTitle, isCompact && styles.subTitleCompact]}>More matches, control. A better you.</Text>
+              <Text style={[styles.mainTitle, isCompact && styles.mainTitleCompact]}>{t('onboarding.steps.subscription.findBetter')}</Text>
+              <Text style={[styles.mainTitle, isCompact && styles.mainTitleCompact]}>{t('onboarding.steps.subscription.connectDeeper')}</Text>
+              <Text style={[styles.subTitle, isCompact && styles.subTitleCompact]}>{t('onboarding.steps.subscription.subTitle')}</Text>
             </View>
           </View>
 
@@ -141,14 +151,17 @@ export default function SubscriptionScreen() {
             <View>
               {/* "Choose your plan" Title */}
               <Text style={[styles.sectionHeaderTitle, isCompact && styles.sectionHeaderTitleCompact]}>
-                Choose your plan
+                {t('onboarding.steps.subscription.choosePlan')}
               </Text>
 
               {/* Plan Cards */}
               <View style={[styles.plansContainer, isCompact && styles.plansContainerCompact]}>
                 {/* 1. Monthly Plan Card */}
                 <Pressable
-                  onPress={() => setSelectedPlan('monthly')}
+                  onPress={() => {
+                    setSelectedPlan('monthly');
+                    updateOnboardingProfileDraft({ selectedPlan: 'monthly' });
+                  }}
                   style={[
                     styles.planCard,
                     isCompact && styles.planCardCompact,
@@ -160,10 +173,10 @@ export default function SubscriptionScreen() {
                   accessibilityLabel="Monthly plan Rs. 299 per month"
                 >
                   <View style={styles.planCardContent}>
-                    <Text style={[styles.planTitle, isCompact && styles.planTitleCompact]}>Monthly</Text>
+                    <Text style={[styles.planTitle, isCompact && styles.planTitleCompact]}>{t('onboarding.steps.subscription.monthly')}</Text>
                     <View style={styles.priceRow}>
-                      <Text style={[styles.priceBold, isCompact && styles.priceBoldCompact]}>Rs. 299</Text>
-                      <Text style={[styles.priceUnit, isCompact && styles.priceUnitCompact]}> / month</Text>
+                      <Text style={[styles.priceBold, isCompact && styles.priceBoldCompact]}>{t('onboarding.steps.subscription.monthlyPrice')}</Text>
+                      <Text style={[styles.priceUnit, isCompact && styles.priceUnitCompact]}>{t('onboarding.steps.subscription.perMonth')}</Text>
                     </View>
                   </View>
 
@@ -181,7 +194,10 @@ export default function SubscriptionScreen() {
 
                 {/* 2. Yearly Plan Card */}
                 <Pressable
-                  onPress={() => setSelectedPlan('yearly')}
+                  onPress={() => {
+                    setSelectedPlan('yearly');
+                    updateOnboardingProfileDraft({ selectedPlan: 'yearly' });
+                  }}
                   style={[
                     styles.planCard,
                     isCompact && styles.planCardCompact,
@@ -193,12 +209,12 @@ export default function SubscriptionScreen() {
                   accessibilityLabel="Yearly plan Rs. 1999 per year, Just Rs. 167 per month"
                 >
                   <View style={styles.planCardContent}>
-                    <Text style={[styles.planTitle, isCompact && styles.planTitleCompact]}>Yearly</Text>
+                    <Text style={[styles.planTitle, isCompact && styles.planTitleCompact]}>{t('onboarding.steps.subscription.yearly')}</Text>
                     <View style={styles.priceRow}>
-                      <Text style={[styles.priceBold, isCompact && styles.priceBoldCompact]}>Rs. 1999</Text>
-                      <Text style={[styles.priceUnit, isCompact && styles.priceUnitCompact]}> / year</Text>
+                      <Text style={[styles.priceBold, isCompact && styles.priceBoldCompact]}>{t('onboarding.steps.subscription.yearlyPrice')}</Text>
+                      <Text style={[styles.priceUnit, isCompact && styles.priceUnitCompact]}>{t('onboarding.steps.subscription.perYear')}</Text>
                     </View>
-                    <Text style={[styles.discountSubtext, isCompact && styles.discountSubtextCompact]}>Just Rs. 167/month</Text>
+                    <Text style={[styles.discountSubtext, isCompact && styles.discountSubtextCompact]}>{t('onboarding.steps.subscription.yearlySubtext')}</Text>
                   </View>
 
                   {/* Radio Button */}
@@ -217,15 +233,15 @@ export default function SubscriptionScreen() {
 
             {/* Premium Benefits Section: positioned with balanced breathing room */}
             <View style={[styles.benefitsCard, isCompact && styles.benefitsCardCompact]}>
-              <Text style={[styles.benefitsTitle, isCompact && styles.benefitsTitleCompact]}>Premium Benefits</Text>
+              <Text style={[styles.benefitsTitle, isCompact && styles.benefitsTitleCompact]}>{t('onboarding.steps.subscription.premiumBenefits')}</Text>
 
               <View style={[styles.benefitsList, isCompact && styles.benefitsListCompact]}>
-                {BENEFITS.map((benefit, index) => (
+                {benefits.map((benefit, index) => (
                   <View
                     key={benefit.id}
                     style={[
                       styles.benefitRow,
-                      index === BENEFITS.length - 1 && styles.benefitRowLast,
+                      index === benefits.length - 1 && styles.benefitRowLast,
                     ]}
                   >
                     <View style={[styles.heartIconBadge, isCompact && styles.heartIconBadgeCompact]}>
@@ -251,7 +267,7 @@ export default function SubscriptionScreen() {
             accessibilityRole="button"
             accessibilityLabel="Subscription"
           >
-            <Text style={styles.subscriptionButtonText}>Subscription</Text>
+            <Text style={styles.subscriptionButtonText}>{t('onboarding.steps.subscription.subscribeBtn')}</Text>
           </TouchableOpacity>
         </View>
       </View>

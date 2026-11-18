@@ -2,13 +2,23 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 
 const CATEGORIES = ['All', 'Nearby', 'New Members', 'Online Now', 'Popular'];
 
+const CATEGORY_KEYS: Record<string, string> = {
+  All: 'explorePage.all',
+  Nearby: 'explorePage.nearby',
+  'New Members': 'explorePage.newMembers',
+  'Online Now': 'explorePage.onlineNow',
+  Popular: 'explorePage.popular',
+};
+
 export default function ExploreScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const theme = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -17,8 +27,8 @@ export default function ExploreScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>Explore</Text>
-          <Text style={styles.subtitle}>Discover new matches around you</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('explorePage.title')}</Text>
+          <Text style={styles.subtitle}>{t('explorePage.subtitle')}</Text>
         </View>
 
         {/* Categories Row */}
@@ -32,7 +42,9 @@ export default function ExploreScreen() {
                 onPress={() => setSelectedCategory(cat)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>{cat}</Text>
+                <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>
+                  {CATEGORY_KEYS[cat] ? t(CATEGORY_KEYS[cat] as any) : cat}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -41,9 +53,9 @@ export default function ExploreScreen() {
         <View style={styles.exploreGrid}>
           <View style={styles.placeholderCard}>
             <Ionicons name="compass-outline" size={48} color="#00F5D4" />
-            <Text style={styles.cardTitle}>Find Matches</Text>
+            <Text style={styles.cardTitle}>{t('explorePage.findMatches')}</Text>
             <Text style={styles.cardDesc}>
-              Browse through profiles and start connecting with people nearby.
+              {t('explorePage.findMatchesDesc')}
             </Text>
           </View>
         </View>

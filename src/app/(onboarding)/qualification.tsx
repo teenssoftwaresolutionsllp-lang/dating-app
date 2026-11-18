@@ -3,11 +3,25 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
+
+const QUALIFICATION_KEYS: Record<string, string> = {
+  'High School': 'onboarding.steps.career.highSchool',
+  Bachelors: 'onboarding.steps.career.bachelors',
+  Masters: 'onboarding.steps.career.masters',
+  PhD: 'onboarding.steps.career.phd',
+  Others: 'onboarding.steps.career.others',
+};
 
 export default function QualificationScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === '#ffffff';
   const qualifications = [
     'High School',
@@ -17,10 +31,14 @@ export default function QualificationScreen() {
     'Others',
   ];
 
-  const [selected, setSelected] = useState<string | null>(null);
+  const initialDraft = getOnboardingProfileDraft();
+  const [selected, setSelected] = useState<string | null>(
+    initialDraft.qualification || null,
+  );
 
   const handleSelect = (qual: string) => {
     setSelected(qual);
+    updateOnboardingProfileDraft({ qualification: qual });
     router.push({
       pathname: '/study',
       params: { qualification: qual },
@@ -61,14 +79,14 @@ export default function QualificationScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>Education & Career</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('onboarding.steps.career.mainTitle')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Add your education and work details to complete your profile.
+            {t('onboarding.steps.career.mainSubtitle')}
           </Text>
 
           {/* Section Title */}
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            What is your highest qualification?
+            {t('onboarding.steps.career.qualificationTitle')}
           </Text>
 
           {/* Options list with chevrons */}
@@ -99,7 +117,7 @@ export default function QualificationScreen() {
                       },
                     ]}
                   >
-                    {qual}
+                    {QUALIFICATION_KEYS[qual] ? t(QUALIFICATION_KEYS[qual] as any) : qual}
                   </Text>
                   <Ionicons
                     name="chevron-forward"

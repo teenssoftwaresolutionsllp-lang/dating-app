@@ -20,6 +20,7 @@ import {
 import { Image } from "expo-image";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import {
   completeOnboarding,
@@ -36,6 +37,7 @@ import {
   calculateAge,
   getStoredUserProfile,
   updateStoredUserProfile,
+  updateOnboardingProfileDraft,
   subscribeUserProfile,
 } from "@/constants/userProfile";
 import { ASSET_IMAGES } from "@/constants/datingData";
@@ -236,6 +238,7 @@ function mergeBackendProfileIntoStored(
 
 export default function ProfileReadyScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -433,7 +436,7 @@ export default function ProfileReadyScreen() {
   const handleSaveBio = async () => {
     setIsSavingBio(true);
     try {
-      const updated = updateStoredUserProfile({ about: bioDraft.trim() });
+      const updated = updateOnboardingProfileDraft({ about: bioDraft.trim() });
       setProfile(updated);
       await updateCurrentProfile({ bio: bioDraft.trim() }).catch(
         (e: unknown) => {
@@ -640,7 +643,7 @@ export default function ProfileReadyScreen() {
               },
             ]}
           >
-            Your profile is ready!
+            {t('onboarding.steps.ready.title')}
           </Animated.Text>
 
           {/* Subtitle */}
@@ -654,8 +657,7 @@ export default function ProfileReadyScreen() {
               },
             ]}
           >
-            You’re all set. Your profile is ready to help you meet people who
-            match your vibe.
+            {t('onboarding.steps.ready.subtitle')}
           </Animated.Text>
 
           {/* User Profile Card Preview */}
@@ -1006,7 +1008,7 @@ export default function ProfileReadyScreen() {
             <View style={styles.verifiedRow}>
               <Ionicons name="shield-checkmark" size={18} color="#00D5D9" />
               <Text style={[styles.identityText, { color: theme.text }]}>
-                Identity Verified
+                {t('onboarding.steps.ready.identityVerified')}
               </Text>
             </View>
           </Animated.View>
@@ -1024,7 +1026,7 @@ export default function ProfileReadyScreen() {
             showBack
             onBack={() => router.back()}
             onNext={handleLetsDate}
-            nextText="Let’s Date"
+            nextText={t('onboarding.steps.ready.letsDate')}
           />
         </Animated.View>
       </View>

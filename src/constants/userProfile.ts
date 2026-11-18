@@ -3,6 +3,8 @@ import * as FileSystem from "expo-file-system/legacy";
 
 const PROFILE_STORAGE_KEY = "user_profile_data.json";
 const PARTNER_STORAGE_KEY = "partner_preferences_data.json";
+const ONBOARDING_PROFILE_DRAFT_KEY = "onboarding_profile_draft.json";
+const ONBOARDING_PARTNER_DRAFT_KEY = "onboarding_partner_draft.json";
 
 export interface UserProfile {
   name: string;
@@ -25,12 +27,29 @@ export interface UserProfile {
   nature?: string[];
   avatarUri?: string;
   gender?: string;
+  incomeRange?: string;
+  qualification?: string;
+  study?: string;
+  studyOtherText?: string;
+  locationCity?: string | null;
+  locationSearchQuery?: string;
+  locationId?: string | null;
+  locationPlaceId?: string | null;
+  verificationDocType?: string;
+  govIdUploaded?: boolean;
+  govIdUri?: string | null;
+  govIdMethod?: "upload" | "camera" | null;
+  selfieVerified?: boolean;
+  selfieUri?: string | null;
+  photos?: (string | null)[];
+  selectedPlan?: "monthly" | "yearly";
 }
 
 export interface PartnerPreferences {
   minAge: number;
   maxAge: number;
   maxDistanceKm: number;
+  maxDistanceLabel?: string;
   religionPreferences: string[];
   preferredInterests: string[];
   relationshipIntentions: string[];
@@ -131,31 +150,37 @@ export const INITIAL_PARTNER_PREFERENCES: PartnerPreferences = {
   relationshipIntentions: ["Serious Relationship"],
 };
 
-// In-memory persistent user profile state
-let storedProfile: UserProfile = { ...INITIAL_USER_PROFILE };
-const userProfileListeners = new Set<(profile: UserProfile) => void>();
+function omitUndefined<T extends Record<string, any>>(
+  partial: Partial<T>,
+): Partial<T> {
+  const cleaned: Partial<T> = {};
+  for (const key of Object.keys(partial) as (keyof T)[]) {
+    if (partial[key] !== undefined) {
+      cleaned[key] = partial[key];
+    }
+  }
+  return cleaned;
+}
 
-// Load persisted profile synchronously on Web or asynchronously on Native
-function loadPersistedProfile() {
+function loadPersistedJson<T>(
+  key: string,
+  onSync: (parsed: T) => void,
+  onAsync: (parsed: T) => void,
+) {
   try {
     if (Platform.OS === "web") {
       if (typeof window !== "undefined" && window.localStorage) {
-        const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+        const raw = window.localStorage.getItem(key);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          storedProfile = { ...INITIAL_USER_PROFILE, ...parsed };
+          onSync(JSON.parse(raw));
         }
       }
     } else if (FileSystem.documentDirectory) {
-      const filePath = `${FileSystem.documentDirectory}${PROFILE_STORAGE_KEY}`;
+      const filePath = `${FileSystem.documentDirectory}${key}`;
       FileSystem.readAsStringAsync(filePath)
         .then((raw) => {
           if (raw) {
-            const parsed = JSON.parse(raw);
-            storedProfile = { ...INITIAL_USER_PROFILE, ...parsed };
-            userProfileListeners.forEach((listener) =>
-              listener({ ...storedProfile }),
-            );
+            onAsync(JSON.parse(raw));
           }
         })
         .catch(() => {});
@@ -163,32 +188,89 @@ function loadPersistedProfile() {
   } catch {}
 }
 
-loadPersistedProfile();
+function persistJson(key: string, value: unknown) {
+  try {
+    const serialized = JSON.stringify(value);
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(key, serialized);
+      }
+    } else if (FileSystem.documentDirectory) {
+      const filePath = `${FileSystem.documentDirectory}${key}`;
+      FileSystem.writeAsStringAsync(filePath, serialized).catch(() => {});
+    }
+  } catch {}
+}
+
+function removePersistedJson(key: string) {
+  try {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } else if (FileSystem.documentDirectory) {
+      const filePath = `${FileSystem.documentDirectory}${key}`;
+      FileSystem.deleteAsync(filePath, { idempotent: true }).catch(() => {});
+    }
+  } catch {}
+}
+
+// In-memory persistent user profile state
+let storedProfile: UserProfile = { ...INITIAL_USER_PROFILE };
+let onboardingProfileDraft: Partial<UserProfile> = {};
+let hasProfileSessionWrites = false;
+const userProfileListeners = new Set<(profile: UserProfile) => void>();
+
+loadPersistedJson<Partial<UserProfile>>(
+  PROFILE_STORAGE_KEY,
+  (parsed) => {
+    storedProfile = { ...INITIAL_USER_PROFILE, ...parsed };
+  },
+  (parsed) => {
+    if (hasProfileSessionWrites) return;
+    storedProfile = { ...INITIAL_USER_PROFILE, ...parsed };
+    userProfileListeners.forEach((listener) => listener({ ...storedProfile }));
+  },
+);
+
+loadPersistedJson<Partial<UserProfile>>(
+  ONBOARDING_PROFILE_DRAFT_KEY,
+  (parsed) => {
+    onboardingProfileDraft = omitUndefined(parsed);
+  },
+  (parsed) => {
+    if (hasProfileSessionWrites) return;
+    onboardingProfileDraft = omitUndefined(parsed);
+  },
+);
 
 export function getStoredUserProfile(): UserProfile {
   return { ...storedProfile };
 }
 
+export function getOnboardingProfileDraft(): Partial<UserProfile> {
+  return { ...onboardingProfileDraft };
+}
+
 export function updateStoredUserProfile(
   partial: Partial<UserProfile>,
 ): UserProfile {
-  storedProfile = { ...storedProfile, ...partial };
+  hasProfileSessionWrites = true;
+  const cleanPartial = omitUndefined(partial);
+  storedProfile = { ...storedProfile, ...cleanPartial };
   userProfileListeners.forEach((listener) => listener({ ...storedProfile }));
-
-  // Persist to storage
-  try {
-    const serialized = JSON.stringify(storedProfile);
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(PROFILE_STORAGE_KEY, serialized);
-      }
-    } else if (FileSystem.documentDirectory) {
-      const filePath = `${FileSystem.documentDirectory}${PROFILE_STORAGE_KEY}`;
-      FileSystem.writeAsStringAsync(filePath, serialized).catch(() => {});
-    }
-  } catch {}
-
+  persistJson(PROFILE_STORAGE_KEY, storedProfile);
   return { ...storedProfile };
+}
+
+export function updateOnboardingProfileDraft(
+  partial: Partial<UserProfile>,
+): UserProfile {
+  hasProfileSessionWrites = true;
+  const cleanPartial = omitUndefined(partial);
+  onboardingProfileDraft = { ...onboardingProfileDraft, ...cleanPartial };
+  persistJson(ONBOARDING_PROFILE_DRAFT_KEY, onboardingProfileDraft);
+  return updateStoredUserProfile(cleanPartial);
 }
 
 export function subscribeUserProfile(
@@ -204,71 +286,66 @@ export function subscribeUserProfile(
 let storedPartnerPreferences: PartnerPreferences = {
   ...INITIAL_PARTNER_PREFERENCES,
 };
+let onboardingPartnerDraft: Partial<PartnerPreferences> = {};
+let hasPartnerSessionWrites = false;
 const partnerPreferencesListeners = new Set<
   (prefs: PartnerPreferences) => void
 >();
 
-function loadPersistedPartnerPreferences() {
-  try {
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.localStorage) {
-        const raw = window.localStorage.getItem(PARTNER_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          storedPartnerPreferences = {
-            ...INITIAL_PARTNER_PREFERENCES,
-            ...parsed,
-          };
-        }
-      }
-    } else if (FileSystem.documentDirectory) {
-      const filePath = `${FileSystem.documentDirectory}${PARTNER_STORAGE_KEY}`;
-      FileSystem.readAsStringAsync(filePath)
-        .then((raw) => {
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            storedPartnerPreferences = {
-              ...INITIAL_PARTNER_PREFERENCES,
-              ...parsed,
-            };
-            partnerPreferencesListeners.forEach((listener) =>
-              listener({ ...storedPartnerPreferences }),
-            );
-          }
-        })
-        .catch(() => {});
-    }
-  } catch {}
-}
+loadPersistedJson<Partial<PartnerPreferences>>(
+  PARTNER_STORAGE_KEY,
+  (parsed) => {
+    storedPartnerPreferences = { ...INITIAL_PARTNER_PREFERENCES, ...parsed };
+  },
+  (parsed) => {
+    if (hasPartnerSessionWrites) return;
+    storedPartnerPreferences = { ...INITIAL_PARTNER_PREFERENCES, ...parsed };
+    partnerPreferencesListeners.forEach((listener) =>
+      listener({ ...storedPartnerPreferences }),
+    );
+  },
+);
 
-loadPersistedPartnerPreferences();
+loadPersistedJson<Partial<PartnerPreferences>>(
+  ONBOARDING_PARTNER_DRAFT_KEY,
+  (parsed) => {
+    onboardingPartnerDraft = omitUndefined(parsed);
+  },
+  (parsed) => {
+    if (hasPartnerSessionWrites) return;
+    onboardingPartnerDraft = omitUndefined(parsed);
+  },
+);
 
 export function getStoredPartnerPreferences(): PartnerPreferences {
   return { ...storedPartnerPreferences };
 }
 
+export function getOnboardingPartnerDraft(): Partial<PartnerPreferences> {
+  return { ...onboardingPartnerDraft };
+}
+
 export function updateStoredPartnerPreferences(
   partial: Partial<PartnerPreferences>,
 ): PartnerPreferences {
-  storedPartnerPreferences = { ...storedPartnerPreferences, ...partial };
+  hasPartnerSessionWrites = true;
+  const cleanPartial = omitUndefined(partial);
+  storedPartnerPreferences = { ...storedPartnerPreferences, ...cleanPartial };
   partnerPreferencesListeners.forEach((listener) =>
     listener({ ...storedPartnerPreferences }),
   );
-
-  // Persist to storage
-  try {
-    const serialized = JSON.stringify(storedPartnerPreferences);
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(PARTNER_STORAGE_KEY, serialized);
-      }
-    } else if (FileSystem.documentDirectory) {
-      const filePath = `${FileSystem.documentDirectory}${PARTNER_STORAGE_KEY}`;
-      FileSystem.writeAsStringAsync(filePath, serialized).catch(() => {});
-    }
-  } catch {}
-
+  persistJson(PARTNER_STORAGE_KEY, storedPartnerPreferences);
   return { ...storedPartnerPreferences };
+}
+
+export function updateOnboardingPartnerDraft(
+  partial: Partial<PartnerPreferences>,
+): PartnerPreferences {
+  hasPartnerSessionWrites = true;
+  const cleanPartial = omitUndefined(partial);
+  onboardingPartnerDraft = { ...onboardingPartnerDraft, ...cleanPartial };
+  persistJson(ONBOARDING_PARTNER_DRAFT_KEY, onboardingPartnerDraft);
+  return updateStoredPartnerPreferences(cleanPartial);
 }
 
 export function subscribePartnerPreferences(
@@ -278,4 +355,21 @@ export function subscribePartnerPreferences(
   return () => {
     partnerPreferencesListeners.delete(listener);
   };
+}
+
+export function resetOnboardingDrafts(): void {
+  hasProfileSessionWrites = true;
+  hasPartnerSessionWrites = true;
+  storedProfile = { ...INITIAL_USER_PROFILE };
+  storedPartnerPreferences = { ...INITIAL_PARTNER_PREFERENCES };
+  onboardingProfileDraft = {};
+  onboardingPartnerDraft = {};
+  removePersistedJson(PROFILE_STORAGE_KEY);
+  removePersistedJson(PARTNER_STORAGE_KEY);
+  removePersistedJson(ONBOARDING_PROFILE_DRAFT_KEY);
+  removePersistedJson(ONBOARDING_PARTNER_DRAFT_KEY);
+  userProfileListeners.forEach((listener) => listener({ ...storedProfile }));
+  partnerPreferencesListeners.forEach((listener) =>
+    listener({ ...storedPartnerPreferences }),
+  );
 }

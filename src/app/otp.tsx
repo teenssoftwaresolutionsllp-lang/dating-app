@@ -29,11 +29,15 @@ import { useTheme } from "@/hooks/use-theme";
 import { resendOtp, verifyOtp } from "@/utils/api";
 import { registerForPushNotifications } from "@/services/notificationService";
 import { classifyError } from "@/utils/errorHandler";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
 
 export default function OtpScreen() {
+  const { t } = useTranslation();
+  const { language, applyUserLanguage } = useLanguage();
   const { phone } = useLocalSearchParams<{ phone?: string }>();
   const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
@@ -218,7 +222,7 @@ export default function OtpScreen() {
 
     const digits = phone ? phone.replace(/\D/g, "") : "";
     if (!digits) {
-      setError("Phone number is missing");
+      setError(t("auth.otp.missingPhone"));
       triggerShake();
       return;
     }
@@ -226,7 +230,7 @@ export default function OtpScreen() {
     try {
       await resendOtp(digits, "+91");
     } catch (err: any) {
-      const userMsg = classifyError(err, "Failed to resend OTP. Please try again.").userMessage;
+      const userMsg = classifyError(err, t("auth.otp.resendFailed") || "Failed to resend OTP. Please try again.").userMessage;
       setError(userMsg);
       triggerShake();
     }
@@ -240,7 +244,7 @@ export default function OtpScreen() {
   const handleVerify = async () => {
     if (isVerifying) return;
     if (!complete) {
-      setError("Invalid OTP");
+      setError(t("auth.otp.invalidOtp"));
       triggerShake();
       return;
     }
@@ -253,13 +257,16 @@ export default function OtpScreen() {
     try {
       const response = await verifyOtp(digits, enteredOtp, "+91");
       void registerForPushNotifications();
+      if (response.data?.user?.preferredLanguage) {
+        await applyUserLanguage(response.data.user.preferredLanguage);
+      }
       router.replace(
         response.data.isNewUser
           ? "/(onboarding)/set-profile"
           : "/(tab)/matches",
       );
     } catch (err: any) {
-      const userMsg = classifyError(err, "Invalid OTP").userMessage;
+      const userMsg = classifyError(err, t("auth.otp.invalidOtp") || "Invalid OTP").userMessage;
       setError(userMsg);
       triggerShake();
     } finally {
@@ -272,7 +279,7 @@ export default function OtpScreen() {
       <Pressable
         onPress={handleBack}
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t("common.goBack")}
         hitSlop={8}
         style={[
           styles.backButton,
@@ -308,13 +315,13 @@ export default function OtpScreen() {
                 <View style={styles.formTopSection}>
                   <View style={styles.headingRow}>
                     <Text style={[styles.heading, { color: theme.text }]}>
-                      Enter OTP to Verify
+                      {t("auth.otp.heading")}
                     </Text>
                     <Pressable
                       onPress={resend}
                       disabled={seconds > 0}
                       accessibilityRole="button"
-                      accessibilityLabel="Resend OTP"
+                      accessibilityLabel={t("auth.otp.resendOtp")}
                       style={seconds === 0 ? styles.webPointer : undefined}
                     >
                       <Text
@@ -325,8 +332,8 @@ export default function OtpScreen() {
                         ]}
                       >
                         {seconds > 0
-                          ? `Resend in 00:${String(seconds).padStart(2, "0")}`
-                          : "Resend OTP"}
+                          ? t("auth.otp.resendIn", { seconds: String(seconds).padStart(2, "0") })
+                          : t("auth.otp.resendOtp")}
                       </Text>
                     </Pressable>
                   </View>
@@ -378,7 +385,7 @@ export default function OtpScreen() {
                   <View style={styles.sentContainer}>
                     <View style={styles.sentRow}>
                       <Text style={[styles.sent, { color: theme.textSecondary }]}>
-                        We have sent OTP to {phone || "00000 00000"}
+                        {t("auth.otp.sentTo", { phone: phone || "00000 00000" })}
                       </Text>
                       <Pressable
                         onPress={handleBack}
@@ -423,7 +430,7 @@ export default function OtpScreen() {
                       },
                     ]}
                   >
-                    Verify
+                    {t("auth.otp.verifyButton")}
                   </PrimaryButton>
                   <LegalFooter />
                 </View>

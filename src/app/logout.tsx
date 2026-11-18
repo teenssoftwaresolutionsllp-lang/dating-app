@@ -10,12 +10,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { LogoutDoorGraphic, LogoutModalIcon } from '@/components/SettingsIcons';
 import { clearUserAuth } from '@/utils/authPersistence';
 import { logout } from '@/utils/api';
 
 export default function LogoutScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleBack = () => {
@@ -57,7 +59,7 @@ export default function LogoutScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Logout</Text>
+          <Text style={styles.headerTitle}>{t('settings.logout')}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -67,9 +69,9 @@ export default function LogoutScreen() {
             <View style={styles.doorGraphicWrapper}>
               <LogoutDoorGraphic size={72} color="#0D7A74" />
             </View>
-            <Text style={styles.mainTitle}>Logout from your account</Text>
+            <Text style={styles.mainTitle}>{t('settings.modals.logout.title')}</Text>
             <Text style={styles.subTitle}>
-              You will need to login again to access your{'\n'}account
+              {t('settings.modals.logout.desc')}
             </Text>
           </View>
         </View>
@@ -81,7 +83,7 @@ export default function LogoutScreen() {
             activeOpacity={0.8}
             onPress={() => setShowConfirm(true)}
           >
-            <Text style={styles.logoutBtnText}>Logout</Text>
+            <Text style={styles.logoutBtnText}>{t('settings.logout')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -101,11 +103,11 @@ export default function LogoutScreen() {
               </View>
 
               {/* Title */}
-              <Text style={styles.dialogTitle}>Logout ?</Text>
+              <Text style={styles.dialogTitle}>{t('settings.modals.logout.title')}</Text>
 
               {/* Description */}
               <Text style={styles.dialogDesc}>
-                Are you sure you want to logout from your account
+                {t('settings.modals.logout.desc')}
               </Text>
 
               {/* Buttons Stack */}
@@ -115,7 +117,7 @@ export default function LogoutScreen() {
                   activeOpacity={0.8}
                   onPress={handleConfirmLogout}
                 >
-                  <Text style={styles.dialogLogoutBtnText}>Logout</Text>
+                  <Text style={styles.dialogLogoutBtnText}>{t('settings.modals.logout.logoutBtn')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -123,7 +125,7 @@ export default function LogoutScreen() {
                   activeOpacity={0.7}
                   onPress={() => setShowConfirm(false)}
                 >
-                  <Text style={styles.dialogCancelBtnText}>Cancel</Text>
+                  <Text style={styles.dialogCancelBtnText}>{t('settings.modals.logout.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

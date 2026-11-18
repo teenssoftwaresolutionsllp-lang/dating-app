@@ -5,8 +5,18 @@ import { OptionButton } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/context/LanguageContext';
+
 export default function LanguageSelectionScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const { language, changeLanguage } = useLanguage();
+
+  const handleSelectLanguage = async (selected: 'en' | 'te') => {
+    await changeLanguage(selected, false);
+    router.push('/login' as any);
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
@@ -17,17 +27,32 @@ export default function LanguageSelectionScreen() {
           }} 
           style={[styles.backButton, { top: 8, left: 16 }]}
           accessibilityRole="button"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="chevron-back-outline" size={24} color="#ffffff" />
         </Pressable>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.text }]}>Set Your Display Language</Text>
+          <Text style={[styles.title, { color: theme.text }]}>
+            {t('onboarding.languageSelection.title')}
+          </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            తెలుగులో యాప్‌ను ఉపయోగించడానికి మీ భాషను ఎంచుకోండి
+            {language === 'te'
+              ? 'యాప్‌ను ఉపయోగించడానికి మీ ప్రాధాన్య భాషను ఎంచుకోండి'
+              : 'తెలుగులో యాప్‌ను ఉపయోగించడానికి మీ భాషను ఎంచుకోండి'}
           </Text>
           <View style={styles.options}>
-            <OptionButton onPress={() => router.push('/login' as any)}>English</OptionButton>
-            <OptionButton onPress={() => router.push('/login' as any)}>తెలుగు</OptionButton>
+            <OptionButton 
+              onPress={() => handleSelectLanguage('en')}
+              style={language === 'en' ? { borderWidth: 1.5, borderColor: '#00E4E8' } : undefined}
+            >
+              English
+            </OptionButton>
+            <OptionButton 
+              onPress={() => handleSelectLanguage('te')}
+              style={language === 'te' ? { borderWidth: 1.5, borderColor: '#00E4E8' } : undefined}
+            >
+              తెలుగు
+            </OptionButton>
           </View>
         </View>
       </View>

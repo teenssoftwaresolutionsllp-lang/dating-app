@@ -10,10 +10,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { DeactivateShieldIcon } from "@/components/SettingsIcons";
 
 export default function DeactivateOrDeleteScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -37,7 +39,7 @@ export default function DeactivateOrDeleteScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Deactivate or Delete</Text>
+          <Text style={styles.headerTitle}>{t('deactivateOrDelete.title')}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -49,8 +51,7 @@ export default function DeactivateOrDeleteScreen() {
           {/* Top Pink Banner */}
           <View style={styles.bannerContainer}>
             <Text style={styles.bannerText}>
-              Take a break by deactivating your account. Log in within 30 days
-              to reactivate it; otherwise, it will be permanently deleted.
+              {t('deactivateOrDelete.banner')}
             </Text>
           </View>
 
@@ -67,10 +68,9 @@ export default function DeactivateOrDeleteScreen() {
                   <DeactivateShieldIcon size={24} color="#14B8A6" />
                 </View>
                 <View style={styles.cardTextWrapper}>
-                  <Text style={styles.cardTitle}>Deactivate Account</Text>
+                  <Text style={styles.cardTitle}>{t('deactivateOrDelete.deactivateTitle')}</Text>
                   <Text style={styles.cardDesc}>
-                    Hide your profile. Log in within 30 days to reactivate your
-                    account.
+                    {t('deactivateOrDelete.deactivateDesc')}
                   </Text>
                 </View>
               </View>
@@ -95,10 +95,9 @@ export default function DeactivateOrDeleteScreen() {
                   <Ionicons name="trash-outline" size={22} color="#EF4444" />
                 </View>
                 <View style={styles.cardTextWrapper}>
-                  <Text style={styles.cardTitle}>Delete Account</Text>
+                  <Text style={styles.cardTitle}>{t('deactivateOrDelete.deleteTitle')}</Text>
                   <Text style={styles.cardDesc}>
-                    Permanently delete your account and all your data. This
-                    action cannot be undone.
+                    {t('deactivateOrDelete.deleteDesc')}
                   </Text>
                 </View>
               </View>

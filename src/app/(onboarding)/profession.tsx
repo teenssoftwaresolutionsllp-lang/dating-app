@@ -3,21 +3,25 @@ import {
   Animated,
   View,
   Text,
-  TextInput,
+  // TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Platform,
-  Dimensions,
+  // Platform,
+  // Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
 
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from 'react-i18next';
 import { updateEducation } from '@/services/profileApi';
 
 const PROFESSIONS = [
@@ -39,18 +43,20 @@ const PROFESSIONS = [
   'Researcher',
   'Student',
   'Freelancing',
+  'Others',
 
 ];
 
 export default function ProfessionScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
+  const { t } = useTranslation();
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedProfession, setSelectedProfession] = useState<string | null>(
+    initialDraft.profession || null,
+  );
   const [error, setError] = useState(false);
-  const isProfessionValid = Boolean(selectedProfession || searchQuery.trim().length > 0);
-
+  const isProfessionValid = Boolean(selectedProfession);
   const [shakeAnim] = useState(() => new Animated.Value(0));
 
   const triggerShake = () => {
@@ -94,18 +100,21 @@ export default function ProfessionScreen() {
     ]).start();
   };
 
-  const filteredProfessions = PROFESSIONS.filter((item) =>
-    item.toLowerCase().includes(searchQuery.toLowerCase().trim())
-  );
+  // const filteredProfessions = PROFESSIONS.filter((item) =>
+  //   item.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  // );
 
   const handleNext = async () => {
-    if (!selectedProfession && !searchQuery.trim()) {
+    if (!selectedProfession) {
       setError(true);
       triggerShake();
       return;
     }
-    const finalProfession = selectedProfession || searchQuery.trim();
-    updateStoredUserProfile({ profession: finalProfession });
+
+    const finalProfession = selectedProfession;
+
+    updateOnboardingProfileDraft({ profession: finalProfession });
+
     await updateEducation({
       profession: finalProfession,
       occupation: finalProfession,
@@ -139,93 +148,71 @@ export default function ProfessionScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Header Title & Subtitle */}
-            <Text style={styles.title}>Education & Career</Text>
+            <Text style={styles.title}>{t('onboarding.steps.career.mainTitle')}</Text>
             <Text style={styles.subtitle}>
-              Add your education and work details to complete your profile.
+              {t('onboarding.steps.career.mainSubtitle')}
             </Text>
 
             {/* Question Heading */}
             <View style={styles.sectionHeaderContainer}>
-              <Text style={styles.sectionTitle}>What do you do?</Text>
-            </View>
-
-            {/* Search Input Capsule */}
-            <View style={styles.searchSection}>
-              <View
-                style={[
-                  styles.searchContainer,
-                  isFocused && styles.searchContainerFocused,
-                  error && styles.searchContainerWithError,
-                ]}
-              >
-                <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  value={searchQuery}
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    if (error && text.trim().length > 0) {
-                      setError(false);
-                    }
-                    if (text && !selectedProfession) {
-                      setSelectedProfession(text);
-                    }
-                  }}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  selectionColor="#00E4E8"
-                  placeholder="Search Profession"
-                  placeholderTextColor="#9CA3AF"
-                  returnKeyType="done"
-                  onSubmitEditing={handleNext}
-                />
-              </View>
+              <Text style={styles.sectionTitle}>
+                {t('onboarding.steps.career.professionTitle')}
+              </Text>
 
               {error && (
                 <Animated.Text
                   style={[
                     styles.errorMessage,
-                    {
-                      transform: [{ translateX: shakeAnim }],
-                    },
+                    { transform: [{ translateX: shakeAnim }] },
                   ]}
                 >
-                  Please choose your Profession
+                  {t('onboarding.steps.career.professionError')}
                 </Animated.Text>
               )}
             </View>
 
+            {/* Search Input Capsule */}
+
+            {/* Profession Options List */}
             {/* Profession Options List */}
             <View style={styles.listContainer}>
-              {filteredProfessions.map((profession) => {
+              {PROFESSIONS.map((profession) => {
                 const isSelected = selectedProfession === profession;
+
                 return (
                   <TouchableOpacity
                     key={profession}
-                    style={[
-                      styles.optionRow,
-                      isSelected && styles.optionRowSelected,
-                    ]}
+                    style={styles.optionRow}
                     onPress={() => {
                       setSelectedProfession(profession);
-                      setSearchQuery(profession);
-                      if (error) {
-                        setError(false);
-                      }
+                      updateOnboardingProfileDraft({ profession });
+                      setError(false);
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text
+                    <View
                       style={[
-                        styles.optionText,
-                        isSelected && styles.optionTextSelected,
+                        styles.radioCircle,
+                        {
+                          borderColor: isSelected
+                            ? theme.primaryButton
+                            : theme.border,
+                        },
                       ]}
                     >
+                      {isSelected && (
+                        <View
+                          style={[
+                            styles.radioInnerCircle,
+                            { backgroundColor: theme.primaryButton },
+                          ]}
+                        />
+                      )}
+                    </View>
+
+                    <Text style={styles.optionText}>
                       {profession}
                     </Text>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color="#00F5D4" />
-                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -291,71 +278,86 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
-  searchSection: {
-    width: '100%',
-    position: 'relative',
-    marginBottom: 24,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  searchContainerFocused: {
-    borderColor: '#00E4E8',
-  },
-  searchContainerWithError: {
-    borderColor: '#FF3B30',
-  },
+  // searchSection: {
+  //   width: '100%',
+  //   position: 'relative',
+  //   marginBottom: 24,
+  // },
+  // searchContainer: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   width: '100%',
+  //   height: 48,
+  //   borderWidth: 1,
+  //   borderColor: '#D1D5DB',
+  //   borderRadius: 24,
+  //   paddingHorizontal: 16,
+  //   backgroundColor: '#FFFFFF',
+  // },
+  // searchContainerFocused: {
+  //   borderColor: '#00E4E8',
+  // },
+  // searchContainerWithError: {
+  //   borderColor: '#FF3B30',
+  // },
   errorMessage: {
     position: 'absolute',
     bottom: -18,
-    left: 12,
+    left: 0,
     fontSize: 12,
     fontWeight: '500',
     color: '#FF3B30',
     fontFamily: 'DM_Sans_500Medium',
   },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-    height: '100%',
-    paddingVertical: 0,
-    outlineStyle: 'none' as any,
-  },
+  // searchIcon: {
+  //   marginRight: 10,
+  // },
+  // searchInput: {
+  //   flex: 1,
+  //   fontSize: 14,
+  //   color: '#111827',
+  //   backgroundColor: '#FFFFFF',
+  //   height: '100%',
+  //   paddingVertical: 0,
+  //   outlineStyle: 'none' as any,
+  // },
   listContainer: {
     width: '100%',
-    gap: 16,
+    gap: 22,
   },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    gap:14,
   },
-  optionRowSelected: {
-    backgroundColor: '#F0FCFC',
+  // optionRowSelected: {
+  //   backgroundColor: '#F0FCFC',
+  // },
+  // optionText: {
+  //   fontSize: 15,
+  //   fontWeight: '500',
+  //   color: '#374151',
+  // },
+  // optionTextSelected: {
+  //   fontWeight: '700',
+  //   color: '#111827',
+  // },
+    radioCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioInnerCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   optionText: {
     fontSize: 15,
     fontWeight: '500',
     color: '#374151',
-  },
-  optionTextSelected: {
-    fontWeight: '700',
-    color: '#111827',
   },
 });

@@ -23,6 +23,7 @@ import {
 } from "@/utils/routePersistence";
 import { OnboardingHeader } from "@/components/onboarding-header";
 import { OnboardingFooter } from "@/components/onboarding-footer";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/use-theme";
 import {
   GovernmentIdIcon,
@@ -33,19 +34,34 @@ import {
   verifyKycDocumentApi,
   verifySelfieApi,
 } from "@/services/profileApi";
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from "@/constants/userProfile";
 
 export default function VerificationScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [selectedDocType, setSelectedDocType] =
-    useState<string>("Aadhaar Card");
-  const [govIdUploaded, setGovIdUploaded] = useState(false);
-  const [govIdUri, setGovIdUri] = useState<string | null>(null);
-  const [selfieUri, setSelfieUri] = useState<string | null>(null);
-  const [govIdMethod, setGovIdMethod] = useState<"upload" | "camera" | null>(
-    null,
+  const { t } = useTranslation();
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedDocType, setSelectedDocType] = useState<string>(
+    initialDraft.verificationDocType || "Aadhaar Card",
   );
-  const [selfieVerified, setSelfieVerified] = useState(false);
+  const [govIdUploaded, setGovIdUploaded] = useState(
+    Boolean(initialDraft.govIdUploaded),
+  );
+  const [govIdUri, setGovIdUri] = useState<string | null>(
+    initialDraft.govIdUri ?? null,
+  );
+  const [selfieUri, setSelfieUri] = useState<string | null>(
+    initialDraft.selfieUri ?? null,
+  );
+  const [govIdMethod, setGovIdMethod] = useState<"upload" | "camera" | null>(
+    initialDraft.govIdMethod ?? null,
+  );
+  const [selfieVerified, setSelfieVerified] = useState(
+    Boolean(initialDraft.selfieVerified),
+  );
   const [showGovIdModal, setShowGovIdModal] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,6 +146,12 @@ export default function VerificationScreen() {
       setGovIdUploaded(true);
       setGovIdUri(uri);
       setErrorMessage(null);
+      updateOnboardingProfileDraft({
+        verificationDocType: selectedDocType,
+        govIdUploaded: true,
+        govIdUri: uri,
+        govIdMethod: method,
+      });
     } catch (err: any) {
       setGovIdUploaded(false);
       setGovIdUri(null);
@@ -171,6 +193,10 @@ export default function VerificationScreen() {
       setSelfieVerified(true);
       setSelfieUri(uri);
       setErrorMessage(null);
+      updateOnboardingProfileDraft({
+        selfieVerified: true,
+        selfieUri: uri,
+      });
     } catch (err: any) {
       setSelfieVerified(false);
       setSelfieUri(null);
@@ -435,6 +461,14 @@ export default function VerificationScreen() {
       }
 
       await submitKyc(formData);
+      updateOnboardingProfileDraft({
+        verificationDocType: selectedDocType,
+        govIdUploaded,
+        govIdUri,
+        govIdMethod,
+        selfieVerified,
+        selfieUri,
+      });
       setLastActiveRoute("/(onboarding)/photos");
       router.push("/(onboarding)/photos" as any);
     } catch (err: any) {
@@ -468,10 +502,10 @@ export default function VerificationScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Title & Subtitle */}
-          <Text style={styles.title}>{"Let's verify it's really you"}</Text>
+          <Text style={styles.title}>{t('onboarding.steps.verification.mainTitle')}</Text>
 
           <Text style={styles.subtitle}>
-            One quick check helps keep our community safe and genuine.
+            {t('onboarding.steps.verification.mainSubtitle')}
           </Text>
 
           {/* Cards Container */}
@@ -488,16 +522,14 @@ export default function VerificationScreen() {
               </View>
 
               <View style={styles.cardTextContent}>
-                <Text style={styles.cardTitle}>Government ID</Text>
+                <Text style={styles.cardTitle}>{t('onboarding.steps.verification.govIdTitle')}</Text>
 
                 <Text style={styles.cardSubtitle}>
                   {isVerifyingGovId
-                    ? "Analyzing & verifying ID document..."
+                    ? t('onboarding.steps.verification.analyzingGovId')
                     : govIdUploaded
-                      ? govIdMethod === "camera"
-                        ? "ID photo verified successfully"
-                        : "ID uploaded & verified successfully"
-                      : "Upload a valid government-issued ID"}
+                      ? t('onboarding.steps.verification.govIdSuccess')
+                      : t('onboarding.steps.verification.govIdPlaceholder')}
                 </Text>
               </View>
 
@@ -534,14 +566,14 @@ export default function VerificationScreen() {
               </View>
 
               <View style={styles.cardTextContent}>
-                <Text style={styles.cardTitle}>Selfie Verification</Text>
+                <Text style={styles.cardTitle}>{t('onboarding.steps.verification.selfieTitle')}</Text>
 
                 <Text style={styles.cardSubtitle}>
                   {isVerifyingSelfie
-                    ? "Analyzing face & selfie quality..."
+                    ? t('onboarding.steps.verification.analyzingSelfie')
                     : selfieVerified
-                      ? "Face confirmed via live camera"
-                      : "Take a quick selfie to confirm it's you"}
+                      ? t('onboarding.steps.verification.selfieSuccess')
+                      : t('onboarding.steps.verification.selfiePlaceholder')}
                 </Text>
               </View>
 
@@ -650,7 +682,10 @@ export default function VerificationScreen() {
                         styles.docChip,
                         selectedDocType === doc && styles.docChipSelected,
                       ]}
-                      onPress={() => setSelectedDocType(doc)}
+                      onPress={() => {
+                        setSelectedDocType(doc);
+                        updateOnboardingProfileDraft({ verificationDocType: doc });
+                      }}
                       activeOpacity={0.7}
                     >
                       <Text

@@ -11,20 +11,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { DeactivatePauseGraphic } from "@/components/SettingsIcons";
 import { authStorage } from "@/services/authStorage";
 import { deactivateAccount } from "@/services/accountApi";
 
-const BENEFITS = [
-  "Your matches and chats will be saved",
-  "You can reactivate your account anytime",
-  "No one will be notified",
-  "Your personal data will remain safe",
-];
-
 export default function DeactivateAccountScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const benefits = [
+    t("deactivateAccount.benefit1"),
+    t("deactivateAccount.benefit2"),
+    t("deactivateAccount.benefit3"),
+    t("deactivateAccount.benefit4"),
+  ];
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -43,7 +45,7 @@ export default function DeactivateAccountScreen() {
       router.replace("/login");
     } catch (error) {
       Alert.alert(
-        "Could not deactivate account",
+        t("deactivateAccount.alertTitle"),
         error instanceof Error ? error.message : "Please try again.",
       );
     } finally {
@@ -65,7 +67,7 @@ export default function DeactivateAccountScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Deactivate</Text>
+          <Text style={styles.headerTitle}>{t("deactivateAccount.title")}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -79,16 +81,15 @@ export default function DeactivateAccountScreen() {
             <View style={styles.iconWrapper}>
               <DeactivatePauseGraphic size={76} color="#0D7A74" />
             </View>
-            <Text style={styles.mainHeading}>Take a Break, Anytime</Text>
+            <Text style={styles.mainHeading}>{t("deactivateAccount.mainHeading")}</Text>
             <Text style={styles.subHeading}>
-              Your profile will be hidden and won&apos;t appear in search or
-              recommendations while your account is deactivated.
+              {t("deactivateAccount.subHeading")}
             </Text>
           </View>
 
           {/* Checklist */}
           <View style={styles.checklistContainer}>
-            {BENEFITS.map((item, index) => (
+            {benefits.map((item, index) => (
               <View key={index} style={styles.checkItem}>
                 <View style={styles.checkCircle}>
                   <Ionicons name="checkmark" size={14} color="#0D7A74" />
@@ -108,7 +109,7 @@ export default function DeactivateAccountScreen() {
             disabled={isSubmitting}
           >
             <Text style={styles.deactivateBtnText}>
-              {isSubmitting ? "Deactivating..." : "Deactivate Account"}
+              {isSubmitting ? t("deactivateAccount.deactivatingBtn") : t("deactivateAccount.deactivateBtn")}
             </Text>
           </TouchableOpacity>
         </View>

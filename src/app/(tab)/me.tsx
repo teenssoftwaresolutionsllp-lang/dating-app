@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { CustomTabBar } from "@/components/CustomTabBar";
 import { PhotoActionSheetModal } from "@/components/PhotoActionSheetModal";
 import { ASSET_IMAGES } from "@/constants/datingData";
@@ -177,6 +178,7 @@ export default function MeScreen({
   showHeaderBar = true,
 }: MeScreenProps = {}) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile>(() =>
     getStoredUserProfile(),
   );
@@ -858,7 +860,7 @@ export default function MeScreen({
             {/* Profile Completion Progress Bar */}
             <View style={styles.completionContainer}>
               <View style={styles.completionHeaderRow}>
-                <Text style={styles.completionTitle}>Profile Completion</Text>
+                <Text style={styles.completionTitle}>{t('profile.profileCompletion')}</Text>
                 <Text style={styles.completionPercentage}>100%</Text>
               </View>
               <View style={styles.progressBarBackground}>
@@ -869,7 +871,7 @@ export default function MeScreen({
                 style={styles.completeLinkTouch}
                 onPress={handleOpenEdit}
               >
-                <Text style={styles.completeLinkText}>Edit Full Profile</Text>
+                <Text style={styles.completeLinkText}>{t('profile.editFullProfile')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -877,12 +879,12 @@ export default function MeScreen({
           {/* Section 1: About Me */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>About Me</Text>
+              <Text style={styles.sectionTitle}>{t('profile.aboutMe')}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/edit-about")}
                 activeOpacity={0.7}
               >
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.aboutCard}>
@@ -897,8 +899,7 @@ export default function MeScreen({
                     { fontStyle: "italic", color: "#6B7280" },
                   ]}
                 >
-                  No bio added yet. Tap Edit to introduce yourself to your
-                  matches!
+                  {t('profile.noBioYet')}
                 </Text>
               )}
             </View>
@@ -907,12 +908,12 @@ export default function MeScreen({
           {/* Section 2: My Nature */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>My Nature</Text>
+              <Text style={styles.sectionTitle}>{t('profile.myNature')}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/edit-nature" as any)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -948,12 +949,12 @@ export default function MeScreen({
           {/* Section 3: What I'm Looking For */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>{"What I'm Looking For"}</Text>
+              <Text style={styles.sectionTitle}>{t('profile.lookingFor')}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/edit-looking-for")}
                 activeOpacity={0.7}
               >
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -978,12 +979,12 @@ export default function MeScreen({
           {/* Section 4: Profile Details Grid (User's Own Attributes) */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Personal Profile Details</Text>
+              <Text style={styles.sectionTitle}>{t('profile.personalDetails')}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/edit-details")}
                 activeOpacity={0.7}
               >
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -991,20 +992,20 @@ export default function MeScreen({
               <View style={styles.detailBox}>
                 <View style={styles.detailBoxHeader}>
                   <Ionicons name="school-outline" size={18} color="#0F766E" />
-                  <Text style={styles.detailBoxTitle}>Education</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.education')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
-                  {profile.education || "Not specified"}
+                  {profile.education || t('profile.notSpecified')}
                 </Text>
               </View>
 
               <View style={styles.detailBox}>
                 <View style={styles.detailBoxHeader}>
                   <Ionicons name="language-outline" size={18} color="#0F766E" />
-                  <Text style={styles.detailBoxTitle}>Languages</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.languages')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
-                  {profile.languages || "Not specified"}
+                  {profile.languages || t('profile.notSpecified')}
                 </Text>
               </View>
 
@@ -1015,10 +1016,10 @@ export default function MeScreen({
                     size={18}
                     color="#0F766E"
                   />
-                  <Text style={styles.detailBoxTitle}>Religion</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.religion')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
-                  {profile.religion || "Not specified"}
+                  {profile.religion || t('profile.notSpecified')}
                 </Text>
               </View>
 
@@ -1029,17 +1030,17 @@ export default function MeScreen({
                     size={18}
                     color="#0F766E"
                   />
-                  <Text style={styles.detailBoxTitle}>Profession</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.profession')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
-                  {profile.profession || "Not specified"}
+                  {profile.profession || t('profile.notSpecified')}
                 </Text>
               </View>
 
               <View style={styles.detailBox}>
                 <View style={styles.detailBoxHeader}>
                   <Ionicons name="heart-outline" size={18} color="#0F766E" />
-                  <Text style={styles.detailBoxTitle}>Relationship Status</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.relationshipStatus')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
                   {profile.relationshipStatus || "Single"}
@@ -1049,7 +1050,7 @@ export default function MeScreen({
               <View style={styles.detailBox}>
                 <View style={styles.detailBoxHeader}>
                   <Ionicons name="body-outline" size={18} color="#0F766E" />
-                  <Text style={styles.detailBoxTitle}>Height</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.height')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
                   {profile.height || `5'10" (178 cm)`}
@@ -1063,7 +1064,7 @@ export default function MeScreen({
                     size={18}
                     color="#0F766E"
                   />
-                  <Text style={styles.detailBoxTitle}>Food Preferences</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.foodPreferences')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
                   {profile.foodPreference || "Foodie / Veg"}
@@ -1073,7 +1074,7 @@ export default function MeScreen({
               <View style={styles.detailBox}>
                 <View style={styles.detailBoxHeader}>
                   <Ionicons name="wine-outline" size={18} color="#0F766E" />
-                  <Text style={styles.detailBoxTitle}>Drink</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.drink')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
                   {profile.drinking || "Socially"}
@@ -1083,7 +1084,7 @@ export default function MeScreen({
               <View style={styles.detailBox}>
                 <View style={styles.detailBoxHeader}>
                   <Ionicons name="cloud-outline" size={18} color="#0F766E" />
-                  <Text style={styles.detailBoxTitle}>Smoke</Text>
+                  <Text style={styles.detailBoxTitle}>{t('profile.smoke')}</Text>
                 </View>
                 <Text style={styles.detailBoxValue}>
                   {profile.smoking || "No"}
@@ -1095,12 +1096,12 @@ export default function MeScreen({
           {/* Section 5: My Interests (User's Own Hobbies) */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>My Interests</Text>
+              <Text style={styles.sectionTitle}>{t('profile.myInterests')}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/edit-interests")}
                 activeOpacity={0.7}
               >
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -1128,11 +1129,11 @@ export default function MeScreen({
               <View style={styles.partnerTitleRow}>
                 <Ionicons name="sparkles" size={17} color="#E11D48" />
                 <Text style={[styles.sectionTitle, { color: "#BE123C" }]}>
-                  Ideal Partner Preferences
+                  {t('profile.idealPartnerPreferences')}
                 </Text>
               </View>
               <TouchableOpacity onPress={handleOpenEdit} activeOpacity={0.7}>
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -1143,7 +1144,7 @@ export default function MeScreen({
                     <Ionicons name="people-outline" size={16} color="#BE123C" />
                   </View>
                   <View style={styles.partnerItemTextWrap}>
-                    <Text style={styles.partnerItemLabel}>Age Range</Text>
+                    <Text style={styles.partnerItemLabel}>{t('profile.ageRange')}</Text>
                     <Text style={styles.partnerItemValue}>
                       {partnerPrefs.minAge} – {partnerPrefs.maxAge} yrs
                     </Text>
@@ -1160,10 +1161,10 @@ export default function MeScreen({
                   </View>
                   <View style={styles.partnerItemTextWrap}>
                     <Text style={styles.partnerItemLabel}>
-                      Maximum Distance
+                      {t('profile.maxDistance')}
                     </Text>
                     <Text style={styles.partnerItemValue}>
-                      Within {partnerPrefs.maxDistanceKm} km
+                      {t('profile.withinDistance', { distance: partnerPrefs.maxDistanceKm })}
                     </Text>
                   </View>
                 </View>
@@ -1178,13 +1179,13 @@ export default function MeScreen({
                   </View>
                   <View style={styles.partnerItemTextWrap}>
                     <Text style={styles.partnerItemLabel}>
-                      Religion Preference
+                      {t('profile.religionPreference')}
                     </Text>
                     <Text style={styles.partnerItemValue}>
                       {partnerPrefs.religionPreferences &&
                       partnerPrefs.religionPreferences.length > 0
                         ? partnerPrefs.religionPreferences.join(", ")
-                        : "Open to all"}
+                        : t('profile.openToAll')}
                     </Text>
                   </View>
                 </View>
@@ -1195,7 +1196,7 @@ export default function MeScreen({
                 partnerPrefs.preferredInterests.length > 0 && (
                   <View style={styles.partnerInterestsWrap}>
                     <Text style={styles.partnerInterestsLabel}>
-                      Preferred Partner Interests
+                      {t('profile.preferredInterests')}
                     </Text>
                     <View style={styles.partnerInterestsChipsRow}>
                       {partnerPrefs.preferredInterests.map((item, idx) => (
@@ -1218,10 +1219,9 @@ export default function MeScreen({
               <Ionicons name="shield-checkmark" size={26} color="#166534" />
             </View>
             <View style={styles.verifiedTextContainer}>
-              <Text style={styles.verifiedBannerTitle}>Identity Verified</Text>
+              <Text style={styles.verifiedBannerTitle}>{t('profile.identityVerified')}</Text>
               <Text style={styles.verifiedBannerSubtitle}>
-                Your identity has been verified to keep your profile
-                trustworthy.
+                {t('profile.identityVerifiedSubtitle')}
               </Text>
             </View>
             <Ionicons

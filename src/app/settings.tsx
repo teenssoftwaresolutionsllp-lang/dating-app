@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   SubscriptionIcon,
   TermsDocIcon,
@@ -23,8 +25,11 @@ import { logout } from "@/utils/api";
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { language, changeLanguage } = useLanguage();
 
   // Dialog States
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showTrustModal, setShowTrustModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -67,7 +72,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#0D7A74" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={styles.headerTitle}>{t("settings.title")}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
@@ -76,7 +81,27 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. Subscription */}
+          {/* 1. Change Language */}
+          <TouchableOpacity
+            style={styles.cardItem}
+            activeOpacity={0.75}
+            onPress={() => setShowLanguageModal(true)}
+          >
+            <View style={styles.cardLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="language-outline" size={24} color="#0D7A74" />
+              </View>
+              <Text style={styles.cardText}>{t("settings.changeLanguage")}</Text>
+            </View>
+            <View style={styles.languageBadge}>
+              <Text style={styles.languageBadgeText}>
+                {language === "te" ? "తెలుగు" : "English"}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
+            </View>
+          </TouchableOpacity>
+
+          {/* 2. Subscription */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -86,12 +111,12 @@ export default function SettingsScreen() {
               <View style={styles.iconContainer}>
                 <SubscriptionIcon size={24} color="#0D7A74" />
               </View>
-              <Text style={styles.cardText}>Subscription</Text>
+              <Text style={styles.cardText}>{t("settings.subscription")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 2. Notifications */}
+          {/* 3. Notifications */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -105,12 +130,12 @@ export default function SettingsScreen() {
                   color="#0D7A74"
                 />
               </View>
-              <Text style={styles.cardText}>Notifications</Text>
+              <Text style={styles.cardText}>{t("settings.notifications")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 3. Terms of Use */}
+          {/* 4. Terms of Use */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -120,12 +145,12 @@ export default function SettingsScreen() {
               <View style={styles.iconContainer}>
                 <TermsDocIcon size={24} color="#0D7A74" />
               </View>
-              <Text style={styles.cardText}>Terms of Use</Text>
+              <Text style={styles.cardText}>{t("settings.termsOfUse")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 4. Terms and Security */}
+          {/* 5. Terms and Security */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -135,12 +160,12 @@ export default function SettingsScreen() {
               <View style={styles.iconContainer}>
                 <TermsDocIcon size={24} color="#0D7A74" />
               </View>
-              <Text style={styles.cardText}>Terms and Security</Text>
+              <Text style={styles.cardText}>{t("settings.termsAndSecurity")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 5. Safety Guidelines */}
+          {/* 6. Safety Guidelines */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -150,12 +175,12 @@ export default function SettingsScreen() {
               <View style={styles.iconContainer}>
                 <SafetyBadgeIcon size={24} color="#0D7A74" />
               </View>
-              <Text style={styles.cardText}>Safety Guidelines</Text>
+              <Text style={styles.cardText}>{t("settings.safetyGuidelines")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 6. Trust Compatibilities */}
+          {/* 7. Trust Compatibilities */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -165,12 +190,12 @@ export default function SettingsScreen() {
               <View style={styles.iconContainer}>
                 <TrustRosetteIcon size={24} color="#0D7A74" />
               </View>
-              <Text style={styles.cardText}>Trust Compatibilities</Text>
+              <Text style={styles.cardText}>{t("settings.trustCompatibility")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 7. Deactivate and Delete Account */}
+          {/* 8. Deactivate and Delete Account */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -181,13 +206,13 @@ export default function SettingsScreen() {
                 <Ionicons name="trash-outline" size={24} color="#EF4444" />
               </View>
               <Text style={[styles.cardText, styles.deleteCardText]}>
-                Deactivate & Delete Account
+                {t("settings.deactivateDelete")}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
 
-          {/* 8. Logout */}
+          {/* 9. Logout */}
           <TouchableOpacity
             style={styles.cardItem}
             activeOpacity={0.75}
@@ -197,11 +222,92 @@ export default function SettingsScreen() {
               <View style={styles.iconContainer}>
                 <Ionicons name="log-out-outline" size={24} color="#0D7A74" />
               </View>
-              <Text style={styles.cardText}>Logout</Text>
+              <Text style={styles.cardText}>{t("settings.logout")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0D7A74" />
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Change Language Modal */}
+        <Modal
+          visible={showLanguageModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLanguageModal(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <View
+                style={[styles.modalIconCircle, { backgroundColor: "#E6FFFA" }]}
+              >
+                <Ionicons name="language" size={30} color="#0D7A74" />
+              </View>
+              <Text style={styles.modalTitle}>
+                {t("settings.modals.language.title")}
+              </Text>
+              <Text style={styles.modalDesc}>
+                {t("settings.modals.language.desc")}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.languageOptionBtn,
+                  language === "en" && styles.languageOptionActive,
+                ]}
+                activeOpacity={0.7}
+                onPress={async () => {
+                  await changeLanguage("en", true);
+                  setShowLanguageModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.languageOptionText,
+                    language === "en" && styles.languageOptionTextActive,
+                  ]}
+                >
+                  English
+                </Text>
+                {language === "en" && (
+                  <Ionicons name="checkmark-circle" size={20} color="#0D7A74" />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.languageOptionBtn,
+                  language === "te" && styles.languageOptionActive,
+                ]}
+                activeOpacity={0.7}
+                onPress={async () => {
+                  await changeLanguage("te", true);
+                  setShowLanguageModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.languageOptionText,
+                    language === "te" && styles.languageOptionTextActive,
+                  ]}
+                >
+                  తెలుగు (Telugu)
+                </Text>
+                {language === "te" && (
+                  <Ionicons name="checkmark-circle" size={20} color="#0D7A74" />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalSecondaryBtn}
+                onPress={() => setShowLanguageModal(false)}
+              >
+                <Text style={styles.modalSecondaryBtnText}>
+                  {t("settings.modals.language.close")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Subscription Modal */}
         <Modal
@@ -217,30 +323,38 @@ export default function SettingsScreen() {
               >
                 <SubscriptionIcon size={32} color="#0D7A74" />
               </View>
-              <Text style={styles.modalTitle}>Premium Subscription</Text>
+              <Text style={styles.modalTitle}>
+                {t("settings.modals.subscription.title")}
+              </Text>
               <Text style={styles.modalDesc}>
-                Unlock unlimited likes, see who viewed your profile, advanced
-                compatibility filters, and boost your profile!
+                {t("settings.modals.subscription.desc")}
               </Text>
               <View style={styles.planBadge}>
                 <Text style={styles.planBadgeText}>
-                  Active Plan: Free Member
+                  {t("settings.modals.subscription.activePlan")}
                 </Text>
               </View>
               <TouchableOpacity
                 style={styles.modalPrimaryBtn}
                 onPress={() => {
                   setShowSubscriptionModal(false);
-                  Alert.alert("Subscription", "Upgrade flow opened!");
+                  Alert.alert(
+                    t("settings.subscription"),
+                    t("settings.modals.subscription.flowOpened")
+                  );
                 }}
               >
-                <Text style={styles.modalPrimaryBtnText}>Upgrade to Gold</Text>
+                <Text style={styles.modalPrimaryBtnText}>
+                  {t("settings.modals.subscription.upgradeGold")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalSecondaryBtn}
                 onPress={() => setShowSubscriptionModal(false)}
               >
-                <Text style={styles.modalSecondaryBtnText}>Close</Text>
+                <Text style={styles.modalSecondaryBtnText}>
+                  {t("settings.modals.subscription.close")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -260,17 +374,19 @@ export default function SettingsScreen() {
               >
                 <TrustRosetteIcon size={32} color="#0284C7" />
               </View>
-              <Text style={styles.modalTitle}>Trust & Compatibility</Text>
+              <Text style={styles.modalTitle}>
+                {t("settings.modals.trust.title")}
+              </Text>
               <Text style={styles.modalDesc}>
-                Our smart matchmaking algorithm analyzes your shared interests,
-                values, and lifestyle preferences to calculate authentic
-                compatibility scores.
+                {t("settings.modals.trust.desc")}
               </Text>
               <TouchableOpacity
                 style={styles.modalPrimaryBtn}
                 onPress={() => setShowTrustModal(false)}
               >
-                <Text style={styles.modalPrimaryBtnText}>Got it</Text>
+                <Text style={styles.modalPrimaryBtnText}>
+                  {t("settings.modals.trust.gotIt")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -291,23 +407,26 @@ export default function SettingsScreen() {
                 <Ionicons name="trash" size={30} color="#EF4444" />
               </View>
               <Text style={[styles.modalTitle, { color: "#EF4444" }]}>
-                Delete Account?
+                {t("settings.modals.delete.title")}
               </Text>
               <Text style={styles.modalDesc}>
-                Choose whether to deactivate your account for up to 30 days or
-                permanently delete it after phone verification.
+                {t("settings.modals.delete.desc")}
               </Text>
               <TouchableOpacity
                 style={[styles.modalPrimaryBtn, { backgroundColor: "#EF4444" }]}
                 onPress={handleDeleteAccount}
               >
-                <Text style={styles.modalPrimaryBtnText}>Delete Account</Text>
+                <Text style={styles.modalPrimaryBtnText}>
+                  {t("settings.modals.delete.deleteBtn")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalSecondaryBtn}
                 onPress={() => setShowDeleteModal(false)}
               >
-                <Text style={styles.modalSecondaryBtnText}>Cancel</Text>
+                <Text style={styles.modalSecondaryBtnText}>
+                  {t("settings.modals.delete.cancel")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -327,21 +446,27 @@ export default function SettingsScreen() {
               >
                 <Ionicons name="log-out-outline" size={30} color="#0D7A74" />
               </View>
-              <Text style={styles.modalTitle}>Log Out</Text>
+              <Text style={styles.modalTitle}>
+                {t("settings.modals.logout.title")}
+              </Text>
               <Text style={styles.modalDesc}>
-                Are you sure you want to log out of your account?
+                {t("settings.modals.logout.desc")}
               </Text>
               <TouchableOpacity
                 style={styles.modalPrimaryBtn}
                 onPress={handleLogout}
               >
-                <Text style={styles.modalPrimaryBtnText}>Log Out</Text>
+                <Text style={styles.modalPrimaryBtnText}>
+                  {t("settings.modals.logout.logoutBtn")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalSecondaryBtn}
                 onPress={() => setShowLogoutModal(false)}
               >
-                <Text style={styles.modalSecondaryBtnText}>Cancel</Text>
+                <Text style={styles.modalSecondaryBtnText}>
+                  {t("settings.modals.logout.cancel")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -515,5 +640,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     fontFamily: "DM_Sans_500Medium",
+  },
+  languageBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  languageBadgeText: {
+    fontSize: 14,
+    fontFamily: "DM_Sans_500Medium",
+    color: "#0D7A74",
+    marginRight: 2,
+  },
+  languageOptionBtn: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 10,
+  },
+  languageOptionActive: {
+    borderColor: "#0D7A74",
+    backgroundColor: "#F0FDFA",
+  },
+  languageOptionText: {
+    fontSize: 15,
+    fontFamily: "DM_Sans_500Medium",
+    color: "#0F172A",
+  },
+  languageOptionTextActive: {
+    color: "#0D7A74",
+    fontFamily: "DM_Sans_700Bold",
   },
 });

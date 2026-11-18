@@ -15,13 +15,19 @@ import { useRouter } from 'expo-router';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
 import { useTheme } from '@/hooks/use-theme';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import { useTranslation } from 'react-i18next';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateEducation } from '@/services/profileApi';
 
 export default function CompanyScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const [companyName, setCompanyName] = useState('');
+  const { t } = useTranslation();
+  const initialDraft = getOnboardingProfileDraft();
+  const [companyName, setCompanyName] = useState(initialDraft.company ?? '');
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,7 +86,7 @@ export default function CompanyScreen() {
     setIsSubmitting(true);
     try {
       const cleanCompany = companyName.trim();
-      updateStoredUserProfile({ company: cleanCompany });
+      updateOnboardingProfileDraft({ company: cleanCompany });
       await updateEducation({
         companyName: cleanCompany,
       }).catch((e) => {
@@ -112,14 +118,14 @@ export default function CompanyScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Header Title & Subtitle */}
-            <Text style={styles.title}>Education & Career</Text>
+            <Text style={styles.title}>{t('onboarding.steps.career.mainTitle')}</Text>
             <Text style={styles.subtitle}>
-              Add your education and work details to complete your profile.
+              {t('onboarding.steps.career.mainSubtitle')}
             </Text>
 
             {/* Section Label */}
             <View style={styles.labelContainer}>
-              <Text style={styles.label}>Company Name / Organization</Text>
+              <Text style={styles.label}>{t('onboarding.steps.career.companyTitle')}</Text>
             </View>
 
             {/* Capsule Input Container */}
@@ -139,13 +145,14 @@ export default function CompanyScreen() {
                   value={companyName}
                   onChangeText={(text) => {
                     setCompanyName(text);
+                    updateOnboardingProfileDraft({ company: text });
                     if (error && text.trim().length > 0) {
                       setError(false);
                     }
                   }}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  placeholder="Enter company name"
+                  placeholder={t('onboarding.steps.career.companyPlaceholder')}
                   placeholderTextColor={error ? '#9CA3AF' : '#9CA3AF'}
                   selectionColor="#00E4E8"
                   autoCapitalize="words"
@@ -163,7 +170,7 @@ export default function CompanyScreen() {
                     },
                   ]}
                 >
-                  Please enter your company name/organization
+                  {t('onboarding.steps.career.companyError')}
                 </Animated.Text>
               )}
             </View>

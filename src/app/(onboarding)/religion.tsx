@@ -3,14 +3,19 @@ import React, { useState } from 'react';
 import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredUserProfile } from '@/constants/userProfile';
+import {
+  getOnboardingProfileDraft,
+  updateOnboardingProfileDraft,
+} from '@/constants/userProfile';
 import { updateCurrentProfile } from '@/services/profileApi';
 
 export default function ReligionScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === '#ffffff';
   const insets = useSafeAreaInsets();
 
@@ -30,7 +35,10 @@ export default function ReligionScreen() {
     'Open to all',
   ];
 
-  const [selectedReligion, setSelectedReligion] = useState<string | null>(null);
+  const initialDraft = getOnboardingProfileDraft();
+  const [selectedReligion, setSelectedReligion] = useState<string | null>(
+    initialDraft.religion || null,
+  );
   const [error, setError] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,6 +88,7 @@ export default function ReligionScreen() {
 
   const handleSelect = (religion: string) => {
     setSelectedReligion(religion);
+    updateOnboardingProfileDraft({ religion });
     if (error) {
       setError(false);
     }
@@ -95,7 +104,7 @@ export default function ReligionScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      updateStoredUserProfile({ religion: selectedReligion });
+      updateOnboardingProfileDraft({ religion: selectedReligion });
       await updateCurrentProfile({ religion: selectedReligion }).catch((e) => {
         console.warn('Backend sync warning on religion update:', e);
       });
@@ -123,14 +132,14 @@ export default function ReligionScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <Text style={[styles.title, { color: theme.text }]}>What are you into?</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('onboarding.steps.religion.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us a little about yourself so we can help you find better matches.
+            {t('onboarding.steps.religion.subtitle')}
           </Text>
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Religion & Community</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('onboarding.steps.religion.sectionHeader')}</Text>
           </View>
 
           {/* Religion Select Box */}
@@ -155,7 +164,7 @@ export default function ReligionScreen() {
                 },
               ]}
             >
-              {selectedReligion || 'Select Religion / Community'}
+              {selectedReligion || t('onboarding.steps.religion.placeholder')}
             </Text>
             <Ionicons
               name="chevron-down"
@@ -173,7 +182,7 @@ export default function ReligionScreen() {
                 },
               ]}
             >
-              Please choose your Religion / Community
+              {t('onboarding.steps.religion.errorMessage')}
             </Animated.Text>
           )}
         </ScrollView>
@@ -212,7 +221,7 @@ export default function ReligionScreen() {
               >
                 {/* Modal Header */}
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>Select Religion / Community</Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>{t('onboarding.steps.religion.modalTitle')}</Text>
                   <Pressable
                     onPress={() => setModalVisible(false)}
                     hitSlop={10}

@@ -15,23 +15,51 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from 'react-i18next';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingFooter } from '@/components/onboarding-footer';
-import { updateStoredPartnerPreferences } from '@/constants/userProfile';
-import { updateDatingPreferences,  getCurrentProfile, CatalogItem, getInterestsCatalog, } from '@/services/profileApi';
+import {
+  getOnboardingPartnerDraft,
+  updateOnboardingPartnerDraft,
+} from '@/constants/userProfile';
+import { updateDatingPreferences, getCurrentProfile, CatalogItem, getInterestsCatalog } from '@/services/profileApi';
 
 export default function IdealMatchScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.text === "#ffffff";
   const insets = useSafeAreaInsets();
 
+  const initialPartnerDraft = getOnboardingPartnerDraft();
+  const initialDistance = initialPartnerDraft.maxDistanceLabel
+    ? initialPartnerDraft.maxDistanceLabel
+    : typeof initialPartnerDraft.maxDistanceKm === 'number'
+      ? `${initialPartnerDraft.maxDistanceKm} km`
+      : null;
+  const initialReligion =
+    Array.isArray(initialPartnerDraft.religionPreferences) &&
+    initialPartnerDraft.religionPreferences[0]
+      ? initialPartnerDraft.religionPreferences[0]
+      : "";
+  const initialInterests = Array.isArray(
+    initialPartnerDraft.preferredInterests,
+  )
+    ? initialPartnerDraft.preferredInterests
+    : [];
+
   // Age state (18 to 55)
-  const [maxAge, setMaxAge] = useState(35);
+  const [maxAge, setMaxAge] = useState(
+    typeof initialPartnerDraft.maxAge === 'number'
+      ? initialPartnerDraft.maxAge
+      : 35,
+  );
   const [trackWidth, setTrackWidth] = useState(240);
 
   // Distance state
   const distanceOptions = ["5 km", "10 km", "25 km", "50 km", "Any Where"];
-  const [selectedDistance, setSelectedDistance] = useState<string | null>(null);
+  const [selectedDistance, setSelectedDistance] = useState<string | null>(
+    initialDistance,
+  );
 
   // Partner Religion state
   const religionOptions = [
@@ -47,11 +75,15 @@ export default function IdealMatchScreen() {
     "Atheist",
     "Other",
   ];
-  const [selectedReligion, setSelectedReligion] = useState<string>("");
+  const [selectedReligion, setSelectedReligion] = useState<string>(
+    initialReligion,
+  );
   const [religionModalVisible, setReligionModalVisible] = useState(false);
 
   const [interestsCatalog, setInterestsCatalog] = useState<CatalogItem[]>([]);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(
+    initialInterests,
+  );
 
   useEffect(() => {
     getInterestsCatalog().then(setInterestsCatalog);
@@ -104,14 +136,12 @@ export default function IdealMatchScreen() {
   };
 
   const toggleInterest = (interest: string) => {
-    let nextInterests: string[];
-    if (selectedInterests.includes(interest)) {
-      nextInterests = selectedInterests.filter((item) => item !== interest);
-    } else {
-      nextInterests = [...selectedInterests, interest];
-    }
-    setSelectedInterests(nextInterests);
-    if (error === 'interests' && nextInterests.length > 0) {
+    const updated = selectedInterests.includes(interest)
+      ? selectedInterests.filter((item) => item !== interest)
+      : [...selectedInterests, interest];
+    setSelectedInterests(updated);
+    updateOnboardingPartnerDraft({ preferredInterests: updated });
+    if (error === 'interests') {
       setError(null);
     }
   };
@@ -121,7 +151,9 @@ export default function IdealMatchScreen() {
     const clampedX = Math.max(0, Math.min(touchX, trackWidth));
     const ratio = clampedX / trackWidth;
     const calculatedAge = Math.round(18 + ratio * (55 - 18));
-    setMaxAge(Math.max(18, Math.min(55, calculatedAge)));
+    const finalAge = Math.max(18, Math.min(55, calculatedAge));
+    setMaxAge(finalAge);
+    updateOnboardingPartnerDraft({ maxAge: finalAge });
   };
 
   // Slider pan responder for age
@@ -169,10 +201,11 @@ export default function IdealMatchScreen() {
       ? parseInt(selectedDistance.replace(/\D/g, ''), 10) || 50
       : 50;
 
-    updateStoredPartnerPreferences({
+    updateOnboardingPartnerDraft({
       minAge: 18,
       maxAge: maxAge || 35,
       maxDistanceKm: distanceNum,
+      maxDistanceLabel: selectedDistance,
       religionPreferences: selectedReligion
         ? [selectedReligion]
         : ['Open to all'],
@@ -229,21 +262,21 @@ export default function IdealMatchScreen() {
         >
           {/* Header */}
           <Text style={[styles.title, { color: theme.text }]}>
-            Your ideal match
+            {t('onboarding.steps.idealMatch.title')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Tell us what matters most to you.
+            {t('onboarding.steps.idealMatch.subtitle')}
           </Text>
 
           {/* 1. Age Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Age
+              {t('onboarding.steps.idealMatch.ageTitle')}
             </Text>
             <Text
               style={[styles.preferredAgeLabel, { color: theme.textSecondary }]}
             >
-              Preferred Age: {maxAge}
+              {t('onboarding.steps.idealMatch.preferredAge', { age: maxAge })}
             </Text>
 
             <View style={styles.sliderRow}>
@@ -296,7 +329,7 @@ export default function IdealMatchScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Distance
+                {t('onboarding.steps.idealMatch.distanceTitle')}
               </Text>
               {error === 'distance' && (
                 <Animated.Text
@@ -307,7 +340,7 @@ export default function IdealMatchScreen() {
                     },
                   ]}
                 >
-                  Please choose your distance preference
+                  {t('onboarding.steps.idealMatch.distanceError')}
                 </Animated.Text>
               )}
             </View>
@@ -319,6 +352,11 @@ export default function IdealMatchScreen() {
                     key={dist}
                     onPress={() => {
                       setSelectedDistance(dist);
+                      const distanceNum = dist ? parseInt(dist.replace(/\D/g, ''), 10) || 50 : 50;
+                      updateOnboardingPartnerDraft({
+                        maxDistanceKm: distanceNum,
+                        maxDistanceLabel: dist,
+                      });
                       if (error === 'distance') setError(null);
                     }}
                     style={[
@@ -360,7 +398,7 @@ export default function IdealMatchScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Partner Religion / Community
+                {t('onboarding.steps.idealMatch.religionTitle')}
               </Text>
               {error === 'religion' && (
                 <Animated.Text
@@ -371,7 +409,7 @@ export default function IdealMatchScreen() {
                     },
                   ]}
                 >
-                  Please choose your religion / community
+                  {t('onboarding.steps.idealMatch.religionError')}
                 </Animated.Text>
               )}
             </View>
@@ -405,7 +443,7 @@ export default function IdealMatchScreen() {
                   },
                 ]}
               >
-                {selectedReligion || "Select Religion / Community"}
+                {selectedReligion || t('onboarding.steps.idealMatch.religionPlaceholder')}
               </Text>
               <Ionicons
                 name="chevron-down"
@@ -425,7 +463,7 @@ export default function IdealMatchScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Partner Interests
+                {t('onboarding.steps.idealMatch.interestsTitle')}
               </Text>
               {error === 'interests' && (
                 <Animated.Text
@@ -436,7 +474,7 @@ export default function IdealMatchScreen() {
                     },
                   ]}
                 >
-                  Please select at least one interest
+                  {t('onboarding.steps.idealMatch.interestsError')}
                 </Animated.Text>
               )}
             </View>
@@ -552,6 +590,7 @@ export default function IdealMatchScreen() {
                         key={item}
                         onPress={() => {
                           setSelectedReligion(item);
+                          updateOnboardingPartnerDraft({ religionPreferences: [item] });
                           if (error === 'religion') setError(null);
                           setReligionModalVisible(false);
                         }}
