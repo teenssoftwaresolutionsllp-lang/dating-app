@@ -55,7 +55,7 @@ export const AppToastOverlay: React.FC = () => {
 
   const translateY = useRef(new Animated.Value(-120)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     toast.register((options) => {

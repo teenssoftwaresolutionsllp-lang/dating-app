@@ -12,7 +12,7 @@ type BadgeListener = (counts: TabBadgeCounts) => void;
 class BadgeService {
   private listeners: Set<BadgeListener> = new Set();
   private currentCounts: TabBadgeCounts = { likesCount: 0, chatsCount: 0 };
-  private pollInterval: NodeJS.Timeout | null = null;
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
   private isFetching = false;
   private activeConversationId: string | null = null;
 

@@ -20,7 +20,7 @@ const SimpleStorage = {
           return await FileSystem.readAsStringAsync(path);
         }
       }
-    } catch {}
+    } catch { }
     return null;
   },
   async setItem(key: string, value: string): Promise<void> {
@@ -35,7 +35,7 @@ const SimpleStorage = {
         const path = `${FileSystem.documentDirectory}${key}.txt`;
         await FileSystem.writeAsStringAsync(path, value);
       }
-    } catch {}
+    } catch { }
   },
 };
 
@@ -48,8 +48,8 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType>({
   language: 'en',
-  changeLanguage: async () => {},
-  applyUserLanguage: async () => {},
+  changeLanguage: async () => { },
+  applyUserLanguage: async () => { },
   isLoading: true,
 });
 
