@@ -12,7 +12,7 @@ export type SupportedLanguage = 'en' | 'te';
 
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
-    compatibilityJSON: 'v4',
+    compatibilityJSON: 'v4' as any,
     resources,
     lng: 'en',
     fallbackLng: 'en',
@@ -22,7 +22,7 @@ if (!i18n.isInitialized) {
     react: {
       useSuspense: false,
     },
-  });
+  } as any);
 }
 
 export default i18n;

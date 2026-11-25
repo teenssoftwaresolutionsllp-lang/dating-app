@@ -20,7 +20,7 @@
         "disabled": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://ringtones-undertake-canvas-animal.trycloudflare.com"
+        "EXPO_PUBLIC_API_URL": "https://dating-be-p9nx.onrender.com"
       }
     },
     "production": {

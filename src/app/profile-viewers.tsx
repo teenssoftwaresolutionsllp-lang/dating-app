@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,34 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-interface ViewerItem {
-  id: string;
-  name: string;
-  subtitle: string;
-  time: string;
-  avatar: any;
-}
-
-const VIEWERS_DATA: ViewerItem[] = [
-  {
-    id: '1',
-    name: 'Ananya',
-    subtitle: 'Looking for serious relationship',
-    time: '08:30 AM',
-    avatar: require('../../assets/images/image 2.png'),
-  },
-  {
-    id: '2',
-    name: 'Swathi',
-    subtitle: 'Looking for casual talk',
-    time: 'Yesterday',
-    avatar: require('../../assets/images/login2.png'),
-  },
-];
+import { viewerService, FALLBACK_VIEWERS, type ProfileViewerItem } from '@/services/viewerService';
 
 export default function ProfileViewersScreen() {
   const router = useRouter();
+  const [viewers, setViewers] = useState<ProfileViewerItem[]>(FALLBACK_VIEWERS);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -48,6 +25,15 @@ export default function ProfileViewersScreen() {
       router.replace('/(tab)/matches' as any);
     }
   };
+
+  useEffect(() => {
+    viewerService.markAsSeen();
+    viewerService.loadViewers().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setViewers(data);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const onBackPress = () => {
@@ -88,7 +74,7 @@ export default function ProfileViewersScreen() {
           <Text style={styles.sectionTitle}>Recent viewers</Text>
 
           <View style={styles.viewersList}>
-            {VIEWERS_DATA.map((item) => (
+            {viewers.map((item) => (
               <View key={item.id} style={styles.viewerCard}>
                 <Image source={item.avatar} style={styles.avatar} resizeMode="cover" />
                 <View style={styles.infoContainer}>

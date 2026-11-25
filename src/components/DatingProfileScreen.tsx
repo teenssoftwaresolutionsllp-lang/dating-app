@@ -21,6 +21,7 @@ import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { CustomTabBar } from './CustomTabBar';
 import { useTranslation } from 'react-i18next';
 import { formatApiImageUrl } from '@/services/api';
+import { viewerService } from '@/services/viewerService';
 import {
   getDiscoveryFeed,
   resetDiscoveryFeed,
@@ -272,6 +273,14 @@ export default function DatingProfileScreen() {
   } | null>(null);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [safetyActionStatus, setSafetyActionStatus] = useState<string | null>(null);
+  const [viewersCount, setViewersCount] = useState(0);
+
+  React.useEffect(() => {
+    const unsubscribe = viewerService.subscribe((count) => {
+      setViewersCount(count);
+    });
+    return unsubscribe;
+  }, []);
 
   const loadProfiles = React.useCallback(() => {
     setIsLoading(true);
@@ -338,6 +347,13 @@ export default function DatingProfileScreen() {
   const currentProfile = cards.length > 0
     ? cards[currentProfileIndex % cards.length]
     : undefined;
+
+  // Record profile view when viewing a candidate profile (triggers real-time badge on their device)
+  React.useEffect(() => {
+    if (currentProfile?.userId) {
+      void viewerService.recordProfileView(currentProfile.userId);
+    }
+  }, [currentProfile?.userId]);
 
   // Responsive container width calculation
   const [cardWidth, setCardWidth] = useState<number>(
@@ -549,9 +565,9 @@ export default function DatingProfileScreen() {
     const photoSource = currentProfile.images[0];
     const partnerPhoto =
       typeof photoSource === 'object' &&
-      photoSource !== null &&
-      'uri' in photoSource &&
-      typeof photoSource.uri === 'string'
+        photoSource !== null &&
+        'uri' in photoSource &&
+        typeof photoSource.uri === 'string'
         ? photoSource.uri
         : '';
     router.push({
@@ -572,9 +588,9 @@ export default function DatingProfileScreen() {
       const partnerId = matchModalData.userId;
       const partnerPhoto =
         typeof matchModalData.photo === 'object' &&
-        matchModalData.photo !== null &&
-        'uri' in matchModalData.photo &&
-        typeof matchModalData.photo.uri === 'string'
+          matchModalData.photo !== null &&
+          'uri' in matchModalData.photo &&
+          typeof matchModalData.photo.uri === 'string'
           ? matchModalData.photo.uri
           : '';
       setMatchModalData(null);
@@ -610,449 +626,456 @@ export default function DatingProfileScreen() {
         {/* MATCHES SCREEN (Main Dating Profile Screen with multi-image carousel) */}
         <View style={{ flex: 1 }}>
           {currentProfile ? (
-          <>
-          {/* Liked Toast Notification */}
-          {showLikedToast && (
-            <View style={styles.likedToast}>
-              <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.likedToastText}>
-                {currentProfile.name ? t('matches.likedToast', { name: currentProfile.name }) : t('matches.likedToastDefault')}
-              </Text>
-            </View>
-          )}
-
-          {/* Top Header Bar with Profile Viewers Eye Icon (Matching Reference Image 1) */}
-          <View style={styles.topHeaderNav}>
-            <View style={styles.topHeaderSpacer} />
-            <TouchableOpacity
-              style={styles.viewersIconButton}
-              onPress={() => router.push('/profile-viewers' as any)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="View Profile Viewers"
-            >
-              <Ionicons name="eye-outline" size={20} color="#0D7A74" />
-            </TouchableOpacity>
-          </View>
-
-            {/* Main Scrollable Content with Animated Slide */}
-            <ScrollView
-              style={styles.mainScrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <Animated.View
-                style={{
-                  transform: [
-                    { translateX: cardSlideAnim },
-                    { rotate: cardRotateInterpolation },
-                  ],
-                }}
-              >
-                {/* Photo Container Card with Side-by-Side Horizontal Image Carousel */}
-                <View style={styles.photoCardContainer} onLayout={onCardLayout}>
-                  <ScrollView
-                    ref={scrollViewRef}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    onScroll={Animated.event(
-                      [{ nativeEvent: { contentOffset: { x: scrollXAnim } } }],
-                      { useNativeDriver: false, listener: handleScroll }
-                    )}
-                    scrollEventThrottle={16}
-                    style={styles.horizontalImageScrollView}
-                  >
-                    {currentProfile.images.map((imgSrc: any, idx: number) => (
-                      <View key={idx} style={[styles.imageSlide, { width: cardWidth }]}>
-                        <Image source={imgSrc} style={[styles.profileImage, { width: cardWidth }]} resizeMode="cover" />
-                        <View style={styles.imageOverlayBadge}>
-                          <Text style={styles.imageOverlayBadgeText}>
-                            {idx + 1}/{currentProfile.images.length}
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                  </ScrollView>
-
-                  {/* Left Chevron Arrow Button */}
-                  <TouchableOpacity
-                    style={[styles.carouselNavBtn, styles.carouselNavBtnLeft]}
-                    onPress={handlePrevImage}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
-
-                  {/* Right Chevron Arrow Button */}
-                  <TouchableOpacity
-                    style={[styles.carouselNavBtn, styles.carouselNavBtnRight]}
-                    onPress={handleNextImage}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
-
-                  {/* Smooth Dots Pagination Indicator */}
-                  <View style={styles.paginationContainer}>
-                    {currentProfile.images.map((_: any, idx: number) => (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => scrollToImage(idx)}
-                        activeOpacity={0.8}
-                      >
-                        <View
-                          style={[
-                            styles.paginationDot,
-                            currentImageIndex === idx && styles.paginationDotActive,
-                          ]}
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Circular Trust Score Badge (Bottom Right of Photo Card) */}
-                  <View style={styles.hundredPercentBadgeOverlay}>
-                    <CircularTrustBadge percentage={currentProfile.trustScore?.score ?? 100} />
-                  </View>
+            <>
+              {/* Liked Toast Notification */}
+              {showLikedToast && (
+                <View style={styles.likedToast}>
+                  <Ionicons name="heart" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.likedToastText}>
+                    {currentProfile.name ? `Liked ${currentProfile.name}'s profile!` : 'Liked profile!'}
+                  </Text>
                 </View>
+              )}
 
-                {/* Profile Basic Details */}
-                <View style={styles.profileDetailsHeader}>
-                  <View style={styles.nameRow}>
-                    {(currentProfile.name || currentProfile.age != null || currentProfile.height) && (
-                      <Text style={styles.profileName}>
-                        {currentProfile.name}
-                        {currentProfile.age != null ? `, ${currentProfile.age}` : ''}
-                        {currentProfile.height ? ` · ${currentProfile.height}` : ''}
+              {/* Top Header Bar with Profile Viewers Eye Icon (Matching Reference Image 1) */}
+              <View style={styles.topHeaderNav}>
+                <View style={styles.topHeaderSpacer} />
+                <TouchableOpacity
+                  style={styles.viewersIconButton}
+                  onPress={() => router.push('/profile-viewers' as any)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View Profile Viewers${viewersCount > 0 ? `, ${viewersCount} new` : ''}`}
+                >
+                  <Ionicons name="eye-outline" size={20} color="#0D7A74" />
+                  {viewersCount > 0 && (
+                    <View style={styles.viewersBadge}>
+                      <Text style={styles.viewersBadgeText}>
+                        {viewersCount > 99 ? '99+' : viewersCount}
                       </Text>
-                    )}
-
-                    {/* Online Status Badge */}
-                    {currentProfile.isOnline && (
-                      <View style={styles.onlineBadge}>
-                        <View style={styles.onlineDot} />
-                        <Text style={styles.onlineText}>Online</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Location Line */}
-                  {currentProfile.location && (
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-sharp" size={16} color="#111827" />
-                      <Text style={styles.locationText}>{currentProfile.location}</Text>
                     </View>
                   )}
-                </View>
+                </TouchableOpacity>
+              </View>
 
-                {/* About Me Section */}
-                {(currentProfile.about || currentProfile.interests.length > 0) && (
-                  <View style={styles.aboutMeCard}>
-                    {currentProfile.about && (
-                      <>
-                        <Text style={styles.aboutMeTitle}>{t('matches.aboutMe')}</Text>
-                        <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
-                      </>
-                    )}
-
-                    {currentProfile.interests.length > 0 && (
-                      <View style={styles.interestChipsContainer}>
-                        {currentProfile.interests.map((interest, idx) => (
-                          <View key={idx} style={styles.interestChip}>
-                            <Text style={styles.interestChipText}>{interest}</Text>
+              {/* Main Scrollable Content with Animated Slide */}
+              <ScrollView
+                style={styles.mainScrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Animated.View
+                  style={{
+                    transform: [
+                      { translateX: cardSlideAnim },
+                      { rotate: cardRotateInterpolation },
+                    ],
+                  }}
+                >
+                  {/* Photo Container Card with Side-by-Side Horizontal Image Carousel */}
+                  <View style={styles.photoCardContainer} onLayout={onCardLayout}>
+                    <ScrollView
+                      ref={scrollViewRef}
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      onScroll={Animated.event(
+                        [{ nativeEvent: { contentOffset: { x: scrollXAnim } } }],
+                        { useNativeDriver: false, listener: handleScroll }
+                      )}
+                      scrollEventThrottle={16}
+                      style={styles.horizontalImageScrollView}
+                    >
+                      {currentProfile.images.map((imgSrc: any, idx: number) => (
+                        <View key={idx} style={[styles.imageSlide, { width: cardWidth }]}>
+                          <Image source={imgSrc} style={[styles.profileImage, { width: cardWidth }]} resizeMode="cover" />
+                          <View style={styles.imageOverlayBadge}>
+                            <Text style={styles.imageOverlayBadgeText}>
+                              {idx + 1}/{currentProfile.images.length}
+                            </Text>
                           </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {/* Profession & Education */}
-                {(currentProfile.education || currentProfile.profession) && (
-                  <View style={styles.professionContainer}>
-                    {currentProfile.education && (
-                      <View style={styles.professionPill}>
-                        <Ionicons name="school-outline" size={18} color="#0D9488" />
-                        <Text style={styles.professionPillText}>{currentProfile.education}</Text>
-                      </View>
-                    )}
-                    {currentProfile.profession && (
-                      <View style={styles.professionPill}>
-                        <Ionicons name="briefcase-outline" size={18} color="#0D9488" />
-                        <Text style={styles.professionPillText}>{currentProfile.profession}</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {/* Attributes Grid (Real Data: Food, Drink, Smoke, Looking For, Religion, Relationship Status) */}
-                {(currentProfile.foodPreference || currentProfile.drinking || currentProfile.smoking ||
-                  currentProfile.lookingFor || currentProfile.religion || currentProfile.relationshipStatus) && (
-                  <View style={styles.attributesGrid}>
-                  {currentProfile.foodPreference && (
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="restaurant-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>{t('matches.foodPreferences')}</Text>
-                    </View>
-                    <Text style={styles.attributeValue}>{currentProfile.foodPreference}</Text>
-                  </View>
-                  )}
-
-                  {currentProfile.drinking && (
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="wine-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>{t('matches.drink')}</Text>
-                    </View>
-                    <Text style={styles.attributeValue}>{currentProfile.drinking}</Text>
-                  </View>
-                  )}
-
-                  {currentProfile.smoking && (
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="cloud-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>{t('matches.smoke')}</Text>
-                    </View>
-                    <Text style={styles.attributeValue}>{currentProfile.smoking}</Text>
-                  </View>
-                  )}
-
-                  {currentProfile.lookingFor && (
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="heart-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>{t('matches.lookingFor')}</Text>
-                    </View>
-                    <Text style={styles.attributeValue} numberOfLines={1}>
-                      {currentProfile.lookingFor}
-                    </Text>
-                  </View>
-                  )}
-
-                  {currentProfile.religion && (
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="flower-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>{t('matches.religion')}</Text>
-                    </View>
-                    <Text style={styles.attributeValue}>{currentProfile.religion}</Text>
-                  </View>
-                  )}
-
-                  {currentProfile.relationshipStatus && (
-                  <View style={styles.attributeBox}>
-                    <View style={styles.attributeHeaderRow}>
-                      <Ionicons name="person-outline" size={15} color="#0D7A74" />
-                      <Text style={styles.attributeTitle}>{t('matches.relationshipStatus')}</Text>
-                    </View>
-                    <Text style={styles.attributeValue}>{currentProfile.relationshipStatus}</Text>
-                  </View>
-                  )}
-                </View>
-                )}
-
-                {/* Nature Section (Dynamically rendered from candidate's real nature traits) */}
-                {currentProfile.nature.length > 0 && (
-                <View style={styles.myVibesSection}>
-                  <Text style={styles.myVibesTitle}>{t('matches.nature')}</Text>
-                  <View style={styles.myVibesRow}>
-                    {currentProfile.nature.slice(0, 5)
-                      .map((trait: string, idx: number) => (
-                        <View key={idx} style={styles.vibeItem}>
-                          <View style={styles.vibeIconCircle}>
-                            <Ionicons name={getMatchVibeIcon(trait)} size={18} color="#0D7A74" />
-                          </View>
-                          <Text style={styles.vibeLabel} numberOfLines={1}>
-                            {trait}
-                          </Text>
                         </View>
                       ))}
+                    </ScrollView>
+
+                    {/* Left Chevron Arrow Button */}
+                    <TouchableOpacity
+                      style={[styles.carouselNavBtn, styles.carouselNavBtnLeft]}
+                      onPress={handlePrevImage}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+
+                    {/* Right Chevron Arrow Button */}
+                    <TouchableOpacity
+                      style={[styles.carouselNavBtn, styles.carouselNavBtnRight]}
+                      onPress={handleNextImage}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+
+                    {/* Smooth Dots Pagination Indicator */}
+                    <View style={styles.paginationContainer}>
+                      {currentProfile.images.map((_: any, idx: number) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => scrollToImage(idx)}
+                          activeOpacity={0.8}
+                        >
+                          <View
+                            style={[
+                              styles.paginationDot,
+                              currentImageIndex === idx && styles.paginationDotActive,
+                            ]}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Circular Trust Score Badge (Bottom Right of Photo Card) */}
+                    <View style={styles.hundredPercentBadgeOverlay}>
+                      <CircularTrustBadge percentage={currentProfile.trustScore?.score ?? 100} />
+                    </View>
+                  </View>
+
+                  {/* Profile Basic Details */}
+                  <View style={styles.profileDetailsHeader}>
+                    <View style={styles.nameRow}>
+                      {(currentProfile.name || currentProfile.age != null || currentProfile.height) && (
+                        <Text style={styles.profileName}>
+                          {currentProfile.name}
+                          {currentProfile.age != null ? `, ${currentProfile.age}` : ''}
+                          {currentProfile.height ? ` · ${currentProfile.height}` : ''}
+                        </Text>
+                      )}
+
+                      {/* Online Status Badge */}
+                      {currentProfile.isOnline && (
+                        <View style={styles.onlineBadge}>
+                          <View style={styles.onlineDot} />
+                          <Text style={styles.onlineText}>Online</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Location Line */}
+                    {currentProfile.location && (
+                      <View style={styles.locationRow}>
+                        <Ionicons name="location-sharp" size={16} color="#111827" />
+                        <Text style={styles.locationText}>{currentProfile.location}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* About Me Section */}
+                  {(currentProfile.about || currentProfile.interests.length > 0) && (
+                    <View style={styles.aboutMeCard}>
+                      {currentProfile.about && (
+                        <>
+                          <Text style={styles.aboutMeTitle}>About Me</Text>
+                          <Text style={styles.aboutMeText}>{currentProfile.about}</Text>
+                        </>
+                      )}
+
+                      {currentProfile.interests.length > 0 && (
+                        <View style={styles.interestChipsContainer}>
+                          {currentProfile.interests.map((interest, idx) => (
+                            <View key={idx} style={styles.interestChip}>
+                              <Text style={styles.interestChipText}>{interest}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Profession & Education */}
+                  {(currentProfile.education || currentProfile.profession) && (
+                    <View style={styles.professionContainer}>
+                      {currentProfile.education && (
+                        <View style={styles.professionPill}>
+                          <Ionicons name="school-outline" size={18} color="#0D9488" />
+                          <Text style={styles.professionPillText}>{currentProfile.education}</Text>
+                        </View>
+                      )}
+                      {currentProfile.profession && (
+                        <View style={styles.professionPill}>
+                          <Ionicons name="briefcase-outline" size={18} color="#0D9488" />
+                          <Text style={styles.professionPillText}>{currentProfile.profession}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Attributes Grid (Real Data: Food, Drink, Smoke, Looking For, Religion, Relationship Status) */}
+                  {(currentProfile.foodPreference || currentProfile.drinking || currentProfile.smoking ||
+                    currentProfile.lookingFor || currentProfile.religion || currentProfile.relationshipStatus) && (
+                      <View style={styles.attributesGrid}>
+                        {currentProfile.foodPreference && (
+                          <View style={styles.attributeBox}>
+                            <View style={styles.attributeHeaderRow}>
+                              <Ionicons name="restaurant-outline" size={15} color="#0D7A74" />
+                              <Text style={styles.attributeTitle}>Food Preferences</Text>
+                            </View>
+                            <Text style={styles.attributeValue}>{currentProfile.foodPreference}</Text>
+                          </View>
+                        )}
+
+                        {currentProfile.drinking && (
+                          <View style={styles.attributeBox}>
+                            <View style={styles.attributeHeaderRow}>
+                              <Ionicons name="wine-outline" size={15} color="#0D7A74" />
+                              <Text style={styles.attributeTitle}>Drink</Text>
+                            </View>
+                            <Text style={styles.attributeValue}>{currentProfile.drinking}</Text>
+                          </View>
+                        )}
+
+                        {currentProfile.smoking && (
+                          <View style={styles.attributeBox}>
+                            <View style={styles.attributeHeaderRow}>
+                              <Ionicons name="cloud-outline" size={15} color="#0D7A74" />
+                              <Text style={styles.attributeTitle}>Smoke</Text>
+                            </View>
+                            <Text style={styles.attributeValue}>{currentProfile.smoking}</Text>
+                          </View>
+                        )}
+
+                        {currentProfile.lookingFor && (
+                          <View style={styles.attributeBox}>
+                            <View style={styles.attributeHeaderRow}>
+                              <Ionicons name="heart-outline" size={15} color="#0D7A74" />
+                              <Text style={styles.attributeTitle}>Looking for</Text>
+                            </View>
+                            <Text style={styles.attributeValue} numberOfLines={1}>
+                              {currentProfile.lookingFor}
+                            </Text>
+                          </View>
+                        )}
+
+                        {currentProfile.religion && (
+                          <View style={styles.attributeBox}>
+                            <View style={styles.attributeHeaderRow}>
+                              <Ionicons name="flower-outline" size={15} color="#0D7A74" />
+                              <Text style={styles.attributeTitle}>Religion</Text>
+                            </View>
+                            <Text style={styles.attributeValue}>{currentProfile.religion}</Text>
+                          </View>
+                        )}
+
+                        {currentProfile.relationshipStatus && (
+                          <View style={styles.attributeBox}>
+                            <View style={styles.attributeHeaderRow}>
+                              <Ionicons name="person-outline" size={15} color="#0D7A74" />
+                              <Text style={styles.attributeTitle}>Relationship Status</Text>
+                            </View>
+                            <Text style={styles.attributeValue}>{currentProfile.relationshipStatus}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                  {/* Nature Section (Dynamically rendered from candidate's real nature traits) */}
+                  {currentProfile.nature.length > 0 && (
+                    <View style={styles.myVibesSection}>
+                      <Text style={styles.myVibesTitle}>Nature</Text>
+                      <View style={styles.myVibesRow}>
+                        {currentProfile.nature.slice(0, 5)
+                          .map((trait: string, idx: number) => (
+                            <View key={idx} style={styles.vibeItem}>
+                              <View style={styles.vibeIconCircle}>
+                                <Ionicons name={getMatchVibeIcon(trait)} size={18} color="#0D7A74" />
+                              </View>
+                              <Text style={styles.vibeLabel} numberOfLines={1}>
+                                {trait}
+                              </Text>
+                            </View>
+                          ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Report & Block Profile Link */}
+                  <TouchableOpacity
+                    style={styles.reportButton}
+                    activeOpacity={0.7}
+                    onPress={() => setShowSafetyModal(true)}
+                  >
+                    <Ionicons name="alert-circle-outline" size={16} color="#FF4D4D" />
+                    <Text style={styles.reportButtonText}>Report & block profile</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+
+                {/* Spacing for floating action buttons */}
+                <View style={{ height: 130 }} />
+              </ScrollView>
+
+              {/* Floating Action Buttons Overlay (Positioned close to footer with Chat slightly higher matching reference image) */}
+              {(currentProfile.isMatched ||
+                currentProfile.theyLikedYou ||
+                currentProfile.alreadyLiked) && (
+                  <View style={styles.alreadyLikedBadge}>
+                    <Ionicons
+                      name={currentProfile.isMatched ? 'heart' : 'checkmark-circle'}
+                      size={16}
+                      color="#168A62"
+                    />
+                    <Text style={styles.alreadyLikedLabel}>
+                      {currentProfile.isMatched
+                        ? "It's a match!"
+                        : currentProfile.theyLikedYou
+                          ? 'They liked you'
+                          : 'You already liked this profile'}
+                    </Text>
+                  </View>
+                )}
+              <View style={styles.floatingActionRow}>
+                {/* Dislike / Red X Button (#FFC5C5 outer ring, #EB1B1B inner circle, white X) */}
+                <View style={styles.actionBtnRedOuter}>
+                  <TouchableOpacity
+                    style={styles.actionBtnRedInner}
+                    activeOpacity={0.85}
+                    onPress={handleReject}
+                  >
+                    <Ionicons name="close" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Chat Message / Blue Elevated Button (#C6EEFF outer ring, #14B9FF inner circle, white bubble with cyan lines) */}
+                <View style={styles.actionBtnBlueOuter}>
+                  <TouchableOpacity
+                    style={styles.actionBtnBlueInner}
+                    activeOpacity={0.85}
+                    onPress={handleOpenChat}
+                  >
+                    <ActionChatIcon size={19} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Like Heart / Pink Button (#F4E7F1 outer ring, #F9C4EC middle ring, #FF1FC7 heart) */}
+                <View style={styles.actionBtnPinkOutermost}>
+                  <View style={styles.actionBtnPinkMiddle}>
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtnPinkInner,
+                        isLiked && styles.actionBtnPinkLiked,
+                        (currentProfile.alreadyLiked || currentProfile.isMatched) &&
+                        styles.actionBtnPinkDisabled,
+                      ]}
+                      activeOpacity={0.85}
+                      disabled={currentProfile.alreadyLiked || currentProfile.isMatched}
+                      accessibilityState={{
+                        disabled: currentProfile.alreadyLiked || currentProfile.isMatched,
+                      }}
+                      onPress={handleToggleLike}
+                    >
+                      <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
+                        <Ionicons
+                          name="heart"
+                          size={22}
+                          color={
+                            currentProfile.alreadyLiked || currentProfile.isMatched
+                              ? '#9CA3AF'
+                              : '#FF1FC7'
+                          }
+                        />
+                      </Animated.View>
+                    </TouchableOpacity>
                   </View>
                 </View>
-                )}
-
-                {/* Report & Block Profile Link */}
-                <TouchableOpacity
-                  style={styles.reportButton}
-                  activeOpacity={0.7}
-                  onPress={() => setShowSafetyModal(true)}
-                >
-                  <Ionicons name="alert-circle-outline" size={16} color="#FF4D4D" />
-                  <Text style={styles.reportButtonText}>{t('matches.reportBlock')}</Text>
-                </TouchableOpacity>
-              </Animated.View>
-
-              {/* Spacing for floating action buttons */}
-              <View style={{ height: 130 }} />
-            </ScrollView>
-
-            {/* Floating Action Buttons Overlay (Positioned close to footer with Chat slightly higher matching reference image) */}
-            {(currentProfile.isMatched ||
-              currentProfile.theyLikedYou ||
-              currentProfile.alreadyLiked) && (
-              <View style={styles.alreadyLikedBadge}>
-                <Ionicons
-                  name={currentProfile.isMatched ? 'heart' : 'checkmark-circle'}
-                  size={16}
-                  color="#168A62"
-                />
-                <Text style={styles.alreadyLikedLabel}>
-                  {currentProfile.isMatched
-                    ? t('matches.itIsAMatch')
-                    : currentProfile.theyLikedYou
-                      ? t('matches.theyLikedYou')
-                      : t('matches.alreadyLiked')}
-                </Text>
-              </View>
-            )}
-            <View style={styles.floatingActionRow}>
-              {/* Dislike / Red X Button (#FFC5C5 outer ring, #EB1B1B inner circle, white X) */}
-              <View style={styles.actionBtnRedOuter}>
-                <TouchableOpacity
-                  style={styles.actionBtnRedInner}
-                  activeOpacity={0.85}
-                  onPress={handleReject}
-                >
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
               </View>
 
-              {/* Chat Message / Blue Elevated Button (#C6EEFF outer ring, #14B9FF inner circle, white bubble with cyan lines) */}
-              <View style={styles.actionBtnBlueOuter}>
-                <TouchableOpacity
-                  style={styles.actionBtnBlueInner}
-                  activeOpacity={0.85}
-                  onPress={handleOpenChat}
-                >
-                  <ActionChatIcon size={19} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
+              {/* Mutual Match Celebration Modal */}
+              {matchModalData && (
+                <View style={styles.matchModalOverlay}>
+                  <View style={styles.matchModalCard}>
+                    <Text style={styles.matchModalTitle}>🎉 It&apos;s a Match!</Text>
+                    <Text style={styles.matchModalSubtitle}>
+                      {matchModalData.name
+                        ? `You and ${matchModalData.name} liked each other.`
+                        : 'You both liked each other.'}
+                    </Text>
+                    <Image source={matchModalData.photo} style={styles.matchModalAvatar} />
 
-              {/* Like Heart / Pink Button (#F4E7F1 outer ring, #F9C4EC middle ring, #FF1FC7 heart) */}
-              <View style={styles.actionBtnPinkOutermost}>
-                <View style={styles.actionBtnPinkMiddle}>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionBtnPinkInner,
-                      isLiked && styles.actionBtnPinkLiked,
-                      (currentProfile.alreadyLiked || currentProfile.isMatched) &&
-                        styles.actionBtnPinkDisabled,
-                    ]}
-                    activeOpacity={0.85}
-                    disabled={currentProfile.alreadyLiked || currentProfile.isMatched}
-                    accessibilityState={{
-                      disabled: currentProfile.alreadyLiked || currentProfile.isMatched,
-                    }}
-                    onPress={handleToggleLike}
-                  >
-                    <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
-                      <Ionicons
-                        name="heart"
-                        size={22}
-                        color={
-                          currentProfile.alreadyLiked || currentProfile.isMatched
-                            ? '#9CA3AF'
-                            : '#FF1FC7'
-                        }
-                      />
-                    </Animated.View>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.matchModalPrimaryBtn}
+                      onPress={handleStartChatWithMatch}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.matchModalPrimaryBtnText}>Send Message</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.matchModalSecondaryBtn}
+                      onPress={() => setMatchModalData(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.matchModalSecondaryBtnText}>Keep Swiping</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </View>
-
-        {/* Mutual Match Celebration Modal */}
-        {matchModalData && (
-          <View style={styles.matchModalOverlay}>
-            <View style={styles.matchModalCard}>
-              <Text style={styles.matchModalTitle}>{t('matches.itsAMatch')}</Text>
-              <Text style={styles.matchModalSubtitle}>
-                {matchModalData.name
-                  ? t('matches.matchModalSub', { name: matchModalData.name })
-                  : t('matches.matchModalSubDefault')}
-              </Text>
-              <Image source={matchModalData.photo} style={styles.matchModalAvatar} />
-              
-              <TouchableOpacity
-                style={styles.matchModalPrimaryBtn}
-                onPress={handleStartChatWithMatch}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.matchModalPrimaryBtnText}>{t('matches.sendMessage')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.matchModalSecondaryBtn}
-                onPress={() => setMatchModalData(null)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.matchModalSecondaryBtnText}>{t('matches.keepSwiping')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Safety & Moderation Modal */}
-        {showSafetyModal && (
-          <View style={styles.matchModalOverlay}>
-            <View style={styles.safetyModalCard}>
-              <Text style={styles.safetyModalTitle}>{t('matches.safetyTitle')}</Text>
-              {safetyActionStatus ? (
-                <Text style={styles.safetyActionFeedback}>{safetyActionStatus}</Text>
-              ) : (
-                <>
-                          <Text style={styles.safetyModalSubtitle}>
-                            {currentProfile.name
-                              ? `Manage connection with ${currentProfile.name}:`
-                              : 'Manage this profile:'}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.safetyActionBtn}
-                    onPress={() => handleReportUser('fake_profile')}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="flag-outline" size={18} color="#EF4444" />
-                    <Text style={styles.safetyActionBtnText}>{t('matches.reportFake')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.safetyActionBtn}
-                    onPress={handleBlockUser}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="ban-outline" size={18} color="#DC2626" />
-                    <Text style={styles.safetyActionBtnText}>{t('matches.blockProfile')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.safetyCancelBtn}
-                    onPress={() => setShowSafetyModal(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.safetyCancelBtnText}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
-                </>
               )}
-            </View>
-          </View>
-        )}
-          </>
+
+              {/* Safety & Moderation Modal */}
+              {showSafetyModal && (
+                <View style={styles.matchModalOverlay}>
+                  <View style={styles.safetyModalCard}>
+                    <Text style={styles.safetyModalTitle}>Safety & Moderation</Text>
+                    {safetyActionStatus ? (
+                      <Text style={styles.safetyActionFeedback}>{safetyActionStatus}</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.safetyModalSubtitle}>
+                          {currentProfile.name
+                            ? `Manage connection with ${currentProfile.name}:`
+                            : 'Manage this profile:'}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.safetyActionBtn}
+                          onPress={() => handleReportUser('fake_profile')}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="flag-outline" size={18} color="#EF4444" />
+                          <Text style={styles.safetyActionBtnText}>Report Inappropriate / Fake Profile</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.safetyActionBtn}
+                          onPress={handleBlockUser}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="ban-outline" size={18} color="#DC2626" />
+                          <Text style={styles.safetyActionBtnText}>Block Profile Immediately</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.safetyCancelBtn}
+                          onPress={() => setShowSafetyModal(false)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.safetyCancelBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              )}
+            </>
           ) : (
             <View style={styles.emptyFeedContainer}>
               <Ionicons name="sparkles-outline" size={44} color="#FF6584" style={{ marginBottom: 12 }} />
               <Text style={styles.emptyFeedTitle}>
                 {isLoading
-                  ? t('matches.loadingProfiles')
+                  ? 'Loading profiles…'
                   : feedError
-                    ? t('matches.unableToLoad')
-                    : t('matches.noProfilesAvailable')}
+                    ? 'Unable to load profiles'
+                    : 'No more new profiles'}
               </Text>
               {!isLoading && !feedError && (
                 <Text style={styles.emptyFeedMessage}>
-                  {t('matches.profilesAppearHere')}
+                  You've swiped through all available candidates. Tap below to reload and explore profiles again!
                 </Text>
               )}
               {!isLoading && feedError && (
@@ -1404,6 +1427,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  viewersBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  viewersBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
   },
   backButton: {
     width: 36,

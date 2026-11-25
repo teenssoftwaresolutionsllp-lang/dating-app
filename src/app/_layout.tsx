@@ -16,6 +16,7 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import '@/global.css';
 
 import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
+import { AppToastOverlay } from '@/components/AppToast';
 import * as Notifications from 'expo-notifications';
 import { authStorage } from '@/services/authStorage';
 import { registerForPushNotifications } from '@/services/notificationService';
@@ -74,6 +75,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }} />
       {Platform.OS !== 'web' && <AnimatedSplashOverlay />}
       <IncomingCallOverlay />
+      <AppToastOverlay />
     </>
   );
 

@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { HeaderStatusBar } from "@/components/HeaderStatusBar";
 import { CustomTabBar } from "@/components/CustomTabBar";
 import { formatApiImageUrl } from "@/services/api";
+import { badgeService } from "@/services/badgeService";
 import {
   getLikesReceived,
   getSentLikes,
@@ -71,6 +72,7 @@ export default function LikesScreen() {
     useCallback(() => {
       let isFocused = true;
       setIsLoading(true);
+      badgeService.clearLikesBadge();
 
       Promise.all([getLikesReceived(), getSentLikes()])
         .then(([received, sent]) => {

@@ -9,17 +9,18 @@ import {
   setUserLoggedIn,
   updateAuthTokens,
 } from "./authPersistence";
+import { classifyError } from "./errorHandler";
 
 export const getBaseUrl = (): string => {
   // 1. Explicit environment variable (highest priority)
   if (process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.trim().length > 0) {
-    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, "");
+    return process.env.EXPO_PUBLIC_API_URL.trim().replace(/\/+$/, "");
   }
 
   // 2. Explicit app.json extra config
   const extraUrl = Constants.expoConfig?.extra?.apiUrl;
   if (extraUrl && typeof extraUrl === "string" && extraUrl.trim().length > 0) {
-    return extraUrl.replace(/\/+$/, "");
+    return extraUrl.trim().replace(/\/+$/, "");
   }
 
   // 3. On Web, standard localhost
@@ -104,10 +105,11 @@ export async function apiRequest<T>(
       headers,
     });
   } catch (fetchErr: any) {
-    console.error(`[API Error] Failed to connect to ${url}:`, fetchErr);
-    throw new Error(
-      `Unable to connect to server at ${url}. (${fetchErr?.message || "Network request failed"})`,
-    );
+    if (__DEV__) {
+      console.error(`[API Error] Failed to connect to ${url}:`, fetchErr);
+    }
+    const classified = classifyError(fetchErr);
+    throw new Error(classified.userMessage);
   }
 
   let json: any;
@@ -121,11 +123,12 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok || json.success === false) {
-    const errorMessage = extractErrorMessage(
+    const rawMessage = extractErrorMessage(
       json,
       `Request failed with status ${response.status}`,
     );
-    const error: any = new Error(errorMessage);
+    const classified = classifyError({ message: rawMessage, status: response.status });
+    const error: any = new Error(classified.userMessage);
     error.status = response.status;
     error.data = json;
     throw error;

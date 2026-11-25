@@ -1,10 +1,43 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import i18n, { type SupportedLanguage } from '@/i18n';
 import { getAuthState, setUserLoggedIn } from '@/utils/authPersistence';
 import { updateUserLanguage } from '@/utils/api';
 
-const LANGUAGE_STORAGE_KEY = '@app_language';
+const LANGUAGE_STORAGE_KEY = 'app_language';
+
+const SimpleStorage = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      if (Platform.OS === 'web') {
+        return typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(key) : null;
+      }
+      if (FileSystem.documentDirectory) {
+        const path = `${FileSystem.documentDirectory}${key}.txt`;
+        const info = await FileSystem.getInfoAsync(path);
+        if (info.exists) {
+          return await FileSystem.readAsStringAsync(path);
+        }
+      }
+    } catch { }
+    return null;
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+        }
+        return;
+      }
+      if (FileSystem.documentDirectory) {
+        const path = `${FileSystem.documentDirectory}${key}.txt`;
+        await FileSystem.writeAsStringAsync(path, value);
+      }
+    } catch { }
+  },
+};
 
 interface LanguageContextType {
   language: SupportedLanguage;
@@ -15,8 +48,8 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType>({
   language: 'en',
-  changeLanguage: async () => {},
-  applyUserLanguage: async () => {},
+  changeLanguage: async () => { },
+  applyUserLanguage: async () => { },
   isLoading: true,
 });
 
@@ -30,7 +63,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const initLanguage = async () => {
       try {
-        const storedLang = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+        const storedLang = await SimpleStorage.getItem(LANGUAGE_STORAGE_KEY);
         const authState = await getAuthState();
         const userLang = authState?.user?.preferredLanguage;
 
@@ -71,8 +104,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await i18n.changeLanguage(validLang);
       setLanguageState(validLang);
 
-      // 2. Persist locally in AsyncStorage
-      await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, validLang);
+      // 2. Persist locally in SimpleStorage
+      await SimpleStorage.setItem(LANGUAGE_STORAGE_KEY, validLang);
 
       // 3. Update auth state if user is logged in
       const authState = await getAuthState();

@@ -28,8 +28,10 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 import { resendOtp, verifyOtp } from "@/utils/api";
 import { registerForPushNotifications } from "@/services/notificationService";
+import { classifyError } from "@/utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/context/LanguageContext";
+import { getOnboardingStatus } from "@/services/profileApi";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
@@ -229,7 +231,8 @@ export default function OtpScreen() {
     try {
       await resendOtp(digits, "+91");
     } catch (err: any) {
-      setError(err?.message || t("auth.otp.resendFailed"));
+      const userMsg = classifyError(err, t("auth.otp.resendFailed") || "Failed to resend OTP. Please try again.").userMessage;
+      setError(userMsg);
       triggerShake();
     }
   };
@@ -258,13 +261,28 @@ export default function OtpScreen() {
       if (response.data?.user?.preferredLanguage) {
         await applyUserLanguage(response.data.user.preferredLanguage);
       }
-      router.replace(
-        response.data.isNewUser
-          ? "/(onboarding)/set-profile"
-          : "/(tab)/matches",
-      );
+
+      let nextRoute = response.data.isNewUser
+        ? "/(onboarding)/set-profile"
+        : "/(tab)/matches";
+
+      if (!response.data.isNewUser) {
+        try {
+          const status = await getOnboardingStatus();
+          if (status && !status.completed) {
+            nextRoute = status.onboardingStep
+              ? `/(onboarding)/${status.onboardingStep}`
+              : "/(onboarding)/set-profile";
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      router.replace(nextRoute as any);
     } catch (err: any) {
-      setError(err?.message || t("auth.otp.invalidOtp"));
+      const userMsg = classifyError(err, t("auth.otp.invalidOtp") || "Invalid OTP").userMessage;
+      setError(userMsg);
       triggerShake();
     } finally {
       setIsVerifying(false);
@@ -371,7 +389,7 @@ export default function OtpScreen() {
                               : "#FFFFFF",
                           },
                           Platform.OS === "web" &&
-                            ({ outlineStyle: "none" } as any),
+                          ({ outlineStyle: "none" } as any),
                         ]}
                         textAlign="center"
                         accessibilityLabel={`OTP digit ${index + 1}`}
