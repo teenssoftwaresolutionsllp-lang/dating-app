@@ -22,7 +22,10 @@ export async function setUserLoggedIn(
 ): Promise<void> {
   const state: UserAuthState = {
     isLoggedIn: loggedIn,
-    isOnboardingCompleted: extra?.isOnboardingCompleted ?? loggedIn,
+    isOnboardingCompleted:
+      extra?.isOnboardingCompleted ??
+      inMemoryAuthState?.isOnboardingCompleted ??
+      false,
     phoneNumber: extra?.phoneNumber ?? inMemoryAuthState?.phoneNumber,
     accessToken: extra?.accessToken !== undefined ? extra.accessToken : inMemoryAuthState?.accessToken,
     refreshToken: extra?.refreshToken !== undefined ? extra.refreshToken : inMemoryAuthState?.refreshToken,

@@ -31,6 +31,7 @@ import { registerForPushNotifications } from "@/services/notificationService";
 import { classifyError } from "@/utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/context/LanguageContext";
+import { getOnboardingStatus } from "@/services/profileApi";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
@@ -260,11 +261,25 @@ export default function OtpScreen() {
       if (response.data?.user?.preferredLanguage) {
         await applyUserLanguage(response.data.user.preferredLanguage);
       }
-      router.replace(
-        response.data.isNewUser
-          ? "/(onboarding)/set-profile"
-          : "/(tab)/matches",
-      );
+
+      let nextRoute = response.data.isNewUser
+        ? "/(onboarding)/set-profile"
+        : "/(tab)/matches";
+
+      if (!response.data.isNewUser) {
+        try {
+          const status = await getOnboardingStatus();
+          if (status && !status.completed) {
+            nextRoute = status.onboardingStep
+              ? `/(onboarding)/${status.onboardingStep}`
+              : "/(onboarding)/set-profile";
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      router.replace(nextRoute as any);
     } catch (err: any) {
       const userMsg = classifyError(err, t("auth.otp.invalidOtp") || "Invalid OTP").userMessage;
       setError(userMsg);

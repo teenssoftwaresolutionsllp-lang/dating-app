@@ -309,12 +309,22 @@ export default function MeScreen({
           type: "image/jpeg",
         } as any);
       }
+      formData.append("isPrimary", "true");
       const uploaded = await uploadPhotos(formData);
       if (Array.isArray(uploaded) && uploaded.length > 0 && uploaded[0].url) {
         updateStoredUserProfile({ avatarUri: uploaded[0].url });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Backend sync warning on photo upload:", e);
+      const previousAvatar = profile.avatarUri;
+      updateStoredUserProfile({ avatarUri: previousAvatar });
+      setProfile((prev) => ({ ...prev, avatarUri: previousAvatar }));
+      setEditForm((prev) => ({ ...prev, avatarUri: previousAvatar }));
+      Alert.alert(
+        "Photo Verification Failed",
+        e?.message ||
+          "Main profile photo must match your verified KYC selfie. Please upload a clear photo of yourself.",
+      );
     }
   };
 
