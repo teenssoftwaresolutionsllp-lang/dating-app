@@ -32,6 +32,7 @@ import {
 } from "@/services/profileApi";
 import { OnboardingFooter } from "@/components/onboarding-footer";
 import { setUserLoggedIn } from "@/utils/authPersistence";
+import { clearLastActiveRoute } from "@/utils/routePersistence";
 import {
   UserProfile,
   calculateAge,
@@ -454,6 +455,7 @@ export default function ProfileReadyScreen() {
       await completeOnboarding().catch((e: unknown) => {
         console.warn("Backend sync warning on complete onboarding:", e);
       });
+      await clearLastActiveRoute();
       await setUserLoggedIn(true, { isOnboardingCompleted: true });
     } catch (err) {
       console.warn("Error completing onboarding:", err);

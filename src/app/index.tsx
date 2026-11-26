@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { isUserLoggedIn, getAuthState } from '@/utils/authPersistence';
 import { getLastActiveRoute } from '@/utils/routePersistence';
 import { getOnboardingStatus } from '@/services/profileApi';
+import { resolveOnboardingRoute } from '@/utils/onboardingRoute';
 
 export default function WelcomeScreen() {
   const { t } = useTranslation();
@@ -34,10 +35,7 @@ export default function WelcomeScreen() {
           try {
             const status = await getOnboardingStatus();
             if (status && !status.completed) {
-              const resumeRoute = status.onboardingStep
-                ? `/(onboarding)/${status.onboardingStep}`
-                : '/(onboarding)/verification';
-              router.replace(resumeRoute as any);
+              router.replace(resolveOnboardingRoute(status.onboardingStep) as any);
               return;
             }
           } catch {
@@ -51,10 +49,7 @@ export default function WelcomeScreen() {
           try {
             const status = await getOnboardingStatus();
             if (status && !status.completed) {
-              const resumeRoute = status.onboardingStep
-                ? `/(onboarding)/${status.onboardingStep}`
-                : '/(onboarding)/verification';
-              router.replace(resumeRoute as any);
+              router.replace(resolveOnboardingRoute(status.onboardingStep) as any);
               return;
             }
           } catch {
@@ -70,7 +65,7 @@ export default function WelcomeScreen() {
     })();
 
     return () => {
-      active = false; 
+      active = false;
     };
   }, []);
 
@@ -114,17 +109,17 @@ export default function WelcomeScreen() {
           <View style={styles.spacer} />
 
           {/* Bottom Action Button */}
-          <View style={styles.bottomSection}>            
+          <View style={styles.bottomSection}>
             <Pressable
               onPress={handleGetStart}
-            style={({ pressed }) => [
-              styles.getStartButton,
-              pressed && styles.buttonPressed,
-              Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t('onboarding.findMatch.getStart')}
-          >
+              style={({ pressed }) => [
+                styles.getStartButton,
+                pressed && styles.buttonPressed,
+                Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t('onboarding.findMatch.getStart')}
+            >
               <Text style={styles.getStartButtonText}>{t('onboarding.findMatch.getStart')}</Text>
             </Pressable>
           </View>

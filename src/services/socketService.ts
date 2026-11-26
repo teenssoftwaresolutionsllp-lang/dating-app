@@ -44,6 +44,12 @@ export type SocketProfileViewCallback = (data: {
   unreadCount?: number;
 }) => void;
 
+export type SocketCallStatusCallback = (data: {
+  callId: string;
+  action: 'accept' | 'reject' | 'busy' | 'end';
+  responderId: string;
+}) => void;
+
 class SocketService {
   private socket: Socket | null = null;
   private currentUserId: string | null = null;
@@ -52,6 +58,7 @@ class SocketService {
   private likeListeners: Set<SocketLikeCallback> = new Set();
   private matchListeners: Set<SocketMatchCallback> = new Set();
   private profileViewListeners: Set<SocketProfileViewCallback> = new Set();
+  private callStatusListeners: Set<SocketCallStatusCallback> = new Set();
   private isConnecting: boolean = false;
 
   /**
@@ -183,6 +190,17 @@ class SocketService {
           }
         });
       });
+
+      // Handle call status signaling (reject, end, accept, busy)
+      this.socket.on('call_status', (data: any) => {
+        this.callStatusListeners.forEach((listener) => {
+          try {
+            listener(data);
+          } catch (err) {
+            console.warn('[WebSocket] Call status listener error:', err);
+          }
+        });
+      });
     } catch (err) {
       console.warn('[WebSocket] Initialization failed:', err);
     } finally {
@@ -193,9 +211,9 @@ class SocketService {
   /**
    * Subscribes to a conversation room
    */
-  public async subscribeToConversation(partnerId: string): Promise<void> {
-    if (!partnerId) return;
-    this.socket?.emit('join_conversation', partnerId);
+  public async subscribeToConversation(conversationId: string): Promise<void> {
+    if (!conversationId) return;
+    this.socket?.emit('join_conversation', conversationId);
   }
 
   /**
@@ -291,6 +309,13 @@ class SocketService {
     };
   }
 
+  public onCallStatus(callback: SocketCallStatusCallback): () => void {
+    this.callStatusListeners.add(callback);
+    return () => {
+      this.callStatusListeners.delete(callback);
+    };
+  }
+
   /**
    * Disconnect and cleanup
    */
@@ -305,6 +330,7 @@ class SocketService {
     this.likeListeners.clear();
     this.matchListeners.clear();
     this.profileViewListeners.clear();
+    this.callStatusListeners.clear();
   }
 }
 

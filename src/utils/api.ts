@@ -286,15 +286,6 @@ export async function updateUserLanguage(language: string): Promise<any> {
 }
 
 /**
- * GET /api/v1/auth/profile
- */
-export async function getCurrentUserProfile(): Promise<any> {
-  return apiRequest("/api/v1/auth/profile", {
-    method: "GET",
-  });
-}
-
-/**
  * POST /api/v1/auth/refresh-token
  */
 export async function refreshToken(): Promise<string> {

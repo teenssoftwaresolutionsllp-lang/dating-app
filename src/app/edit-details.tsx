@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,13 @@ import {
   getStoredUserProfile,
   updateStoredUserProfile,
 } from "@/constants/userProfile";
-import { updateCurrentProfile, updateEducation } from "@/services/profileApi";
+import {
+  getLanguagesCatalog,
+  updateCurrentProfile,
+  updateEducation,
+  updateLanguages,
+  type CatalogItem,
+} from "@/services/profileApi";
 
 const EDUCATION_OPTIONS = [
   "Graduation / B.Tech",
@@ -82,7 +88,16 @@ export default function EditDetailsScreen() {
   const [drinking, setDrinking] = useState(profile.drinking || "");
   const [smoking, setSmoking] = useState(profile.smoking || "");
   const [height, setHeight] = useState(profile.height || `5'10" (178 cm)`);
+  const [languagesCatalog, setLanguagesCatalog] = useState<CatalogItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    getLanguagesCatalog().then((items) => {
+      if (Array.isArray(items) && items.length > 0) {
+        setLanguagesCatalog(items);
+      }
+    });
+  }, []);
 
   const handleSave = async () => {
     if (isSubmitting) return;
@@ -103,6 +118,17 @@ export default function EditDetailsScreen() {
       const cmMatch = height.match(/(\d+)\s*cm/i);
       const heightCm = cmMatch ? parseInt(cmMatch[1], 10) : 178;
 
+      const selectedLangNames = languages
+        .split(",")
+        .map((l) => l.trim().toLowerCase())
+        .filter(Boolean);
+      const languageIds = selectedLangNames
+        .map(
+          (name) =>
+            languagesCatalog.find((c) => c.name.toLowerCase() === name)?.id,
+        )
+        .filter((id): id is number => typeof id === "number");
+
       await Promise.allSettled([
         updateCurrentProfile({
           religion: religion.trim(),
@@ -116,6 +142,7 @@ export default function EditDetailsScreen() {
           educationLevel: education.trim(),
           profession: profession.trim(),
         }),
+        ...(languageIds.length > 0 ? [updateLanguages(languageIds)] : []),
       ]);
 
       router.back();
@@ -288,7 +315,7 @@ export default function EditDetailsScreen() {
                       style={[
                         styles.choiceChipText,
                         relationshipStatus === item &&
-                          styles.choiceChipTextSelected,
+                        styles.choiceChipTextSelected,
                       ]}
                     >
                       {item}
@@ -316,7 +343,7 @@ export default function EditDetailsScreen() {
                       style={[
                         styles.choiceChipText,
                         foodPreference === item &&
-                          styles.choiceChipTextSelected,
+                        styles.choiceChipTextSelected,
                       ]}
                     >
                       {item}

@@ -15,6 +15,9 @@ export interface BackendProfile {
   smoking?: string | null;
   vibes?: string[] | null;
   nature?: string[] | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -176,19 +179,27 @@ export async function getInterestsCatalog(): Promise<CatalogItem[]> {
 export async function updateLanguages(
   languageIds: number[],
 ): Promise<number[]> {
-  return apiRequest<number[]>("/api/v1/profile/languages", {
-    method: "PATCH",
-    body: JSON.stringify({ languageIds }),
-  });
+  const res = await apiRequest<{ languageIds?: number[] } | number[]>(
+    "/api/v1/profile/languages",
+    {
+      method: "PATCH",
+      body: JSON.stringify({ languageIds }),
+    },
+  );
+  return Array.isArray(res) ? res : (res?.languageIds ?? []);
 }
 
 export async function updateInterests(
   interestIds: number[],
 ): Promise<number[]> {
-  return apiRequest<number[]>("/api/v1/profile/interests", {
-    method: "PUT",
-    body: JSON.stringify({ interestIds }),
-  });
+  const res = await apiRequest<{ interestIds?: number[] } | number[]>(
+    "/api/v1/profile/interests",
+    {
+      method: "PUT",
+      body: JSON.stringify({ interestIds }),
+    },
+  );
+  return Array.isArray(res) ? res : (res?.interestIds ?? []);
 }
 
 // 3. Education & Work
@@ -247,20 +258,14 @@ export async function validatePhotoApi(formData: FormData) {
 }
 
 export async function uploadPhotos(formData: FormData) {
-  return apiRequest<any[]>("/api/v1/profile/photos", {
-    method: "POST",
-    body: formData,
-  });
-}
-
-export async function getPhotos() {
-  return apiRequest<any[]>("/api/v1/profile/photos");
-}
-
-export async function deletePhoto(photoId: string) {
-  return apiRequest(`/api/v1/profile/photos/${photoId}`, {
-    method: "DELETE",
-  });
+  const res = await apiRequest<{ photos?: any[] } | any[]>(
+    "/api/v1/profile/photos",
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+  return Array.isArray(res) ? res : (res?.photos ?? []);
 }
 
 // 6. Dating Preferences

@@ -212,6 +212,15 @@ export default function IdealMatchScreen() {
       preferredInterests: selectedInterests,
     });
 
+    const preferredInterestIds = selectedInterests
+      .map(
+        (name) =>
+          interestsCatalog.find(
+            (c) => c.name.toLowerCase() === name.toLowerCase(),
+          )?.id,
+      )
+      .filter((id): id is number => typeof id === 'number');
+
     await updateDatingPreferences({
       maxAge: maxAge || 35,
       minAge: 18,
@@ -219,6 +228,7 @@ export default function IdealMatchScreen() {
       religionPreferences: selectedReligion
         ? [selectedReligion]
         : undefined,
+      ...(preferredInterestIds.length > 0 ? { preferredInterestIds } : {}),
     });
 
     // Get gender from database

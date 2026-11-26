@@ -32,6 +32,7 @@ import { classifyError } from "@/utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/context/LanguageContext";
 import { getOnboardingStatus } from "@/services/profileApi";
+import { resolveOnboardingRoute } from "@/utils/onboardingRoute";
 
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
@@ -270,9 +271,7 @@ export default function OtpScreen() {
         try {
           const status = await getOnboardingStatus();
           if (status && !status.completed) {
-            nextRoute = status.onboardingStep
-              ? `/(onboarding)/${status.onboardingStep}`
-              : "/(onboarding)/set-profile";
+            nextRoute = resolveOnboardingRoute(status.onboardingStep);
           }
         } catch {
           // fallback

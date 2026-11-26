@@ -103,10 +103,8 @@ function isTabActive(tabId: string, pathname: string | null | undefined): boolea
   if (tabId === 'matches') {
     return (
       path === '/(tab)/matches' ||
-      path === '/(tab)/home' ||
       path === '/(tab)' ||
       path === '/matches' ||
-      path === '/home' ||
       path === '/' ||
       path === ''
     );

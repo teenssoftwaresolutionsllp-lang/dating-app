@@ -220,7 +220,9 @@ export default function ChatScreen({
     );
     setChatsError(null);
     conversations.forEach((conv) => {
-      void rtmChatService.subscribeToConversation(conv.partner.id);
+      if (conv.conversationId) {
+        void rtmChatService.subscribeToConversation(conv.conversationId);
+      }
     });
   }, []);
 
@@ -403,11 +405,14 @@ export default function ChatScreen({
     };
   }, []);
 
-  // Subscribe to Agora RTM conversation channel whenever partner changes
+  // Subscribe to WebSocket conversation room whenever active conversation changes
   useEffect(() => {
     if (!activePartnerId) return;
-    void rtmChatService.subscribeToConversation(activePartnerId);
-  }, [activePartnerId]);
+    const matchedChat = chats.find((c) => c.partnerId === activePartnerId);
+    if (matchedChat?.id) {
+      void rtmChatService.subscribeToConversation(matchedChat.id);
+    }
+  }, [activePartnerId, chats]);
 
   // Handle open individual chat detail screen
   const openChatDetail = useCallback((chat: ChatListItem) => {

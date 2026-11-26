@@ -275,10 +275,10 @@ export async function blockUser(targetUserId: string): Promise<void> {
 export async function reportUser(
   targetUserId: string,
   reason: string,
-  details?: string,
+  description?: string,
 ): Promise<void> {
   await apiRequest("/api/v1/matches/report", {
     method: "POST",
-    body: JSON.stringify({ targetUserId, reason, details }),
+    body: JSON.stringify({ targetUserId, reason, description }),
   });
 }

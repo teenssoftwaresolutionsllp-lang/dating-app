@@ -15,9 +15,7 @@ export default function TabLayout() {
       const isHome =
         pathname === '/(tab)/matches' ||
         pathname === '/matches' ||
-        pathname === '/(tab)/home' ||
         pathname === '/(tab)' ||
-        pathname === '/home' ||
         pathname === '/';
 
       if (isHome) {
@@ -48,8 +46,6 @@ export default function TabLayout() {
       <Stack.Screen name="people" />
       <Stack.Screen name="chats" />
       <Stack.Screen name="me" />
-      <Stack.Screen name="home" />
-      <Stack.Screen name="explore" />
     </Stack>
   );
 }
