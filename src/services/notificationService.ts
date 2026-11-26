@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { apiRequest } from './api';
 import { authStorage } from './authStorage';
 
@@ -15,7 +16,7 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Register the device for push notifications (APNs / FCM) and sync push token with backend
+ * Register the device for push notifications (APNs / FCM / Expo) and sync push token with backend
  */
 export async function registerForPushNotifications(): Promise<string | null> {
   if (Platform.OS === 'web') return null;
@@ -58,24 +59,31 @@ export async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    // Retrieve native device push token (FCM for Android, APNs for iOS)
+    // Retrieve device push token (FCM for native Android build, Expo push token for Expo Go / dev)
     let pushToken: string | null = null;
+    const projectId =
+      Constants?.expoConfig?.extra?.eas?.projectId ??
+      Constants?.easConfig?.projectId ??
+      'a5128713-816b-4d3f-afe6-d6fe58c553d0';
+
     try {
       const tokenData = await Notifications.getDevicePushTokenAsync();
       pushToken = tokenData.data;
     } catch (tokenErr) {
       // In development / Expo Go, fallback to Expo push token if getDevicePushTokenAsync is unsupported
       try {
-        const expoTokenData = await Notifications.getExpoPushTokenAsync();
+        const expoTokenData = await Notifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined
+        );
         pushToken = expoTokenData.data;
-      } catch {
-        console.warn('[NotificationService] Could not retrieve device push token:', tokenErr);
+      } catch (expoErr) {
+        console.warn('[NotificationService] Could not retrieve device push token:', tokenErr, expoErr);
       }
     }
 
     if (!pushToken) return null;
 
-    console.info(`[NotificationService] Registering push token on backend: ${pushToken.slice(0, 15)}...`);
+    console.info(`[NotificationService] Registering push token on backend: ${pushToken.slice(0, 18)}...`);
 
     // Send push token to backend
     await apiRequest('/api/v1/users/push-token', {

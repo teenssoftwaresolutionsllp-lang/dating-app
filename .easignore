@@ -8,3 +8,6 @@ web-build/
 .claude/
 android/
 ios/
+package-lock.json
+*.log
+

@@ -5,7 +5,9 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
-import { isUserLoggedIn } from '@/utils/authPersistence';
+import { isUserLoggedIn, getAuthState } from '@/utils/authPersistence';
+import { getLastActiveRoute } from '@/utils/routePersistence';
+import { getOnboardingStatus } from '@/services/profileApi';
 
 export default function WelcomeScreen() {
   const { t } = useTranslation();
@@ -15,10 +17,49 @@ export default function WelcomeScreen() {
     let active = true;
     (async () => {
       try {
+        const lastRoute = await getLastActiveRoute();
+        const authState = await getAuthState();
+
+        // If user was in the middle of an onboarding screen (e.g. returning from camera on Android), resume there!
+        if (lastRoute && lastRoute.startsWith('/(onboarding)')) {
+          if (active) {
+            router.replace(lastRoute as any);
+            return;
+          }
+        }
+
         const loggedIn = await isUserLoggedIn();
         if (loggedIn && active) {
+          // Verify with backend whether onboarding is truly completed
+          try {
+            const status = await getOnboardingStatus();
+            if (status && !status.completed) {
+              const resumeRoute = status.onboardingStep
+                ? `/(onboarding)/${status.onboardingStep}`
+                : '/(onboarding)/verification';
+              router.replace(resumeRoute as any);
+              return;
+            }
+          } catch {
+            // Fallback if offline
+          }
+
           router.replace('/(tab)/matches');
           return;
+        } else if (authState?.isLoggedIn && active) {
+          // User authenticated via OTP, check onboarding step
+          try {
+            const status = await getOnboardingStatus();
+            if (status && !status.completed) {
+              const resumeRoute = status.onboardingStep
+                ? `/(onboarding)/${status.onboardingStep}`
+                : '/(onboarding)/verification';
+              router.replace(resumeRoute as any);
+              return;
+            }
+          } catch {
+            // Fallback
+          }
         }
       } catch {
         // Ignore errors

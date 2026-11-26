@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { LegalFooter, PrimaryButton, RelationshipArtwork } from '@/components/onboarding';
 import { useTheme } from '@/hooks/use-theme';
 import { sendOtp } from '@/utils/api';
+import { classifyError } from '@/utils/errorHandler';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -95,7 +96,8 @@ export default function LoginScreen() {
       await sendOtp(digits, '+91');
       router.push({ pathname: '/otp' as any, params: { phone: digits } });
     } catch (err: any) {
-      setError(err?.message || t('auth.login.sendFailed'));
+      const userMsg = classifyError(err, t('auth.login.sendFailed') || 'Failed to send OTP. Please try again.').userMessage;
+      setError(userMsg);
       triggerShake();
     } finally {
       setIsSubmitting(false);
@@ -121,14 +123,14 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Pressable 
+      <Pressable
         onPress={() => {
           // if (router.canGoBack()) {
           //   router.back();
           // } else {
-            router.replace('/select-language' as any);
+          router.replace('/select-language' as any);
           // }
-        }} 
+        }}
         style={[styles.backButton, { top: insets.top + 8, left: 16 }]}
         accessibilityRole="button"
         accessibilityLabel={t('common.goBack')}
