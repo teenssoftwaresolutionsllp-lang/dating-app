@@ -107,9 +107,16 @@ export function IncomingCallOverlay() {
       }
     });
 
+    const unsubscribeStatus = rtmChatService.onCallStatus((data) => {
+      if (data.action === 'end' || data.action === 'reject' || data.action === 'busy') {
+        setIncomingCall((curr) => (curr?.id === data.callId ? null : curr));
+      }
+    });
+
     return () => {
       isMounted = false;
       unsubscribe();
+      unsubscribeStatus();
     };
   }, [pathname]);
 

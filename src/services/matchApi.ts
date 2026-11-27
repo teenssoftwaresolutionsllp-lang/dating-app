@@ -104,6 +104,7 @@ export interface LikeReceivedItem {
   age?: number | null;
   photo?: string | null;
   likedAt?: string;
+  isSeen?: boolean;
   isSuperLike?: boolean;
   action?: string;
   isMatched?: boolean;
@@ -280,5 +281,17 @@ export async function reportUser(
   await apiRequest("/api/v1/matches/report", {
     method: "POST",
     body: JSON.stringify({ targetUserId, reason, description }),
+  });
+}
+
+export async function markLikesSeen(): Promise<void> {
+  await apiRequest("/api/v1/matches/likes/mark-seen", {
+    method: "POST",
+  });
+}
+
+export async function markProfileViewersSeen(): Promise<void> {
+  await apiRequest("/api/v1/matches/profile-viewers/mark-seen", {
+    method: "POST",
   });
 }

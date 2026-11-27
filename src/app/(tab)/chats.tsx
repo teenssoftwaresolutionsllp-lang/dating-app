@@ -26,6 +26,7 @@ import {
   getConversations,
   getConversation,
   likeConversation,
+  markConversationAsRead,
   sendMessage,
 } from '@/services/messageApi';
 import { callApi, type IncomingCallData, type CallHistoryItem } from '@/services/callApi';
@@ -106,6 +107,8 @@ export default function ChatScreen({
   const [isCalling, setIsCalling] = useState(false);
   const messagesScrollRef = useRef<ScrollView>(null);
   const lastOpenedPartnerId = useRef<string | null>(null);
+  const activePartnerIdRef = useRef<string | null>(null);
+  const seenRealtimeMsgIdsRef = useRef<Set<string>>(new Set());
 
   const handleStartCall = async (
     type: 'audio' | 'video',
@@ -170,30 +173,6 @@ export default function ChatScreen({
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!selectedConversation && !selectedCall) return;
-
-      const subscription = BackHandler.addEventListener(
-        'hardwareBackPress',
-        () => {
-          if (selectedConversation) {
-            setSelectedConversation(null);
-            setMessageError(null);
-            return true;
-          }
-          if (selectedCall) {
-            setSelectedCall(null);
-            return true;
-          }
-          return false;
-        },
-      );
-
-      return () => subscription.remove();
-    }, [selectedConversation, selectedCall]),
-  );
-
   const loadChats = useCallback(async () => {
     const conversations = await getConversations();
     setChats(
@@ -225,6 +204,33 @@ export default function ChatScreen({
       }
     });
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!selectedConversation && !selectedCall) return;
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        () => {
+          if (selectedConversation) {
+            activePartnerIdRef.current = null;
+            badgeService.setActiveConversation(null, null);
+            setSelectedConversation(null);
+            setMessageError(null);
+            void loadChats().finally(() => void badgeService.refresh());
+            return true;
+          }
+          if (selectedCall) {
+            setSelectedCall(null);
+            return true;
+          }
+          return false;
+        },
+      );
+
+      return () => subscription.remove();
+    }, [selectedConversation, selectedCall, loadChats]),
+  );
 
   const loadCalls = useCallback(async () => {
     try {
@@ -317,6 +323,7 @@ export default function ChatScreen({
             : current,
         );
         setMessageError(null);
+        void badgeService.refresh();
       } catch (error) {
         if (isActive) {
           setMessageError(
@@ -352,7 +359,30 @@ export default function ChatScreen({
 
         if (!isMounted) return;
         unsubscribe = rtmChatService.onMessage((incomingMsg) => {
-          // If the message is from the active partner, append to chat immediately
+          if (
+            incomingMsg.messageType === 'call' &&
+            incomingMsg.metadata?.event === 'INCOMING_CALL'
+          ) {
+            return;
+          }
+          if (incomingMsg.senderId === myId) {
+            return;
+          }
+          if (incomingMsg.id) {
+            if (seenRealtimeMsgIdsRef.current.has(incomingMsg.id)) {
+              return;
+            }
+            seenRealtimeMsgIdsRef.current.add(incomingMsg.id);
+            if (seenRealtimeMsgIdsRef.current.size > 500) {
+              const oldest = seenRealtimeMsgIdsRef.current.values().next().value;
+              if (oldest) seenRealtimeMsgIdsRef.current.delete(oldest);
+            }
+          }
+
+          const isViewingSender =
+            activePartnerIdRef.current === incomingMsg.senderId;
+
+          // If the message is from the active partner, append and mark read immediately
           setSelectedConversation((current) => {
             if (!current || current.partnerId !== incomingMsg.senderId) return current;
             if (current.messages.some((m) => m.id === incomingMsg.id)) return current;
@@ -375,7 +405,13 @@ export default function ChatScreen({
             };
           });
 
-          // Also update the chat list preview instantly
+          if (isViewingSender) {
+            void markConversationAsRead(incomingMsg.senderId).then(
+              () => void badgeService.refresh(),
+            );
+          }
+
+          // Update chat preview; never increment unread count for the currently open chat
           setChats((prevChats) =>
             prevChats.map((c) =>
               c.partnerId === incomingMsg.senderId
@@ -386,7 +422,7 @@ export default function ChatScreen({
                     hour: '2-digit',
                     minute: '2-digit',
                   }),
-                  unreadCount: (c.unreadCount || 0) + 1,
+                  unreadCount: isViewingSender ? undefined : (c.unreadCount || 0) + 1,
                 }
                 : c
             )
@@ -416,8 +452,14 @@ export default function ChatScreen({
 
   // Handle open individual chat detail screen
   const openChatDetail = useCallback((chat: ChatListItem) => {
-    badgeService.setActiveConversation(chat.partnerId);
-    badgeService.decrementChats(chat.unreadCount || 1);
+    activePartnerIdRef.current = chat.partnerId;
+    badgeService.setActiveConversation(chat.partnerId, chat.id);
+    badgeService.decrementChats(chat.unreadCount || 0);
+    setChats((prevChats) =>
+      prevChats.map((c) =>
+        c.partnerId === chat.partnerId ? { ...c, unreadCount: undefined } : c,
+      ),
+    );
     setSelectedConversation({
       partnerId: chat.partnerId,
       name: chat.name,
@@ -429,11 +471,21 @@ export default function ChatScreen({
     });
     setIsLoadingMessages(true);
     setMessageError(null);
+    void markConversationAsRead(chat.partnerId)
+      .then(() => void badgeService.refresh())
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
-    badgeService.setActiveConversation(selectedConversation?.partnerId || null);
-  }, [selectedConversation?.partnerId]);
+    activePartnerIdRef.current = selectedConversation?.partnerId || null;
+    const matchedChat = selectedConversation?.partnerId
+      ? chats.find((c) => c.partnerId === selectedConversation.partnerId)
+      : undefined;
+    badgeService.setActiveConversation(
+      selectedConversation?.partnerId || null,
+      matchedChat?.id || null,
+    );
+  }, [selectedConversation?.partnerId, chats]);
 
   useEffect(() => {
     if (!requestedPartnerId) {
@@ -489,11 +541,6 @@ export default function ChatScreen({
         receiverId: selectedConversation.partnerId,
         content: text.trim(),
       });
-      // Broadcast over Agora RTM for sub-second delivery
-      void rtmChatService.publishRealtimeMessage(
-        selectedConversation.partnerId,
-        result.message,
-      );
       setSelectedConversation((current) =>
         current?.partnerId === selectedConversation.partnerId
           ? {
@@ -581,7 +628,13 @@ export default function ChatScreen({
           <View style={styles.detailHeader}>
             <TouchableOpacity
               style={styles.backBtn}
-              onPress={() => setSelectedConversation(null)}
+              onPress={() => {
+                activePartnerIdRef.current = null;
+                badgeService.setActiveConversation(null, null);
+                setSelectedConversation(null);
+                setMessageError(null);
+                void loadChats().finally(() => void badgeService.refresh());
+              }}
               activeOpacity={0.7}
             >
               <Ionicons name="chevron-back-outline" size={22} color="#111827" />

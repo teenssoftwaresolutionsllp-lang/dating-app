@@ -29,6 +29,7 @@ import {
   GovernmentIdIcon,
   SelfieScanIcon,
 } from "@/components/illustrations/verification-icons";
+import { LiveSelfieScannerModal } from "@/components/LiveSelfieScannerModal";
 import {
   submitKyc,
   verifyKycDocumentApi,
@@ -64,6 +65,7 @@ export default function VerificationScreen() {
   );
   const [showGovIdModal, setShowGovIdModal] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
+  const [showLiveSelfieScanner, setShowLiveSelfieScanner] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifyingGovId, setIsVerifyingGovId] = useState(false);
   const [isVerifyingSelfie, setIsVerifyingSelfie] = useState(false);
@@ -405,13 +407,18 @@ export default function VerificationScreen() {
 
   const handleSelectSelfieCamera = async () => {
     setShowSelfieModal(false);
-    await setPendingVerificationAction("selfie");
 
-    openCameraPicker((uri) => {
-      if (uri) {
-        processSelfieImage(uri);
-      }
-    }, true);
+    if (Platform.OS === "web") {
+      openCameraPicker((uri) => {
+        if (uri) {
+          processSelfieImage(uri);
+        }
+      }, true);
+      return;
+    }
+
+    // Native: launch in-app front-camera-locked Live Oval Scanner (expo-camera)
+    setShowLiveSelfieScanner(true);
   };
 
   const handleNext = async () => {
@@ -640,9 +647,9 @@ export default function VerificationScreen() {
           nextButtonStyle={{
             backgroundColor:
               isVerificationComplete &&
-              !isSubmitting &&
-              !isVerifyingGovId &&
-              !isVerifyingSelfie
+                !isSubmitting &&
+                !isVerifyingGovId &&
+                !isVerifyingSelfie
                 ? theme.primaryButton
                 : "#BDFFF9",
           }}
@@ -841,6 +848,15 @@ export default function VerificationScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* In-App Live Selfie Oval Scanner (Front Camera Locked) */}
+      <LiveSelfieScannerModal
+        visible={showLiveSelfieScanner}
+        onClose={() => setShowLiveSelfieScanner(false)}
+        onCapture={(uri) => {
+          void processSelfieImage(uri);
+        }}
+      />
     </SafeAreaView>
   );
 }

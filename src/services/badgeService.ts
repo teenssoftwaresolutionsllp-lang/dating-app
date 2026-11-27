@@ -1,4 +1,5 @@
-import { getLikesReceived } from './matchApi';
+import { authStorage } from './authStorage';
+import { getLikesReceived, markLikesSeen } from './matchApi';
 import { getConversations } from './messageApi';
 import { socketService } from './socketService';
 
@@ -14,27 +15,83 @@ class BadgeService {
   private currentCounts: TabBadgeCounts = { likesCount: 0, chatsCount: 0 };
   private pollInterval: ReturnType<typeof setInterval> | null = null;
   private isFetching = false;
+  private activePartnerId: string | null = null;
   private activeConversationId: string | null = null;
+  private seenMessageIds: Set<string> = new Set();
+  private likesMarkingSeenPromise: Promise<void> | null = null;
+  private likesClearedAt = 0;
 
   constructor() {
     this.startPolling();
     this.initSocketListeners();
   }
 
+  private trackMessageId(id: string): boolean {
+    if (this.seenMessageIds.has(id)) {
+      return false;
+    }
+    this.seenMessageIds.add(id);
+    if (this.seenMessageIds.size > 500) {
+      const oldest = this.seenMessageIds.values().next().value;
+      if (oldest) {
+        this.seenMessageIds.delete(oldest);
+      }
+    }
+    return true;
+  }
+
   private initSocketListeners() {
     // 1. Listen for instant incoming chat messages
     socketService.onMessage((msg) => {
-      // If user is currently chatting inside this conversation, don't increment
-      if (this.activeConversationId && msg?.metadata?.conversationId === this.activeConversationId) {
-        return;
-      }
-      this.currentCounts.chatsCount += 1;
-      this.emit();
+      void (async () => {
+        // Ignore call signaling events forwarded through messageListeners
+        if (
+          msg?.messageType === 'call' ||
+          msg?.metadata?.event === 'INCOMING_CALL'
+        ) {
+          return;
+        }
+
+        // Deduplicate multiple socket emissions for the same message
+        if (msg?.id && !this.trackMessageId(msg.id)) {
+          return;
+        }
+
+        // Never count self-sent messages
+        const myUserId = await authStorage.getUserId();
+        if (myUserId && msg?.senderId === myUserId) {
+          return;
+        }
+
+        // If user is currently viewing this conversation, do not increment unread badge
+        const isSamePartner =
+          Boolean(this.activePartnerId) && msg?.senderId === this.activePartnerId;
+        const isSameConversation =
+          Boolean(this.activeConversationId) &&
+          msg?.conversationId === this.activeConversationId;
+        if (isSamePartner || isSameConversation) {
+          return;
+        }
+
+        this.currentCounts = {
+          ...this.currentCounts,
+          chatsCount: this.currentCounts.chatsCount + 1,
+        };
+        this.emit();
+      })();
+    });
+
+    // 1b. Sync unread chats count when messages are marked as read
+    socketService.onMessagesRead(() => {
+      void this.refresh();
     });
 
     // 2. Listen for instant incoming likes (when another user likes profile)
     socketService.onLike(() => {
-      this.currentCounts.likesCount += 1;
+      this.currentCounts = {
+        ...this.currentCounts,
+        likesCount: this.currentCounts.likesCount + 1,
+      };
       this.emit();
     });
 
@@ -44,30 +101,48 @@ class BadgeService {
     });
   }
 
-  setActiveConversation(conversationId: string | null) {
-    this.activeConversationId = conversationId;
+  setActiveConversation(partnerId: string | null, conversationId?: string | null) {
+    this.activePartnerId = partnerId;
+    this.activeConversationId = conversationId ?? null;
   }
 
-  clearLikesBadge() {
+  async clearLikesBadge(): Promise<void> {
+    this.likesClearedAt = Date.now();
     if (this.currentCounts.likesCount > 0) {
-      this.currentCounts.likesCount = 0;
+      this.currentCounts = {
+        ...this.currentCounts,
+        likesCount: 0,
+      };
       this.emit();
     }
+
+    if (!this.likesMarkingSeenPromise) {
+      this.likesMarkingSeenPromise = markLikesSeen()
+        .catch((err) => {
+          console.warn('[BadgeService] Failed to mark likes as seen:', err);
+        })
+        .finally(() => {
+          this.likesMarkingSeenPromise = null;
+        });
+    }
+
+    await this.likesMarkingSeenPromise;
   }
 
   decrementChats(amount = 1) {
+    if (amount <= 0) return;
     if (this.currentCounts.chatsCount > 0) {
-      this.currentCounts.chatsCount = Math.max(0, this.currentCounts.chatsCount - amount);
+      this.currentCounts = {
+        ...this.currentCounts,
+        chatsCount: Math.max(0, this.currentCounts.chatsCount - amount),
+      };
       this.emit();
     }
   }
 
   subscribe(listener: BadgeListener): () => void {
     this.listeners.add(listener);
-    // Immediately emit cached counts
     listener(this.currentCounts);
-
-    // Trigger fresh fetch
     void this.refresh();
 
     return () => {
@@ -80,26 +155,31 @@ class BadgeService {
     this.isFetching = true;
 
     try {
+      if (this.likesMarkingSeenPromise) {
+        await this.likesMarkingSeenPromise;
+      }
+
       const [likesRes, chatsRes] = await Promise.allSettled([
         getLikesReceived(),
         getConversations(),
       ]);
 
-      let newLikes = 0;
+      let newLikes = this.currentCounts.likesCount;
       if (likesRes.status === 'fulfilled' && Array.isArray(likesRes.value)) {
-        // Count active likes received (unmatched admirers or total likes)
-        newLikes = likesRes.value.filter((l) => !l.isMatched).length;
-        if (newLikes === 0 && likesRes.value.length > 0) {
-          newLikes = likesRes.value.length;
-        }
+        const recentlyCleared = Date.now() - this.likesClearedAt < 2500;
+        newLikes = recentlyCleared
+          ? 0
+          : likesRes.value.filter((l) => !l.isMatched && !l.isSeen).length;
       }
 
-      let newChats = 0;
+      let newChats = this.currentCounts.chatsCount;
       if (chatsRes.status === 'fulfilled' && Array.isArray(chatsRes.value)) {
-        newChats = chatsRes.value.reduce(
-          (sum, c) => sum + (c.unreadCount || 0),
-          0
-        );
+        newChats = chatsRes.value.reduce((sum, c) => {
+          if (this.activePartnerId && c.partner?.id === this.activePartnerId) {
+            return sum;
+          }
+          return sum + (c.unreadCount || 0);
+        }, 0);
       }
 
       this.currentCounts = {
@@ -133,7 +213,6 @@ class BadgeService {
 
   private startPolling() {
     if (this.pollInterval) clearInterval(this.pollInterval);
-    // Poll every 25 seconds for quiet background badge sync
     this.pollInterval = setInterval(() => {
       void this.refresh();
     }, 25000);
@@ -148,4 +227,3 @@ class BadgeService {
 }
 
 export const badgeService = new BadgeService();
-

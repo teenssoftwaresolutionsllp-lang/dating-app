@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { viewerService, FALLBACK_VIEWERS, type ProfileViewerItem } from '@/services/viewerService';
+import { useFocusEffect, useRouter } from 'expo-router';
+import {
+  viewerService,
+  formatViewerRelativeTime,
+  type ProfileViewerItem,
+} from '@/services/viewerService';
 
 export default function ProfileViewersScreen() {
   const router = useRouter();
-  const [viewers, setViewers] = useState<ProfileViewerItem[]>(FALLBACK_VIEWERS);
+  const [viewers, setViewers] = useState<ProfileViewerItem[]>(() =>
+    viewerService.getViewers(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -26,14 +33,34 @@ export default function ProfileViewersScreen() {
     }
   };
 
-  useEffect(() => {
-    viewerService.markAsSeen();
-    viewerService.loadViewers().then((data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setViewers(data);
-      }
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setIsLoading(true);
+      void viewerService.markAsSeen();
+      void viewerService
+        .loadViewers()
+        .then((data) => {
+          if (active && Array.isArray(data)) {
+            setViewers(data);
+          }
+        })
+        .finally(() => {
+          if (active) setIsLoading(false);
+        });
+
+      const refreshTimer = setInterval(() => {
+        if (active) {
+          setViewers(viewerService.getViewers());
+        }
+      }, 30000);
+
+      return () => {
+        active = false;
+        clearInterval(refreshTimer);
+      };
+    }, []),
+  );
 
   useEffect(() => {
     const onBackPress = () => {
@@ -73,18 +100,32 @@ export default function ProfileViewersScreen() {
         >
           <Text style={styles.sectionTitle}>Recent viewers</Text>
 
-          <View style={styles.viewersList}>
-            {viewers.map((item) => (
-              <View key={item.id} style={styles.viewerCard}>
-                <Image source={item.avatar} style={styles.avatar} resizeMode="cover" />
-                <View style={styles.infoContainer}>
-                  <Text style={styles.nameText}>{item.name}</Text>
-                  <Text style={styles.subtitleText}>{item.subtitle}</Text>
+          {isLoading && viewers.length === 0 ? (
+            <Text style={styles.emptyText}>Loading recent viewers...</Text>
+          ) : viewers.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="eye-off-outline" size={40} color="#CBD5E1" />
+              <Text style={styles.emptyTitle}>No profile views yet</Text>
+              <Text style={styles.emptyText}>
+                When someone views your profile, they will appear here with the exact time.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.viewersList}>
+              {viewers.map((item) => (
+                <View key={item.id} style={styles.viewerCard}>
+                  <Image source={item.avatar} style={styles.avatar} resizeMode="cover" />
+                  <View style={styles.infoContainer}>
+                    <Text style={styles.nameText}>{item.name}</Text>
+                    <Text style={styles.subtitleText}>{item.subtitle}</Text>
+                  </View>
+                  <Text style={styles.timeText}>
+                    {formatViewerRelativeTime(item.viewedAt, item.time)}
+                  </Text>
                 </View>
-                <Text style={styles.timeText}>{item.time}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -142,6 +183,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginBottom: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontFamily: 'DM_Sans_700Bold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 6,
+  },
+  emptyText: {
+    fontFamily: 'DM_Sans_400Regular',
+    fontSize: 13.5,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   viewersList: {
     gap: 20,

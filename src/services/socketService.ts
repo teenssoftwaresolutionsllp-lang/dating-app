@@ -4,12 +4,18 @@ import { authStorage } from './authStorage';
 
 export type SocketMessageCallback = (message: {
   id: string;
+  conversationId?: string;
   senderId: string;
   receiverId?: string;
   content: string;
   messageType?: string;
   createdAt: string;
   metadata?: any;
+}) => void;
+
+export type SocketMessagesReadCallback = (data: {
+  partnerId?: string;
+  conversationId?: string | null;
 }) => void;
 
 export type TypingCallback = (data: {
@@ -59,6 +65,7 @@ class SocketService {
   private matchListeners: Set<SocketMatchCallback> = new Set();
   private profileViewListeners: Set<SocketProfileViewCallback> = new Set();
   private callStatusListeners: Set<SocketCallStatusCallback> = new Set();
+  private messagesReadListeners: Set<SocketMessagesReadCallback> = new Set();
   private isConnecting: boolean = false;
 
   /**
@@ -201,6 +208,17 @@ class SocketService {
           }
         });
       });
+
+      // Handle conversation read synchronization
+      this.socket.on('messages_read', (data: any) => {
+        this.messagesReadListeners.forEach((listener) => {
+          try {
+            listener(data || {});
+          } catch (err) {
+            console.warn('[WebSocket] Messages read listener error:', err);
+          }
+        });
+      });
     } catch (err) {
       console.warn('[WebSocket] Initialization failed:', err);
     } finally {
@@ -316,6 +334,13 @@ class SocketService {
     };
   }
 
+  public onMessagesRead(callback: SocketMessagesReadCallback): () => void {
+    this.messagesReadListeners.add(callback);
+    return () => {
+      this.messagesReadListeners.delete(callback);
+    };
+  }
+
   /**
    * Disconnect and cleanup
    */
@@ -331,6 +356,7 @@ class SocketService {
     this.matchListeners.clear();
     this.profileViewListeners.clear();
     this.callStatusListeners.clear();
+    this.messagesReadListeners.clear();
   }
 }
 

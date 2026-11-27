@@ -15,7 +15,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { CustomTabBar } from './CustomTabBar';
@@ -281,6 +281,12 @@ export default function DatingProfileScreen() {
     });
     return unsubscribe;
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void viewerService.loadViewers();
+    }, []),
+  );
 
   const loadProfiles = React.useCallback(() => {
     setIsLoading(true);

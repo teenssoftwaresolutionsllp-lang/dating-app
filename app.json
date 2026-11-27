@@ -61,6 +61,12 @@
       "expo-status-bar",
       "expo-web-browser",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Dating App to access your camera for live KYC selfie verification and video calls."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

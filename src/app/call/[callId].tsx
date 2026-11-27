@@ -22,6 +22,7 @@ import {
   type IRtcEngine,
 } from '../../services/agoraClient';
 import { callApi } from '../../services/callApi';
+import { socketService } from '../../services/socketService';
 
 export default function CallScreen() {
   const router = useRouter();
@@ -165,6 +166,49 @@ export default function CallScreen() {
       clearInterval(interval);
     };
   }, [callId, callStatus]);
+
+  // Real-time WebSocket call_status listener (reject / end / accept)
+  useEffect(() => {
+    if (!callId) return;
+
+    let active = true;
+    const unsubscribe = socketService.onCallStatus((data) => {
+      if (!active || data.callId !== callId) return;
+
+      if (data.action === 'accept') {
+        setCallStatus('connected');
+        setStatusMessage('Connected');
+        setJoined(true);
+        if (!agoraSupported) {
+          setRemoteUid(1001);
+        }
+      } else if (data.action === 'reject') {
+        setCallStatus('rejected');
+        setStatusMessage(`Call declined by ${matchName}`);
+        setTimeout(() => {
+          if (active) router.back();
+        }, 1800);
+      } else if (data.action === 'end') {
+        if (engine.current) {
+          try {
+            engine.current.leaveChannel();
+            engine.current.release();
+            engine.current = null;
+          } catch {}
+        }
+        setCallStatus('ended');
+        setStatusMessage('Call ended');
+        setTimeout(() => {
+          if (active) router.back();
+        }, 1200);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [callId, matchName, agoraSupported]);
 
   // Timer counter (only runs when actively connected)
   useEffect(() => {

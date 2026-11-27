@@ -96,6 +96,13 @@ export async function likeConversation(partnerUserId: string): Promise<void> {
   );
 }
 
+export async function markConversationAsRead(partnerUserId: string): Promise<void> {
+  await apiRequest<{ conversationId: string | null; markedCount: number }>(
+    `/api/v1/messages/${partnerUserId}/read`,
+    { method: 'POST' },
+  );
+}
+
 export async function deleteMessage(messageId: string): Promise<void> {
   await apiRequest(`/api/v1/messages/${messageId}`, {
     method: 'DELETE',

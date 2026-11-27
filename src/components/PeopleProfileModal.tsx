@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { startMatchChat, swipeUser } from "@/services/matchApi";
 import { formatApiImageUrl } from "@/services/api";
+import { viewerService } from "@/services/viewerService";
 
 export interface PeopleProfilePreview {
   id: string;
@@ -40,6 +41,12 @@ export function PeopleProfileModal({
   const [likedProfileId, setLikedProfileId] = useState<string | null>(null);
   const isLiked =
     profile?.alreadyLiked === true || profile?.id === likedProfileId;
+
+  useEffect(() => {
+    if (profile?.id) {
+      void viewerService.recordProfileView(profile.id);
+    }
+  }, [profile?.id]);
 
   const handleLike = async () => {
     if (!profile || isSavingLike || isLiked) return;
