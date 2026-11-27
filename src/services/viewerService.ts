@@ -183,6 +183,14 @@ class ViewerService {
     await this.markingSeenPromise;
   }
 
+  reset(): void {
+    this.viewers = [];
+    this.unreadCount = 0;
+    this.clearedAt = 0;
+    this.markingSeenPromise = null;
+    this.emit();
+  }
+
   private emit(): void {
     this.listeners.forEach((listener) => {
       try {

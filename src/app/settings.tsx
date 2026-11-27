@@ -20,8 +20,8 @@ import {
   SafetyBadgeIcon,
   TrustRosetteIcon,
 } from "@/components/SettingsIcons";
-import { clearUserAuth } from "@/utils/authPersistence";
 import { logout } from "@/utils/api";
+import { completeSignOutAndResetToLogin } from "@/utils/sessionNavigation";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -48,9 +48,9 @@ export default function SettingsScreen() {
     try {
       await logout();
     } catch {
-      await clearUserAuth();
+      // Proceed to full local sign-out & stack reset
     }
-    router.replace("/login");
+    await completeSignOutAndResetToLogin();
   };
 
   const handleDeleteAccount = async () => {

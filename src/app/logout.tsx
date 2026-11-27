@@ -12,8 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LogoutDoorGraphic, LogoutModalIcon } from '@/components/SettingsIcons';
-import { clearUserAuth } from '@/utils/authPersistence';
 import { logout } from '@/utils/api';
+import { completeSignOutAndResetToLogin } from '@/utils/sessionNavigation';
 
 export default function LogoutScreen() {
   const router = useRouter();
@@ -37,9 +37,9 @@ export default function LogoutScreen() {
     try {
       await logout();
     } catch {
-      await clearUserAuth();
+      // Proceed to full local sign-out & stack reset
     }
-    router.replace('/login');
+    await completeSignOutAndResetToLogin();
   };
 
   return (

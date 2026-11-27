@@ -152,6 +152,11 @@ class BadgeService {
 
   async refresh(): Promise<TabBadgeCounts> {
     if (this.isFetching) return this.currentCounts;
+    const token = await authStorage.getToken();
+    if (!token) {
+      return this.currentCounts;
+    }
+
     this.isFetching = true;
 
     try {
@@ -216,6 +221,16 @@ class BadgeService {
     this.pollInterval = setInterval(() => {
       void this.refresh();
     }, 25000);
+  }
+
+  reset() {
+    this.currentCounts = { likesCount: 0, chatsCount: 0 };
+    this.activePartnerId = null;
+    this.activeConversationId = null;
+    this.seenMessageIds.clear();
+    this.likesClearedAt = 0;
+    this.likesMarkingSeenPromise = null;
+    this.emit();
   }
 
   stopPolling() {

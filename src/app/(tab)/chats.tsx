@@ -45,6 +45,8 @@ interface SelectedConversation {
   isOnline: boolean;
   isMatched: boolean;
   messagesRemaining: number | null;
+  isUnavailable?: boolean;
+  unavailableReason?: string;
   messages: {
     id: string;
     sender: 'user' | 'contact';
@@ -64,6 +66,8 @@ interface ChatListItem extends ChatMessage {
   partnerId: string;
   isMatched: boolean;
   messagesRemaining: number | null;
+  isUnavailable?: boolean;
+  unavailableReason?: string;
 }
 
 export default function ChatScreen({
@@ -192,9 +196,11 @@ export default function ChatScreen({
           : '',
         unreadCount:
           conversation.unreadCount > 0 ? conversation.unreadCount : undefined,
-        isOnline: conversation.partner.isOnline,
+        isOnline: conversation.isUnavailable ? false : conversation.partner.isOnline,
         isMatched: conversation.isMatched,
         messagesRemaining: conversation.messagesRemaining,
+        isUnavailable: Boolean(conversation.isUnavailable || conversation.partner.isUnavailable),
+        unavailableReason: conversation.unavailableReason,
       })),
     );
     setChatsError(null);
@@ -319,6 +325,15 @@ export default function ChatScreen({
                 })),
               isMatched: history.isMatched,
               messagesRemaining: history.messagesRemaining,
+              isUnavailable: Boolean(history.isUnavailable),
+              unavailableReason: history.unavailableReason,
+              ...(history.isUnavailable
+                ? {
+                  name: 'Account unavailable',
+                  avatar: ASSET_IMAGES.userProfile,
+                  isOnline: false,
+                }
+                : {}),
             }
             : current,
         );
@@ -462,18 +477,20 @@ export default function ChatScreen({
     );
     setSelectedConversation({
       partnerId: chat.partnerId,
-      name: chat.name,
-      avatar: chat.avatar,
-      isOnline: Boolean(chat.isOnline),
+      name: chat.isUnavailable ? 'Account unavailable' : chat.name,
+      avatar: chat.isUnavailable ? ASSET_IMAGES.userProfile : chat.avatar,
+      isOnline: chat.isUnavailable ? false : Boolean(chat.isOnline),
       isMatched: chat.isMatched,
       messagesRemaining: chat.messagesRemaining,
+      isUnavailable: Boolean(chat.isUnavailable),
+      unavailableReason: chat.unavailableReason,
       messages: [],
     });
     setIsLoadingMessages(true);
     setMessageError(null);
     void markConversationAsRead(chat.partnerId)
       .then(() => void badgeService.refresh())
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -643,34 +660,42 @@ export default function ChatScreen({
             <View style={styles.detailHeaderInfo}>
               <Text style={styles.detailHeaderName}>{selectedConversation.name}</Text>
               <View style={styles.onlineStatusRow}>
-                  {selectedConversation.isOnline && <View style={styles.greenDot} />}
+                  {selectedConversation.isOnline && !selectedConversation.isUnavailable && (
+                    <View style={styles.greenDot} />
+                  )}
                   <Text style={styles.onlineStatusText}>
-                    {selectedConversation.isOnline ? t('chats.activeNow') : t('chats.offline')}
+                    {selectedConversation.isUnavailable
+                      ? 'Unavailable'
+                      : selectedConversation.isOnline
+                        ? t('chats.activeNow')
+                        : t('chats.offline')}
                   </Text>
               </View>
             </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={[styles.headerActionBtn, isCalling && { opacity: 0.5 }]}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Audio Call"
-                onPress={() => void handleStartCall('audio')}
-                disabled={isCalling}
-              >
-                <Ionicons name="call-outline" size={22} color="#111827" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerActionBtn, isCalling && { opacity: 0.5 }]}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Video Call"
-                onPress={() => void handleStartCall('video')}
-                disabled={isCalling}
-              >
-                <Ionicons name="videocam-outline" size={24} color="#111827" />
-              </TouchableOpacity>
-            </View>
+            {!selectedConversation.isUnavailable ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={[styles.headerActionBtn, isCalling && { opacity: 0.5 }]}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Audio Call"
+                  onPress={() => void handleStartCall('audio')}
+                  disabled={isCalling}
+                >
+                  <Ionicons name="call-outline" size={22} color="#111827" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerActionBtn, isCalling && { opacity: 0.5 }]}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Video Call"
+                  onPress={() => void handleStartCall('video')}
+                  disabled={isCalling}
+                >
+                  <Ionicons name="videocam-outline" size={24} color="#111827" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
 
           {/* Messages Area */}
@@ -875,7 +900,11 @@ export default function ChatScreen({
           ) : null}
 
           {/* Input Bar */}
-          {preMatchLimitReached ? (
+          {selectedConversation.isUnavailable ? (
+            <Text style={styles.messageLimitText}>
+              {selectedConversation.unavailableReason || 'Account unavailable. You cannot message or call this user right now.'}
+            </Text>
+          ) : preMatchLimitReached ? (
             <Text style={styles.messageLimitText}>
               {t('chats.limitReached', { name: selectedConversation.name })}
             </Text>

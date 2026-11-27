@@ -4,6 +4,21 @@ import Constants from 'expo-constants';
 import { apiRequest } from './api';
 import { authStorage } from './authStorage';
 
+let lastRegisteredPushToken: string | null = null;
+
+export function getLastRegisteredPushToken(): string | null {
+  return lastRegisteredPushToken;
+}
+
+export async function dismissAllAppNotifications(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.dismissAllNotificationsAsync();
+  } catch {
+    // Non-blocking cleanup
+  }
+}
+
 // Configure notification behavior when app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -83,6 +98,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     if (!pushToken) return null;
 
+    lastRegisteredPushToken = pushToken;
     console.info(`[NotificationService] Registering push token on backend: ${pushToken.slice(0, 18)}...`);
 
     // Send push token to backend

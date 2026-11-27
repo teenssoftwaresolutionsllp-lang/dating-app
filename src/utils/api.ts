@@ -2,6 +2,8 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { router } from "expo-router";
 import { authStorage } from "@/services/authStorage";
+import { getLastRegisteredPushToken } from "@/services/notificationService";
+import { completeSignOutAndResetToLogin } from "@/utils/sessionNavigation";
 import { resetOnboardingDrafts } from "@/constants/userProfile";
 import {
   getAccessToken,
@@ -291,8 +293,7 @@ export async function updateUserLanguage(language: string): Promise<any> {
 export async function refreshToken(): Promise<string> {
   const storedRefreshToken = await getRefreshToken();
   if (!storedRefreshToken) {
-    await authStorage.clearAuth();
-    router.replace("/login" as any);
+    await completeSignOutAndResetToLogin();
     throw new Error("No refresh token available");
   }
 
@@ -317,8 +318,7 @@ export async function refreshToken(): Promise<string> {
 
     return tokens.accessToken;
   } catch (error: any) {
-    await authStorage.clearAuth();
-    router.replace("/login" as any);
+    await completeSignOutAndResetToLogin();
     throw error;
   }
 }
@@ -329,6 +329,7 @@ export async function refreshToken(): Promise<string> {
 export async function logout(): Promise<void> {
   const storedRefreshToken = await getRefreshToken();
   const storedAccessToken = await getAccessToken();
+  const pushToken = getLastRegisteredPushToken();
 
   try {
     await apiRequest<LogoutResponse>(
@@ -337,6 +338,7 @@ export async function logout(): Promise<void> {
         method: "POST",
         body: JSON.stringify({
           refreshToken: storedRefreshToken || "",
+          ...(pushToken ? { pushToken } : {}),
         }),
       },
       storedAccessToken,

@@ -7,6 +7,7 @@ export interface ChatConversationItem {
     name: string;
     primaryPhoto: string | null;
     isOnline: boolean;
+    isUnavailable?: boolean;
     trustScore?: {
       totalScore: number;
     };
@@ -23,6 +24,8 @@ export interface ChatConversationItem {
   lastActivityAt: string;
   isMatched: boolean;
   messagesRemaining: number | null;
+  isUnavailable?: boolean;
+  unavailableReason?: string;
 }
 
 export interface SingleChatMessage {
@@ -48,6 +51,8 @@ export interface ConversationHistory {
   items: SingleChatMessage[];
   isMatched: boolean;
   messagesRemaining: number | null;
+  isUnavailable?: boolean;
+  unavailableReason?: string;
 }
 
 export async function getConversations(): Promise<ChatConversationItem[]> {

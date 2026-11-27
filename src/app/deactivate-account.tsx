@@ -13,8 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { DeactivatePauseGraphic } from "@/components/SettingsIcons";
-import { authStorage } from "@/services/authStorage";
 import { deactivateAccount } from "@/services/accountApi";
+import { completeSignOutAndResetToLogin } from "@/utils/sessionNavigation";
 
 export default function DeactivateAccountScreen() {
   const router = useRouter();
@@ -41,8 +41,7 @@ export default function DeactivateAccountScreen() {
     setIsSubmitting(true);
     try {
       await deactivateAccount();
-      await authStorage.clearAuth();
-      router.replace("/login");
+      await completeSignOutAndResetToLogin();
     } catch (error) {
       Alert.alert(
         t("deactivateAccount.alertTitle"),

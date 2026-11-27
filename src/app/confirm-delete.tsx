@@ -12,11 +12,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { WarningTriangleGraphic } from "@/components/SettingsIcons";
-import { authStorage } from "@/services/authStorage";
 import {
   confirmAccountDeletion,
   requestAccountDeletionOtp,
 } from "@/services/accountApi";
+import { completeSignOutAndResetToLogin } from "@/utils/sessionNavigation";
 
 const isOtpCooldownError = (error: unknown) => {
   if (!(error instanceof Error)) return false;
@@ -101,8 +101,7 @@ export default function ConfirmDeleteScreen() {
     setError("");
     try {
       await confirmAccountDeletion(otp);
-      await authStorage.clearAuth();
-      router.replace("/login");
+      await completeSignOutAndResetToLogin();
     } catch (requestError) {
       setError(
         requestError instanceof Error

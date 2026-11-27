@@ -1,7 +1,8 @@
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  BackHandler,
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
@@ -39,6 +40,22 @@ export default function LoginScreen() {
     const scrollY = Math.round(initialHeight * 0.28);
     scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        () => {
+          if (!router.canGoBack()) {
+            BackHandler.exitApp();
+            return true;
+          }
+          return false;
+        },
+      );
+      return () => subscription.remove();
+    }, []),
+  );
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';

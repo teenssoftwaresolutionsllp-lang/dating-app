@@ -1,10 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { BackHandler } from 'react-native';
-import { Stack, usePathname, router } from 'expo-router';
+import { Stack, useFocusEffect, usePathname, router } from 'expo-router';
 import { registerForPushNotifications } from '@/services/notificationService';
+import { authStorage } from '@/services/authStorage';
+import { resetNavigationToLogin } from '@/utils/sessionNavigation';
 
 export default function TabLayout() {
   const pathname = usePathname();
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void authStorage.getToken().then((token) => {
+        if (active && !token) {
+          resetNavigationToLogin();
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   useEffect(() => {
     void registerForPushNotifications();
