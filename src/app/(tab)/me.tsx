@@ -9,6 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -36,10 +39,14 @@ import {
   updateCurrentProfile,
   updateEducation,
   updateDatingPreferences,
+  getMyPhotos,
   uploadPhotos,
+  replaceProfilePhoto,
+  deleteProfilePhoto,
   getInterestsCatalog,
   updateInterests,
   type CatalogItem,
+  type ProfilePhotoItem,
   type SelectedLocation,
 } from "@/services/profileApi";
 import { formatApiImageUrl } from "@/services/api";
@@ -193,7 +200,19 @@ export default function MeScreen({
     () => getStoredPartnerPreferences(),
   );
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState(
+    "Profile & preferences updated successfully!",
+  );
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoSheetMode, setPhotoSheetMode] = useState<
+    "primary" | "add_gallery" | "replace_gallery"
+  >("primary");
+  const [galleryPhotos, setGalleryPhotos] = useState<ProfilePhotoItem[]>([]);
+  const [selectedGalleryPhoto, setSelectedGalleryPhoto] =
+    useState<ProfilePhotoItem | null>(null);
+  const [showGalleryMenuModal, setShowGalleryMenuModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [galleryBusyId, setGalleryBusyId] = useState<string | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [interestsCatalog, setInterestsCatalog] = useState<CatalogItem[]>([]);
@@ -210,6 +229,46 @@ export default function MeScreen({
       }
     });
   }, []);
+
+  const triggerToast = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 2500);
+  };
+
+  const syncPhotosFromServer = (photosList: ProfilePhotoItem[]) => {
+    const sorted = [...photosList].sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+    });
+    const primary = sorted.find((p) => p.isPrimary);
+    const gallery = sorted.filter((p) => !p.isPrimary).slice(0, 3);
+    setGalleryPhotos(gallery);
+
+    if (primary?.url) {
+      const updated = updateStoredUserProfile({ avatarUri: primary.url });
+      setProfile(updated);
+      setEditForm(updated);
+    }
+  };
+
+  const buildPhotoFormData = async (uri: string, filename: string) => {
+    const formData = new FormData();
+    if (Platform.OS === "web") {
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      formData.append("photo", blob, filename);
+    } else {
+      formData.append("photo", {
+        uri,
+        name: filename,
+        type: "image/jpeg",
+      } as any);
+    }
+    return formData;
+  };
 
   useEffect(() => {
     const unsubProfile = subscribeUserProfile((updated) => {
@@ -238,13 +297,22 @@ export default function MeScreen({
           updateStoredUserProfile(user);
           setProfile(user);
           setEditForm(user);
+          if (Array.isArray(fullData.photos)) {
+            syncPhotosFromServer(fullData.photos);
+          }
           if (Object.keys(partner).length > 0) {
             const updatedPartner = updateStoredPartnerPreferences(partner);
             setPartnerPrefs(updatedPartner);
             setEditPartnerForm(updatedPartner);
           }
         } else {
-          const backendProfile = await getCurrentProfile().catch(() => null);
+          const [backendProfile, photosList] = await Promise.all([
+            getCurrentProfile().catch(() => null),
+            getMyPhotos().catch(() => [] as ProfilePhotoItem[]),
+          ]);
+          if (photosList.length > 0) {
+            syncPhotosFromServer(photosList);
+          }
           if (backendProfile) {
             const locParts = [
               selectedLocation?.city,
@@ -285,38 +353,109 @@ export default function MeScreen({
     };
   }, []);
 
+  const openPrimaryPhotoPicker = () => {
+    setPhotoSheetMode("primary");
+    setSelectedGalleryPhoto(null);
+    setShowPhotoModal(true);
+  };
+
+  const openAddGalleryPhotoPicker = () => {
+    if (galleryPhotos.length >= 3) {
+      Alert.alert(
+        "Gallery Limit Reached",
+        "You can keep up to 3 gallery photos. Use the three-dots menu on any photo to update or delete it.",
+      );
+      return;
+    }
+    setPhotoSheetMode("add_gallery");
+    setSelectedGalleryPhoto(null);
+    setShowPhotoModal(true);
+  };
+
+  const handleConfirmDeleteGalleryPhoto = async () => {
+    if (!selectedGalleryPhoto) return;
+    const targetId = selectedGalleryPhoto.id;
+    setShowDeleteConfirmModal(false);
+    setGalleryBusyId(targetId);
+
+    try {
+      await deleteProfilePhoto(targetId);
+      const updatedPhotos = await getMyPhotos().catch(() =>
+        galleryPhotos.filter((p) => p.id !== targetId),
+      );
+      syncPhotosFromServer(updatedPhotos);
+      triggerToast("Gallery photo deleted!");
+    } catch (e: any) {
+      Alert.alert(
+        "Delete Failed",
+        e?.message || "Could not delete gallery photo. Please try again.",
+      );
+    } finally {
+      setGalleryBusyId(null);
+      setSelectedGalleryPhoto(null);
+    }
+  };
+
   const handlePhotoSelected = async (uri: string) => {
+    if (photoSheetMode === "add_gallery") {
+      setGalleryBusyId("adding");
+      try {
+        const formData = await buildPhotoFormData(uri, `gallery_${Date.now()}.jpg`);
+        formData.append("isPrimary", "false");
+        const uploaded = await uploadPhotos(formData);
+        const latestPhotos = await getMyPhotos().catch(() => uploaded);
+        syncPhotosFromServer(latestPhotos);
+        triggerToast("Gallery photo added!");
+      } catch (e: any) {
+        Alert.alert(
+          "Upload Failed",
+          e?.message || "Could not add gallery photo. Please try another photo.",
+        );
+      } finally {
+        setGalleryBusyId(null);
+      }
+      return;
+    }
+
+    if (photoSheetMode === "replace_gallery" && selectedGalleryPhoto) {
+      const targetId = selectedGalleryPhoto.id;
+      setGalleryBusyId(targetId);
+      try {
+        const formData = await buildPhotoFormData(uri, `gallery_${Date.now()}.jpg`);
+        await replaceProfilePhoto(targetId, formData);
+        const latestPhotos = await getMyPhotos().catch(() => []);
+        if (latestPhotos.length > 0) {
+          syncPhotosFromServer(latestPhotos);
+        }
+        triggerToast("Gallery photo updated!");
+      } catch (e: any) {
+        Alert.alert(
+          "Update Failed",
+          e?.message || "Could not update gallery photo. Please try another photo.",
+        );
+      } finally {
+        setGalleryBusyId(null);
+        setSelectedGalleryPhoto(null);
+      }
+      return;
+    }
+
+    // Main Profile Photo update (replaces and deletes previous main profile photo)
+    const previousAvatar = profile.avatarUri;
     setImageError(false);
     const updated = updateStoredUserProfile({ avatarUri: uri });
     setProfile(updated);
     setEditForm((prev) => ({ ...prev, avatarUri: uri }));
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 2500);
 
-    // Sync uploaded photo with backend database
     try {
-      const formData = new FormData();
-      if (Platform.OS === "web") {
-        const res = await fetch(uri);
-        const blob = await res.blob();
-        formData.append("photo", blob, "avatar.jpg");
-      } else {
-        formData.append("photo", {
-          uri,
-          name: "avatar.jpg",
-          type: "image/jpeg",
-        } as any);
-      }
+      const formData = await buildPhotoFormData(uri, "avatar.jpg");
       formData.append("isPrimary", "true");
       const uploaded = await uploadPhotos(formData);
-      if (Array.isArray(uploaded) && uploaded.length > 0 && uploaded[0].url) {
-        updateStoredUserProfile({ avatarUri: uploaded[0].url });
-      }
+      const latestPhotos = await getMyPhotos().catch(() => uploaded);
+      syncPhotosFromServer(latestPhotos);
+      triggerToast("Main profile photo updated!");
     } catch (e: any) {
       console.warn("Backend sync warning on photo upload:", e);
-      const previousAvatar = profile.avatarUri;
       updateStoredUserProfile({ avatarUri: previousAvatar });
       setProfile((prev) => ({ ...prev, avatarUri: previousAvatar }));
       setEditForm((prev) => ({ ...prev, avatarUri: previousAvatar }));
@@ -447,6 +586,27 @@ export default function MeScreen({
       ? { uri: formatApiImageUrl(profile.avatarUri) }
       : ASSET_IMAGES.userProfile;
 
+  const photoActionSheetModal = (
+    <PhotoActionSheetModal
+      visible={showPhotoModal}
+      onClose={() => setShowPhotoModal(false)}
+      onPhotoSelected={handlePhotoSelected}
+      title={
+        photoSheetMode === "primary"
+          ? "Change Main Profile Photo"
+          : photoSheetMode === "replace_gallery"
+            ? "Update Gallery Photo"
+            : "Add Gallery Photo"
+      }
+      subtitle={
+        photoSheetMode === "primary"
+          ? "Replaces your current main profile photo on Matches"
+          : "Choose an option for your profile gallery"
+      }
+      aspect={photoSheetMode === "primary" ? [1, 1] : [4, 5]}
+    />
+  );
+
   // RENDER INTERACTIVE EDIT PROFILE SCREEN
   if (isEditing) {
     return (
@@ -493,7 +653,7 @@ export default function MeScreen({
                 />
                 <TouchableOpacity
                   style={styles.changePhotoButton}
-                  onPress={() => setShowPhotoModal(true)}
+                  onPress={openPrimaryPhotoPicker}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="camera-outline" size={16} color="#0F766E" />
@@ -765,6 +925,7 @@ export default function MeScreen({
                 <Text style={styles.fullSaveButtonText}>Save Changes</Text>
               </TouchableOpacity>
             </ScrollView>
+            {photoActionSheetModal}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -807,7 +968,7 @@ export default function MeScreen({
               style={{ marginRight: 6 }}
             />
             <Text style={styles.toastBannerText}>
-              Profile & preferences updated successfully!
+              {toastMessage}
             </Text>
           </View>
         )}
@@ -836,7 +997,7 @@ export default function MeScreen({
               />
               <TouchableOpacity
                 style={styles.cameraEditBadge}
-                onPress={() => setShowPhotoModal(true)}
+                onPress={openPrimaryPhotoPicker}
                 activeOpacity={0.85}
               >
                 <Ionicons name="camera" size={14} color="#FFFFFF" />
@@ -884,6 +1045,94 @@ export default function MeScreen({
                 <Text style={styles.completeLinkText}>{t('profile.editFullProfile')}</Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Gallery Section (Up to 3 Additional Photos) */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.galleryTitleRow}>
+                <Text style={styles.sectionTitle}>Gallery</Text>
+                <View style={styles.galleryCountBadge}>
+                  <Text style={styles.galleryCountText}>
+                    {galleryPhotos.length}/3
+                  </Text>
+                </View>
+              </View>
+              {galleryPhotos.length < 3 && (
+                <TouchableOpacity
+                  onPress={openAddGalleryPhotoPicker}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.editText}>+ Add Photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.galleryGrid}>
+              {[0, 1, 2].map((slotIdx) => {
+                const photo = galleryPhotos[slotIdx];
+                if (photo) {
+                  const isBusy = galleryBusyId === photo.id;
+                  return (
+                    <View key={photo.id} style={styles.galleryCard}>
+                      <Image
+                        source={{ uri: formatApiImageUrl(photo.url) }}
+                        style={styles.galleryImage}
+                        contentFit="cover"
+                        transition={150}
+                      />
+                      <TouchableOpacity
+                        style={styles.galleryDotsButton}
+                        onPress={() => {
+                          setSelectedGalleryPhoto(photo);
+                          setShowGalleryMenuModal(true);
+                        }}
+                        activeOpacity={0.8}
+                        disabled={isBusy}
+                        accessibilityLabel={`Manage gallery photo ${slotIdx + 1}`}
+                      >
+                        <Ionicons
+                          name="ellipsis-vertical"
+                          size={15}
+                          color="#FFFFFF"
+                        />
+                      </TouchableOpacity>
+                      {isBusy && (
+                        <View style={styles.galleryBusyOverlay}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                  );
+                }
+
+                const isAddingSlot =
+                  slotIdx === galleryPhotos.length && galleryBusyId === "adding";
+                return (
+                  <TouchableOpacity
+                    key={`empty-slot-${slotIdx}`}
+                    style={styles.galleryEmptyCard}
+                    onPress={openAddGalleryPhotoPicker}
+                    activeOpacity={0.75}
+                    disabled={galleryBusyId !== null}
+                  >
+                    {isAddingSlot ? (
+                      <ActivityIndicator size="small" color="#0F766E" />
+                    ) : (
+                      <>
+                        <View style={styles.galleryAddIconCircle}>
+                          <Ionicons name="add" size={20} color="#0F766E" />
+                        </View>
+                        <Text style={styles.galleryAddText}>Add Photo</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.galleryHelperText}>
+              These gallery photos appear after your main profile photo on the Matches screen.
+            </Text>
           </View>
 
           {/* Section 1: About Me */}
@@ -1243,11 +1492,166 @@ export default function MeScreen({
         </ScrollView>
 
         {/* Photo Picker Action Sheet Modal */}
-        <PhotoActionSheetModal
-          visible={showPhotoModal}
-          onClose={() => setShowPhotoModal(false)}
-          onPhotoSelected={handlePhotoSelected}
-        />
+        {photoActionSheetModal}
+
+        {/* Three-dots Gallery Photo Options Sheet */}
+        <Modal
+          visible={showGalleryMenuModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowGalleryMenuModal(false)}
+        >
+          <TouchableWithoutFeedback
+            onPress={() => setShowGalleryMenuModal(false)}
+          >
+            <View style={styles.sheetBackdrop}>
+              <TouchableWithoutFeedback>
+                <View style={styles.gallerySheetContainer}>
+                  <View style={styles.gallerySheetHandle} />
+                  <View style={styles.gallerySheetHeaderRow}>
+                    {selectedGalleryPhoto?.url ? (
+                      <Image
+                        source={{
+                          uri: formatApiImageUrl(selectedGalleryPhoto.url),
+                        }}
+                        style={styles.gallerySheetThumb}
+                        contentFit="cover"
+                      />
+                    ) : null}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.gallerySheetTitle}>
+                        Gallery Photo
+                      </Text>
+                      <Text style={styles.gallerySheetSubtitle}>
+                        Update or remove this photo from your Matches gallery
+                      </Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.galleryMenuOption}
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      setShowGalleryMenuModal(false);
+                      setPhotoSheetMode("replace_gallery");
+                      setShowPhotoModal(true);
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.galleryMenuIconCircle,
+                        { backgroundColor: "#E6FFFA" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="images-outline"
+                        size={20}
+                        color="#0F766E"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.galleryMenuOptionTitle}>
+                        Update Photo
+                      </Text>
+                      <Text style={styles.galleryMenuOptionSub}>
+                        Replace with a new photo from camera or library
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color="#94A3B8"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.galleryMenuOption}
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      setShowGalleryMenuModal(false);
+                      setShowDeleteConfirmModal(true);
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.galleryMenuIconCircle,
+                        { backgroundColor: "#FEE2E2" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#DC2626"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.galleryMenuOptionTitle,
+                          { color: "#DC2626" },
+                        ]}
+                      >
+                        Delete Photo
+                      </Text>
+                      <Text style={styles.galleryMenuOptionSub}>
+                        Remove permanently from your profile & Matches
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color="#94A3B8"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.gallerySheetCancelBtn}
+                    onPress={() => setShowGalleryMenuModal(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.gallerySheetCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+
+        {/* Confirm Delete Gallery Photo Modal */}
+        <Modal
+          visible={showDeleteConfirmModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDeleteConfirmModal(false)}
+        >
+          <View style={styles.confirmBackdrop}>
+            <View style={styles.confirmCard}>
+              <View style={styles.confirmIconCircle}>
+                <Ionicons name="trash-outline" size={24} color="#DC2626" />
+              </View>
+              <Text style={styles.confirmTitle}>Delete Gallery Photo?</Text>
+              <Text style={styles.confirmMessage}>
+                This photo will be removed from your Me gallery and your Matches profile cards.
+              </Text>
+              <View style={styles.confirmActionsRow}>
+                <TouchableOpacity
+                  style={styles.confirmCancelBtn}
+                  onPress={() => setShowDeleteConfirmModal(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.confirmCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmDeleteBtn}
+                  onPress={handleConfirmDeleteGalleryPhoto}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.confirmDeleteText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {showTabBar && <CustomTabBar />}
       </View>
@@ -1826,6 +2230,261 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: "DM_Sans_700Bold",
+  },
+  /* Gallery Section Styles */
+  galleryTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  galleryCountBadge: {
+    backgroundColor: "#E6FFFA",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "#CCFBF1",
+  },
+  galleryCountText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#0F766E",
+    fontFamily: "DM_Sans_700Bold",
+  },
+  galleryGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  galleryCard: {
+    flex: 1,
+    aspectRatio: 0.78,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    position: "relative",
+  },
+  galleryImage: {
+    width: "100%",
+    height: "100%",
+  },
+  galleryDotsButton: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(15, 23, 42, 0.72)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  galleryBusyOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  galleryEmptyCard: {
+    flex: 1,
+    aspectRatio: 0.78,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#CBD5E1",
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    gap: 6,
+  },
+  galleryAddIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#E6FFFA",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  galleryAddText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#0F766E",
+    fontFamily: "DM_Sans_500Medium",
+  },
+  galleryHelperText: {
+    marginTop: 8,
+    fontSize: 11.5,
+    color: "#64748B",
+    fontFamily: "DM_Sans_400Regular",
+  },
+  /* Gallery Three-Dots Menu Sheet & Confirm Modal */
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  gallerySheetContainer: {
+    width: "100%",
+    maxWidth: 480,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  gallerySheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E2E8F0",
+    alignSelf: "center",
+    marginBottom: 14,
+  },
+  gallerySheetHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  gallerySheetThumb: {
+    width: 48,
+    height: 58,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+  },
+  gallerySheetTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+    fontFamily: "DM_Sans_700Bold",
+  },
+  gallerySheetSubtitle: {
+    fontSize: 12.5,
+    color: "#64748B",
+    fontFamily: "DM_Sans_400Regular",
+    marginTop: 2,
+  },
+  galleryMenuOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    gap: 12,
+  },
+  galleryMenuIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  galleryMenuOptionTitle: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#0F172A",
+    fontFamily: "DM_Sans_700Bold",
+  },
+  galleryMenuOptionSub: {
+    fontSize: 12,
+    color: "#64748B",
+    fontFamily: "DM_Sans_400Regular",
+    marginTop: 1,
+  },
+  gallerySheetCancelBtn: {
+    marginTop: 4,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+  },
+  gallerySheetCancelText: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#475569",
+    fontFamily: "DM_Sans_700Bold",
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+  },
+  confirmIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  confirmTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111827",
+    fontFamily: "DM_Sans_700Bold",
+    marginBottom: 6,
+  },
+  confirmMessage: {
+    fontSize: 13.5,
+    color: "#6B7280",
+    fontFamily: "DM_Sans_400Regular",
+    textAlign: "center",
+    lineHeight: 19,
+    marginBottom: 18,
+  },
+  confirmActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+  },
+  confirmCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    fontFamily: "DM_Sans_700Bold",
+  },
+  confirmDeleteBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+  },
+  confirmDeleteText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
     fontFamily: "DM_Sans_700Bold",
   },
 });

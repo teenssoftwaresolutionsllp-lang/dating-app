@@ -282,46 +282,44 @@ export default function DatingProfileScreen() {
     return unsubscribe;
   }, []);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      void viewerService.loadViewers();
-    }, []),
-  );
+  const mapFeedToCards = React.useCallback((feed: DiscoveryCard[]): ProfileCard[] => {
+    return feed
+      .filter((card) => card.photos.some((photo) => photo.url))
+      .map((card) => ({
+        id: card.userId,
+        userId: card.userId,
+        alreadyLiked: card.alreadyLiked,
+        theyLikedYou: card.theyLikedYou,
+        isMatched: card.isMatched,
+        name: card.name,
+        age: card.age,
+        height: card.formattedHeight || card.heightFt,
+        isOnline: card.isOnline,
+        location: card.city ? `Lives in ${card.city}` : card.location,
+        about: card.bio,
+        interests: card.interests || [],
+        education: card.education?.qualification || card.education?.educationLevel || null,
+        profession: card.education?.profession || null,
+        trustScore: card.trustScore,
+        foodPreference: card.foodPreference || null,
+        drinking: card.drinking || null,
+        smoking: card.smoking || null,
+        lookingFor: card.lookingFor?.[0] || null,
+        religion: card.religion || null,
+        relationshipStatus: card.relationshipStatus,
+        nature: card.nature || [],
+        images: card.photos
+          .filter((photo) => Boolean(photo.url))
+          .map((photo) => ({ uri: formatApiImageUrl(photo.url) })),
+      }));
+  }, []);
 
   const loadProfiles = React.useCallback(() => {
     setIsLoading(true);
     setFeedError(null);
     getDiscoveryFeed()
       .then((feed) => {
-        const mapped = feed
-          .filter((card) => card.photos.some((photo) => photo.url))
-          .map((card) => ({
-            id: card.userId,
-            userId: card.userId,
-            alreadyLiked: card.alreadyLiked,
-            theyLikedYou: card.theyLikedYou,
-            isMatched: card.isMatched,
-            name: card.name,
-            age: card.age,
-            height: card.formattedHeight || card.heightFt,
-            isOnline: card.isOnline,
-            location: card.city ? `Lives in ${card.city}` : card.location,
-            about: card.bio,
-            interests: card.interests || [],
-            education: card.education?.qualification || card.education?.educationLevel || null,
-            profession: card.education?.profession || null,
-            trustScore: card.trustScore,
-            foodPreference: card.foodPreference || null,
-            drinking: card.drinking || null,
-            smoking: card.smoking || null,
-            lookingFor: card.lookingFor?.[0] || null,
-            religion: card.religion || null,
-            relationshipStatus: card.relationshipStatus,
-            nature: card.nature || [],
-            images: card.photos
-              .filter((photo) => Boolean(photo.url))
-              .map((photo) => ({ uri: formatApiImageUrl(photo.url) })),
-          }));
+        const mapped = mapFeedToCards(feed);
         setCards(mapped);
         setCurrentProfileIndex(0);
         setCurrentImageIndex(0);
@@ -333,7 +331,24 @@ export default function DatingProfileScreen() {
         );
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [mapFeedToCards]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void viewerService.loadViewers();
+      getDiscoveryFeed()
+        .then((feed) => {
+          const mapped = mapFeedToCards(feed);
+          if (mapped.length > 0) {
+            setCards(mapped);
+            setCurrentProfileIndex((prev) => (prev < mapped.length ? prev : 0));
+          }
+        })
+        .catch(() => {
+          // Keep existing cards on background focus sync error
+        });
+    }, [mapFeedToCards]),
+  );
 
   const handleResetSwipes = async () => {
     try {

@@ -16,12 +16,18 @@ interface PhotoActionSheetModalProps {
   visible: boolean;
   onClose: () => void;
   onPhotoSelected: (uri: string) => void;
+  title?: string;
+  subtitle?: string;
+  aspect?: [number, number];
 }
 
 export function PhotoActionSheetModal({
   visible,
   onClose,
   onPhotoSelected,
+  title = 'Change Profile Photo',
+  subtitle = 'Choose an option to update your profile photo',
+  aspect = [1, 1],
 }: PhotoActionSheetModalProps) {
   const handleUseCamera = async () => {
     try {
@@ -38,7 +44,7 @@ export function PhotoActionSheetModal({
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect,
         quality: 0.85,
       });
 
@@ -68,7 +74,7 @@ export function PhotoActionSheetModal({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect,
         quality: 0.85,
       });
 
@@ -96,9 +102,9 @@ export function PhotoActionSheetModal({
               {/* Top Handle Indicator */}
               <View style={styles.dragHandle} />
 
-              <Text style={styles.sheetTitle}>Change Profile Photo</Text>
+              <Text style={styles.sheetTitle}>{title}</Text>
               <Text style={styles.sheetSubtitle}>
-                Choose an option to update your profile photo
+                {subtitle}
               </Text>
 
               {/* Action Buttons */}

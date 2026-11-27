@@ -278,6 +278,9 @@ export default function AddPhotosScreen() {
         }
       }
 
+      formData.append('isPrimary', photos[0] ? 'true' : 'false');
+      formData.append('replaceAll', 'true');
+
       const res = await uploadPhotos(formData);
       updateOnboardingProfileDraft({
         photos: [...photos],

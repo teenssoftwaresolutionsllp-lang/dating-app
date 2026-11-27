@@ -247,6 +247,16 @@ export async function getKycStatus(): Promise<{ status: string } | null> {
 }
 
 // 5. Photos
+export interface ProfilePhotoItem {
+  id: string;
+  url: string;
+  displayOrder: number;
+  isPrimary: boolean;
+  verificationStatus?: string;
+  moderationStatus?: string;
+  createdAt?: string;
+}
+
 export async function validatePhotoApi(formData: FormData) {
   return apiRequest<{ valid: boolean; message: string; metadata?: any }>(
     "/api/v1/profile/photos/validate-photo",
@@ -257,8 +267,15 @@ export async function validatePhotoApi(formData: FormData) {
   );
 }
 
+export async function getMyPhotos(): Promise<ProfilePhotoItem[]> {
+  const res = await apiRequest<{ photos?: ProfilePhotoItem[] } | ProfilePhotoItem[]>(
+    "/api/v1/profile/photos",
+  );
+  return Array.isArray(res) ? res : (res?.photos ?? []);
+}
+
 export async function uploadPhotos(formData: FormData) {
-  const res = await apiRequest<{ photos?: any[] } | any[]>(
+  const res = await apiRequest<{ photos?: ProfilePhotoItem[] } | ProfilePhotoItem[]>(
     "/api/v1/profile/photos",
     {
       method: "POST",
@@ -266,6 +283,29 @@ export async function uploadPhotos(formData: FormData) {
     },
   );
   return Array.isArray(res) ? res : (res?.photos ?? []);
+}
+
+export async function replaceProfilePhoto(
+  photoId: string,
+  formData: FormData,
+): Promise<ProfilePhotoItem | null> {
+  const res = await apiRequest<{ photo?: ProfilePhotoItem } | ProfilePhotoItem>(
+    `/api/v1/profile/photos/${encodeURIComponent(photoId)}`,
+    {
+      method: "PATCH",
+      body: formData,
+    },
+  );
+  if (res && "photo" in res && res.photo) {
+    return res.photo;
+  }
+  return (res as ProfilePhotoItem) ?? null;
+}
+
+export async function deleteProfilePhoto(photoId: string): Promise<void> {
+  await apiRequest(`/api/v1/profile/photos/${encodeURIComponent(photoId)}`, {
+    method: "DELETE",
+  });
 }
 
 // 6. Dating Preferences
